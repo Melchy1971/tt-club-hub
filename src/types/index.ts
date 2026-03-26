@@ -1,90 +1,37 @@
-// === Rollen ===
-export type AppRole = 'admin' | 'vorstand' | 'trainer' | 'spieler' | 'mitglied' | 'developer';
+// Re-export generated Supabase types for convenience
+import type { Tables, TablesInsert, TablesUpdate, Enums } from '@/integrations/supabase/types';
 
-// === Mitglieder ===
-export interface Member {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone?: string;
-  date_of_birth?: string;
-  gender?: 'männlich' | 'weiblich' | 'divers';
-  street?: string;
-  zip_code?: string;
-  city?: string;
-  member_number?: string;
-  entry_date: string;
-  exit_date?: string;
-  is_active: boolean;
-  ttr_rating?: number;
-  qttr_rating?: number;
-  club_id?: string;
-  created_at: string;
-  updated_at: string;
-}
+// === Supabase Table Row Types ===
+export type Member = Tables<'members'>;
+export type MemberInsert = TablesInsert<'members'>;
+export type MemberUpdate = TablesUpdate<'members'>;
 
-// === Mannschaften ===
-export interface Team {
-  id: string;
-  name: string;
-  league: string;
-  season_id: string;
-  division?: string;
-  captain_id?: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
+export type Team = Tables<'teams'>;
+export type TeamInsert = TablesInsert<'teams'>;
+export type TeamUpdate = TablesUpdate<'teams'>;
 
-export interface TeamMember {
-  id: string;
-  team_id: string;
-  member_id: string;
-  position: number;
-  member?: Member;
-}
+export type TeamMember = Tables<'team_members'>;
+export type TeamMemberInsert = TablesInsert<'team_members'>;
 
-// === Saison ===
-export interface Season {
-  id: string;
-  name: string;
-  start_date: string;
-  end_date: string;
-  is_current: boolean;
-}
+export type Season = Tables<'seasons'>;
+export type SeasonInsert = TablesInsert<'seasons'>;
 
-// === Spielbetrieb ===
-export interface Match {
-  id: string;
-  season_id: string;
-  team_id: string;
-  match_day: number;
-  date: string;
-  time?: string;
-  home_team: string;
-  away_team: string;
-  home_score?: number;
-  away_score?: number;
-  venue?: string;
-  is_home: boolean;
-  status: 'geplant' | 'laufend' | 'beendet' | 'verschoben';
-  created_at: string;
-  updated_at: string;
-  team?: Team;
-}
+export type ScheduleMatch = Tables<'schedule_matches'>;
+export type ScheduleMatchInsert = TablesInsert<'schedule_matches'>;
+export type ScheduleMatchUpdate = TablesUpdate<'schedule_matches'>;
 
-export interface SingleMatch {
-  id: string;
-  match_id: string;
-  position: number;
-  home_player_id?: string;
-  away_player_name?: string;
-  sets_home: number;
-  sets_away: number;
-  set_results?: string;
-  home_player?: Member;
-}
+export type Venue = Tables<'venues'>;
+export type VenueInsert = TablesInsert<'venues'>;
+
+export type Role = Tables<'roles'>;
+export type UserRole = Tables<'user_roles'>;
+export type ClubSettings = Tables<'club_settings'>;
+
+// === Enum Types ===
+export type AppRole = Enums<'app_role'>;
+export type AgeGroup = Enums<'age_group'>;
+export type MatchStatus = Enums<'match_status'>;
+export type Gender = Enums<'gender'>;
 
 // === Dashboard ===
 export interface DashboardStats {
