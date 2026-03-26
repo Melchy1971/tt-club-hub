@@ -1,32 +1,72 @@
-import type { Match } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
+import type { ScheduleMatch, ScheduleMatchInsert, ScheduleMatchUpdate } from '@/types';
 
 export const matchService = {
-  async getAll(): Promise<Match[]> {
-    return [];
+  async getAll(): Promise<ScheduleMatch[]> {
+    const { data, error } = await supabase
+      .from('schedule_matches')
+      .select('*')
+      .order('match_date', { ascending: true });
+    if (error) throw error;
+    return data ?? [];
   },
 
-  async getByTeam(teamId: string): Promise<Match[]> {
-    console.log('getByTeam stub', teamId);
-    return [];
+  async getByTeam(teamId: string): Promise<ScheduleMatch[]> {
+    const { data, error } = await supabase
+      .from('schedule_matches')
+      .select('*')
+      .eq('team_id', teamId)
+      .order('match_date', { ascending: true });
+    if (error) throw error;
+    return data ?? [];
   },
 
-  async getById(id: string): Promise<Match | null> {
-    console.log('getById stub', id);
-    return null;
+  async getBySeason(seasonId: string): Promise<ScheduleMatch[]> {
+    const { data, error } = await supabase
+      .from('schedule_matches')
+      .select('*')
+      .eq('season_id', seasonId)
+      .order('match_date', { ascending: true });
+    if (error) throw error;
+    return data ?? [];
   },
 
-  async create(data: Partial<Match>): Promise<Match | null> {
-    console.log('create stub', data);
-    return null;
+  async getById(id: string): Promise<ScheduleMatch | null> {
+    const { data, error } = await supabase
+      .from('schedule_matches')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+    if (error) throw error;
+    return data;
   },
 
-  async update(id: string, data: Partial<Match>): Promise<Match | null> {
-    console.log('update stub', id, data);
-    return null;
+  async create(match: ScheduleMatchInsert): Promise<ScheduleMatch> {
+    const { data, error } = await supabase
+      .from('schedule_matches')
+      .insert(match)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
   },
 
-  async delete(id: string): Promise<boolean> {
-    console.log('delete stub', id);
-    return false;
+  async update(id: string, updates: ScheduleMatchUpdate): Promise<ScheduleMatch> {
+    const { data, error } = await supabase
+      .from('schedule_matches')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('schedule_matches')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
   },
 };
