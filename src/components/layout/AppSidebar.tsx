@@ -35,6 +35,7 @@ const settingsNav = [
 ];
 
 export function AppSidebar() {
+  const { signOut, user } = useAuth();
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const location = useLocation();
