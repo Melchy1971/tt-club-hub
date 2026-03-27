@@ -40,12 +40,12 @@ export const ROUTES: RouteConfig[] = [
 
   { path: '/kommunikation', name: 'Kommunikation', module: 'communication', icon: MessageSquare, group: 'club', minRoles: ['trainer', 'vorstand', 'admin', 'developer'] },
   { path: '/vorstand', name: 'Vorstand', module: 'board', icon: Landmark, group: 'club', minRoles: ['vorstand', 'admin', 'developer'] },
-  { path: '/import', name: 'Import', module: 'import', icon: Upload, group: 'club', minRoles: ['admin', 'developer'] },
 
   { path: '/admin', name: 'Admin', module: 'admin', icon: ShieldAlert, group: 'system', minRoles: ['admin', 'developer'] },
   { path: '/rollen', name: 'Rollen & Rechte', module: 'roles', icon: Shield, group: 'system', minRoles: ['admin', 'developer'] },
   { path: '/saisons', name: 'Saisons', module: 'seasons', icon: Calendar, group: 'system', requiredPermission: 'season:read' },
   { path: '/einstellungen', name: 'Einstellungen', module: 'settings', icon: Settings, group: 'system', requiredPermission: 'settings:read' },
+  { path: '/import', name: 'Import', module: 'import', icon: Upload, group: 'system', minRoles: ['admin', 'developer'] },
   { path: '/info', name: 'Info', module: 'info', icon: Info, group: 'system' },
 
   { path: '/profil', name: 'Profil', module: 'profile', icon: UserCircle, group: 'system', hideInSidebar: true },
