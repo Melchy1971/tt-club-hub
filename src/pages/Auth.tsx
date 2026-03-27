@@ -128,6 +128,28 @@ export default function Auth() {
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Anmelden
                 </Button>
+                <Button
+                  type="button"
+                  variant="link"
+                  className="w-full text-sm text-muted-foreground"
+                  onClick={async () => {
+                    const email = loginForm.getValues('email');
+                    if (!email) {
+                      toast({ variant: 'destructive', title: 'E-Mail eingeben', description: 'Bitte gib zuerst deine E-Mail-Adresse ein.' });
+                      return;
+                    }
+                    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                      redirectTo: `${window.location.origin}/reset-password`,
+                    });
+                    if (error) {
+                      toast({ variant: 'destructive', title: 'Fehler', description: error.message });
+                    } else {
+                      toast({ title: 'E-Mail gesendet', description: 'Prüfe deinen Posteingang für den Link zum Zurücksetzen.' });
+                    }
+                  }}
+                >
+                  Passwort vergessen?
+                </Button>
               </form>
             </TabsContent>
 
