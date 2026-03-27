@@ -231,6 +231,8 @@ export default function Import() {
   const [validatedRows, setValidatedRows] = useState<RowValidation[]>([]);
   const [fileName, setFileName] = useState('');
   const [dragOver, setDragOver] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
+  const [skipDuplicates, setSkipDuplicates] = useState(true);
 
   /* Upload */
   const handleFile = useCallback((file: File) => {
@@ -275,7 +277,6 @@ export default function Import() {
     });
   };
 
-  const [isChecking, setIsChecking] = useState(false);
 
   const proceedToPreview = async () => {
     // Check required columns mapped
@@ -370,7 +371,6 @@ export default function Import() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const [skipDuplicates, setSkipDuplicates] = useState(true);
   const duplicateRows = validatedRows.filter((r) => r.isDuplicate && r.errors.length === 0);
   const validRows = validatedRows.filter((r) => r.errors.length === 0 && (!skipDuplicates || !r.isDuplicate));
   const errorRows = validatedRows.filter((r) => r.errors.length > 0);
