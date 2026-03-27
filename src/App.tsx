@@ -13,6 +13,7 @@ import Teams from "./pages/Teams";
 import Matches from "./pages/Matches";
 import SettingsPage from "./pages/SettingsPage";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
