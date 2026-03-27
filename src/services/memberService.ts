@@ -97,7 +97,11 @@ export const memberService = {
 
   async create(payload: MemberCreateDTO): Promise<MemberUI> {
     const parsed = memberCreateSchema.parse(payload);
-    const { data, error } = await supabase.from('members').insert(parsed).select().single();
+    const { data, error } = await supabase
+      .from('members')
+      .insert(parsed as any)
+      .select()
+      .single();
     if (error) handleError(error, 'create');
     return mapToUI(data as Member);
   },
@@ -106,7 +110,7 @@ export const memberService = {
     const parsed = memberUpdateSchema.parse(payload);
     const { data, error } = await supabase
       .from('members')
-      .update(parsed)
+      .update(parsed as any)
       .eq('id', id)
       .select()
       .single();
