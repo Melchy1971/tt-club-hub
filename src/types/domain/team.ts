@@ -1,11 +1,16 @@
 import type { MemberId, SeasonId, TeamId } from '../api';
 import type { Member } from './member';
+import type { AGE_GROUP_VALUES } from '@/schemas/team.schema';
+
+export type AgeGroup = (typeof AGE_GROUP_VALUES)[number];
 
 export interface Team {
   readonly id: TeamId;
   name: string;
-  league: string;
+  /** Nullable in der DB, aber im UI als Pflichtfeld behandelt. */
+  league: string | null;
   season_id: SeasonId;
+  age_group: AgeGroup;
   division: string | null;
   captain_id: MemberId | null;
   is_active: boolean;
@@ -17,8 +22,28 @@ export interface TeamMember {
   readonly id: string;
   team_id: TeamId;
   member_id: MemberId;
+  /**
+   * Aufstellungsposition (1-20). 0 = keine feste Position.
+   * DB-Constraint: position >= 0, UNIQUE(team_id, position).
+   */
   position: number;
-  member?: Member;
+  readonly created_at: string;
+}
+
+/**
+ * TeamMember mit gejointen Mitglieds-Daten.
+ * Wird von teamAssignmentService.getByTeam() zurückgegeben.
+ */
+export interface AssignmentWithMember extends TeamMember {
+  members: Member;
+}
+
+/**
+ * Team mit vollständigem Kader.
+ * Wird von teamService.getWithRoster() zurückgegeben.
+ */
+export interface TeamWithRoster extends Team {
+  team_members: AssignmentWithMember[];
 }
 
 export type TeamCreate = Omit<Team, 'id' | 'created_at' | 'updated_at'>;
