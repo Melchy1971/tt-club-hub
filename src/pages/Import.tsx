@@ -234,7 +234,7 @@ export default function Import() {
   const [fileName, setFileName] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
-  const [skipDuplicates, setSkipDuplicates] = useState(true);
+  
   const [duplicateMode, setDuplicateMode] = useState<DuplicateMode>('skip');
 
   /* Upload */
@@ -394,7 +394,7 @@ export default function Import() {
   const newRows = validatedRows.filter((r) => r.errors.length === 0 && !r.isDuplicate);
   const errorRows = validatedRows.filter((r) => r.errors.length > 0);
 
-  const importableNewRows = [...newRows, ...csvOnlyDuplicates.filter((_, i) => i === 0 || !skipDuplicates)];
+  const importableNewRows = newRows;
   const importableDuplicateUpdates = duplicateMode === 'update' ? duplicateRows : [];
   const skippedDuplicates = duplicateMode === 'skip' ? duplicateRows : [];
 
@@ -666,7 +666,7 @@ export default function Import() {
                     {validatedRows.map((row, i) => (
                       <TableRow key={i} className={cn(
                         row.errors.length > 0 ? 'bg-destructive/5' : '',
-                        row.isDuplicate && skipDuplicates ? 'opacity-50' : '',
+                        row.isDuplicate && duplicateMode === 'skip' ? 'opacity-50' : '',
                       )}>
                         <TableCell className="text-muted-foreground">{i + 1}</TableCell>
                         <TableCell>
