@@ -15,10 +15,14 @@ export const seasonService = {
     let query = supabase
       .from('seasons')
       .select('*')
-      .eq('is_current', true);
+      .eq('is_current', true)
+      .order('start_date', { ascending: false })
+      .limit(1);
+
     if (ageGroup) {
-      query = query.eq('age_group', ageGroup as any);
+      query = query.eq('age_group', ageGroup as never);
     }
+
     const { data, error } = await query.maybeSingle();
     if (error) throw error;
     return data;
@@ -46,10 +50,7 @@ export const seasonService = {
   },
 
   async remove(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('seasons')
-      .delete()
-      .eq('id', id);
+    const { error } = await supabase.from('seasons').delete().eq('id', id);
     if (error) throw error;
   },
 

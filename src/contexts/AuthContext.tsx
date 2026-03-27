@@ -4,6 +4,7 @@ import {
   useEffect,
   useState,
   useCallback,
+  useRef,
   type ReactNode,
 } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,9 +28,13 @@ const AuthContext = createContext<AuthContextValue>(initialContext);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthContextValue>(initialContext);
+  const requestVersionRef = useRef(0);
 
   const loadUserData = useCallback(async (session: Session | null) => {
+    const requestVersion = ++requestVersionRef.current;
+
     if (!session?.user) {
+      if (requestVersion !== requestVersionRef.current) return;
       setState((prev) => ({
         ...prev,
         user: null,
@@ -46,45 +51,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const supaUser: User = session.user;
     let problem: AuthProblem | null = null;
 
-    // 1) Rollen laden
-    const { data: roles, error: roleError } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', supaUser.id);
+    const [{ data: roles, error: roleError }, { data: member, error: memberError }] = await Promise.all([
+      supabase.from('user_roles').select('role').eq('user_id', supaUser.id),
+      supabase.from('members').select('*').eq('user_id', supaUser.id).maybeSingle(),
+    ]);
 
-    if (roleError) {
+    if (roleError || memberError) {
       problem = 'UNKNOWN';
     }
 
     const primaryRole = roles?.[0]?.role as AppRole | undefined;
-    const roleIsValid = primaryRole && APP_ROLES.includes(primaryRole);
+    const roleIsValid = !!primaryRole && APP_ROLES.includes(primaryRole);
+
     if (!roles?.length) {
       problem = 'NO_USER_ROLES';
     } else if (!roleIsValid) {
       problem = 'INVALID_ROLE';
     }
 
-    // 2) Member-Profil laden
-    const { data: member } = await supabase
-      .from('members')
-      .select('*')
-      .eq('user_id', supaUser.id)
-      .maybeSingle();
-
     if (!member) {
       problem = problem ?? 'MISSING_MEMBER';
     }
+
+    if (requestVersion !== requestVersionRef.current) return;
 
     setState((prev) => ({
       ...prev,
       user: {
         id: supaUser.id,
         email: supaUser.email ?? null,
-        name: supaUser.user_metadata?.full_name ?? null,
-        role: roleIsValid ? primaryRole! : null,
+        name:
+          supaUser.user_metadata?.full_name ??
+          [supaUser.user_metadata?.first_name, supaUser.user_metadata?.last_name]
+            .filter(Boolean)
+            .join(' ') ||
+          null,
+        role: roleIsValid ? primaryRole : null,
       },
       session,
-      role: roleIsValid ? primaryRole! : null,
+      role: roleIsValid ? primaryRole : null,
       member: member ?? null,
       isAuthenticated: !!(session && !problem && member && roleIsValid),
       problem,
@@ -93,26 +98,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
+
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      if (!isMounted) return;
       setState((prev) => ({ ...prev, isLoading: true }));
-      await loadUserData(newSession);
+      void loadUserData(newSession);
     });
 
-    supabase.auth.getSession().then(({ data: { session: existing } }) => {
-      loadUserData(existing);
+    void supabase.auth.getSession().then(({ data: { session: existing } }) => {
+      if (!isMounted) return;
+      void loadUserData(existing);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, [loadUserData]);
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
+    requestVersionRef.current += 1;
     setState(initialContext);
   }, []);
 
   const refresh = useCallback(async () => {
+    setState((prev) => ({ ...prev, isLoading: true }));
     const { data } = await supabase.auth.getSession();
     await loadUserData(data.session);
   }, [loadUserData]);
