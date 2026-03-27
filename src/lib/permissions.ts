@@ -59,3 +59,8 @@ export const canApproveSubstitutes = (role: AppRole | null | undefined) =>
 
 export const canAccessSettings = (role: AppRole | null | undefined) =>
   hasPermission(role, 'settings:read');
+
+export const canWriteSeasons = (role: AppRole | null | undefined) =>
+  hasPermission(role, 'season:write');
+export const canDeleteSeasons = (role: AppRole | null | undefined) =>
+  hasPermission(role, 'season:delete');

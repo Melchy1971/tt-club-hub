@@ -242,6 +242,7 @@ export type Database = {
       }
       seasons: {
         Row: {
+          age_group: Database["public"]["Enums"]["age_group"]
           created_at: string
           end_date: string
           id: string
@@ -251,6 +252,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          age_group?: Database["public"]["Enums"]["age_group"]
           created_at?: string
           end_date: string
           id?: string
@@ -260,6 +262,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          age_group?: Database["public"]["Enums"]["age_group"]
           created_at?: string
           end_date?: string
           id?: string

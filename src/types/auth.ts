@@ -86,6 +86,7 @@ export const ROLE_PERMISSIONS: Record<AppRole, Permission[]> = {
     'team:write',
     'match:read',
     'match:write',
+    'season:read',
     'training:read',
     'training:write',
     'substitute:read',
@@ -96,12 +97,13 @@ export const ROLE_PERMISSIONS: Record<AppRole, Permission[]> = {
     'member:read',
     'team:read',
     'match:read',
+    'season:read',
     'training:read',
     'training:write',
     'substitute:read',
     'substitute:write',
   ],
-  mitglied: ['member:read', 'team:read', 'match:read'],
+  mitglied: ['member:read', 'team:read', 'match:read', 'season:read'],
 };
 
 // === Auth-Fehler ===
