@@ -15,6 +15,7 @@ export type TeamMemberInsert = TablesInsert<'team_members'>;
 
 export type Season = Tables<'seasons'>;
 export type SeasonInsert = TablesInsert<'seasons'>;
+export type SeasonUpdate = TablesUpdate<'seasons'>;
 
 export type ScheduleMatch = Tables<'schedule_matches'>;
 export type ScheduleMatchInsert = TablesInsert<'schedule_matches'>;
