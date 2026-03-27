@@ -137,6 +137,33 @@ export type Database = {
         }
         Relationships: []
       }
+      role_module_permissions: {
+        Row: {
+          created_at: string
+          id: string
+          level: Database["public"]["Enums"]["permission_level"]
+          module: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          level?: Database["public"]["Enums"]["permission_level"]
+          module: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          level?: Database["public"]["Enums"]["permission_level"]
+          module?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       roles: {
         Row: {
           created_at: string
@@ -467,6 +494,7 @@ export type Database = {
         | "beendet"
         | "verschoben"
         | "abgesagt"
+      permission_level: "none" | "read" | "write"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -618,6 +646,7 @@ export const Constants = {
       ],
       gender: ["maennlich", "weiblich", "divers"],
       match_status: ["geplant", "laufend", "beendet", "verschoben", "abgesagt"],
+      permission_level: ["none", "read", "write"],
     },
   },
 } as const

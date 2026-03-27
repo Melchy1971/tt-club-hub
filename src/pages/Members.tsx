@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, Plus, Search, Pencil, Trash2, Eye, X, UserPlus } from 'lucide-react';
+import { Users, Search, Pencil, Trash2, Eye, X, UserPlus } from 'lucide-react';
 import { memberService } from '@/services/memberService';
 import { useAuth } from '@/contexts/AuthContext';
 import { canWriteMembers, canDeleteMembers } from '@/lib/permissions';
@@ -26,7 +26,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/common/EmptyState';
 import { Constants } from '@/integrations/supabase/types';
-import type { Member, MemberInsert } from '@/types';
+import type { MemberUI, MemberCreateDTO } from '@/types/member';
 
 const AGE_GROUP_LABELS: Record<string, string> = {
   herren: 'Herren', damen: 'Damen',
@@ -62,44 +62,43 @@ const emptyForm = {
 
 type FormState = typeof emptyForm;
 
-function memberToForm(m: Member): FormState {
+function memberToForm(m: MemberUI): FormState {
   return {
-    first_name: m.first_name,
-    last_name: m.last_name,
+    first_name: m.firstName,
+    last_name: m.lastName,
     email: m.email ?? '',
     phone: m.phone ?? '',
-    date_of_birth: m.date_of_birth ?? '',
-    gender: m.gender ?? '',
+    date_of_birth: '',
+    gender: '',
     street: m.street ?? '',
-    zip_code: m.zip_code ?? '',
+    zip_code: m.zipCode ?? '',
     city: m.city ?? '',
-    member_number: m.member_number ?? '',
-    age_group: m.age_group ?? '',
-    ttr_rating: m.ttr_rating?.toString() ?? '',
-    qttr_rating: m.qttr_rating?.toString() ?? '',
-    entry_date: m.entry_date,
-    notes: m.notes ?? '',
-    is_active: m.is_active,
+    member_number: m.memberNumber ?? '',
+    age_group: m.ageGroup ?? '',
+    ttr_rating: m.ttr?.toString() ?? '',
+    qttr_rating: m.qttr?.toString() ?? '',
+    entry_date: m.entryDate ?? new Date().toISOString().slice(0, 10),
+    notes: '',
+    is_active: m.isActive,
   };
 }
 
-function formToInsert(f: FormState): MemberInsert {
+function formToPayload(f: FormState): MemberCreateDTO {
   return {
     first_name: f.first_name.trim(),
     last_name: f.last_name.trim(),
     email: f.email.trim() || null,
     phone: f.phone.trim() || null,
     date_of_birth: f.date_of_birth || null,
-    gender: (f.gender || null) as MemberInsert['gender'],
+    gender: (f.gender || null) as MemberCreateDTO['gender'],
     street: f.street.trim() || null,
     zip_code: f.zip_code.trim() || null,
     city: f.city.trim() || null,
     member_number: f.member_number.trim() || null,
-    age_group: (f.age_group || null) as MemberInsert['age_group'],
+    age_group: (f.age_group || null) as MemberCreateDTO['age_group'],
     ttr_rating: f.ttr_rating ? parseInt(f.ttr_rating, 10) : null,
     qttr_rating: f.qttr_rating ? parseInt(f.qttr_rating, 10) : null,
-    entry_date: f.entry_date,
-    notes: f.notes.trim() || null,
+    entry_date: f.entry_date || undefined,
     is_active: f.is_active,
   };
 }
@@ -115,14 +114,14 @@ export default function Members() {
   const [formOpen, setFormOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [editingMember, setEditingMember] = useState<Member | null>(null);
-  const [viewingMember, setViewingMember] = useState<Member | null>(null);
+  const [editingMember, setEditingMember] = useState<MemberUI | null>(null);
+  const [viewingMember, setViewingMember] = useState<MemberUI | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const { data: members = [], isLoading } = useQuery({
+  const { data: members = [], isLoading } = useQuery<MemberUI[]>({
     queryKey: ['members'],
-    queryFn: memberService.getAll,
+    queryFn: () => memberService.list(),
   });
 
   const { data: userRoles = [] } = useQuery({
@@ -139,20 +138,20 @@ export default function Members() {
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['members'] });
 
   const createMut = useMutation({
-    mutationFn: (m: MemberInsert) => memberService.create(m),
+    mutationFn: (m: MemberCreateDTO) => memberService.create(m),
     onSuccess: () => { toast.success('Mitglied erstellt'); invalidate(); closeForm(); },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const updateMut = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<MemberInsert> }) =>
+    mutationFn: ({ id, data }: { id: string; data: Partial<MemberCreateDTO> }) =>
       memberService.update(id, data),
     onSuccess: () => { toast.success('Mitglied aktualisiert'); invalidate(); closeForm(); },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const deleteMut = useMutation({
-    mutationFn: (id: string) => memberService.delete(id),
+    mutationFn: (id: string) => memberService.remove(id),
     onSuccess: () => { toast.success('Mitglied gelöscht'); invalidate(); },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -164,24 +163,24 @@ export default function Members() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const filtered = members.filter((m) => {
+  const filtered = members.filter((m: MemberUI) => {
     const q = search.toLowerCase();
     const matchesSearch = !q ||
-      m.first_name.toLowerCase().includes(q) ||
-      m.last_name.toLowerCase().includes(q) ||
+      m.firstName.toLowerCase().includes(q) ||
+      m.lastName.toLowerCase().includes(q) ||
       (m.email?.toLowerCase().includes(q)) ||
-      (m.member_number?.toLowerCase().includes(q));
+      (m.memberNumber?.toLowerCase().includes(q));
     const matchesStatus =
       statusFilter === 'all' ||
-      (statusFilter === 'active' && m.is_active) ||
-      (statusFilter === 'inactive' && !m.is_active);
+      (statusFilter === 'active' && m.isActive) ||
+      (statusFilter === 'inactive' && !m.isActive);
     return matchesSearch && matchesStatus;
   });
 
-  function getRolesForMember(m: Member): string[] {
-    if (!m.user_id) return [];
+  function getRolesForMember(m: MemberUI): string[] {
+    if (!m.userId) return [];
     return userRoles
-      .filter((r) => r.user_id === m.user_id)
+      .filter((r) => r.user_id === m.userId)
       .map((r) => r.role);
   }
 
@@ -199,14 +198,14 @@ export default function Members() {
     setFormOpen(true);
   }
 
-  function openEdit(m: Member) {
+  function openEdit(m: MemberUI) {
     setEditingMember(m);
     setForm(memberToForm(m));
     setErrors({});
     setFormOpen(true);
   }
 
-  function openDetail(m: Member) {
+  function openDetail(m: MemberUI) {
     setViewingMember(m);
     setDetailOpen(true);
   }
@@ -225,7 +224,7 @@ export default function Members() {
 
   function handleSubmit() {
     if (!validate()) return;
-    const payload = formToInsert(form);
+    const payload = formToPayload(form);
     if (editingMember) {
       updateMut.mutate({ id: editingMember.id, data: payload });
     } else {
@@ -312,21 +311,21 @@ export default function Members() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((m) => {
+              {filtered.map((m: MemberUI) => {
                 const roles = getRolesForMember(m);
                 return (
                   <TableRow key={m.id}>
                     <TableCell className="font-medium">
-                      {m.last_name}, {m.first_name}
+                      {m.lastName}, {m.firstName}
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-muted-foreground">
                       {m.email ?? '–'}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-muted-foreground">
-                      {m.member_number ?? '–'}
+                      {m.memberNumber ?? '–'}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-muted-foreground">
-                      {m.ttr_rating ?? '–'} / {m.qttr_rating ?? '–'}
+                      {m.ttr ?? '–'} / {m.qttr ?? '–'}
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       <div className="flex flex-wrap gap-1">
@@ -340,12 +339,12 @@ export default function Members() {
                     <TableCell>
                       {canWrite ? (
                         <Switch
-                          checked={m.is_active}
+                          checked={m.isActive}
                           onCheckedChange={(val) => toggleMut.mutate({ id: m.id, active: val })}
                         />
                       ) : (
-                        <Badge variant={m.is_active ? 'default' : 'secondary'}>
-                          {m.is_active ? 'Aktiv' : 'Inaktiv'}
+                        <Badge variant={m.isActive ? 'default' : 'secondary'}>
+                          {m.isActive ? 'Aktiv' : 'Inaktiv'}
                         </Badge>
                       )}
                     </TableCell>
@@ -377,33 +376,25 @@ export default function Members() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {viewingMember ? `${viewingMember.first_name} ${viewingMember.last_name}` : 'Mitglied'}
+              {viewingMember ? `${viewingMember.firstName} ${viewingMember.lastName}` : 'Mitglied'}
             </DialogTitle>
           </DialogHeader>
           {viewingMember && (
             <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm py-2">
-              <DetailRow label="Mitgliedsnr." value={viewingMember.member_number} />
+              <DetailRow label="Mitgliedsnr." value={viewingMember.memberNumber} />
               <DetailRow label="E-Mail" value={viewingMember.email} />
               <DetailRow label="Telefon" value={viewingMember.phone} />
-              <DetailRow label="Geburtsdatum" value={viewingMember.date_of_birth} />
-              <DetailRow label="Geschlecht" value={viewingMember.gender ? GENDER_LABELS[viewingMember.gender] : null} />
-              <DetailRow label="Altersgruppe" value={viewingMember.age_group ? AGE_GROUP_LABELS[viewingMember.age_group] : null} />
+              <DetailRow label="TTR" value={viewingMember.ttr?.toString()} />
+              <DetailRow label="QTTR" value={viewingMember.qttr?.toString()} />
+              <DetailRow label="Altersgruppe" value={viewingMember.ageGroup ? AGE_GROUP_LABELS[viewingMember.ageGroup] : null} />
               <DetailRow label="Straße" value={viewingMember.street} />
-              <DetailRow label="PLZ / Ort" value={[viewingMember.zip_code, viewingMember.city].filter(Boolean).join(' ') || null} />
-              <DetailRow label="TTR" value={viewingMember.ttr_rating?.toString()} />
-              <DetailRow label="QTTR" value={viewingMember.qttr_rating?.toString()} />
-              <DetailRow label="Eintrittsdatum" value={viewingMember.entry_date} />
-              <DetailRow label="Austrittsdatum" value={viewingMember.exit_date} />
-              <DetailRow label="Status" value={viewingMember.is_active ? 'Aktiv' : 'Inaktiv'} />
+              <DetailRow label="PLZ / Ort" value={[viewingMember.zipCode, viewingMember.city].filter(Boolean).join(' ') || null} />
+              <DetailRow label="Eintrittsdatum" value={viewingMember.entryDate} />
+              <DetailRow label="Austrittsdatum" value={viewingMember.exitDate} />
+              <DetailRow label="Status" value={viewingMember.isActive ? 'Aktiv' : 'Inaktiv'} />
               <DetailRow label="Rollen" value={getRolesForMember(viewingMember).join(', ') || null} />
-              {viewingMember.user_id && (
-                <DetailRow label="User-ID" value={viewingMember.user_id} />
-              )}
-              {viewingMember.notes && (
-                <div className="col-span-2 pt-2">
-                  <span className="text-muted-foreground">Notizen:</span>
-                  <p className="mt-1">{viewingMember.notes}</p>
-                </div>
+              {viewingMember.userId && (
+                <DetailRow label="User-ID" value={viewingMember.userId} />
               )}
             </div>
           )}
@@ -425,23 +416,18 @@ export default function Members() {
             <DialogTitle>{editingMember ? 'Mitglied bearbeiten' : 'Neues Mitglied'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            {/* Name */}
             <div className="grid grid-cols-2 gap-4">
               <FormField label="Vorname *" id="first_name" value={form.first_name} error={errors.first_name}
                 onChange={(v) => setField('first_name', v)} />
               <FormField label="Nachname *" id="last_name" value={form.last_name} error={errors.last_name}
                 onChange={(v) => setField('last_name', v)} />
             </div>
-
-            {/* Contact */}
             <div className="grid grid-cols-2 gap-4">
               <FormField label="E-Mail" id="email" value={form.email} error={errors.email} type="email"
                 onChange={(v) => setField('email', v)} />
               <FormField label="Telefon" id="phone" value={form.phone}
                 onChange={(v) => setField('phone', v)} />
             </div>
-
-            {/* Personal */}
             <div className="grid grid-cols-2 gap-4">
               <FormField label="Geburtsdatum" id="date_of_birth" value={form.date_of_birth} type="date"
                 onChange={(v) => setField('date_of_birth', v)} />
@@ -457,8 +443,6 @@ export default function Members() {
                 </Select>
               </div>
             </div>
-
-            {/* Address */}
             <FormField label="Straße" id="street" value={form.street}
               onChange={(v) => setField('street', v)} />
             <div className="grid grid-cols-3 gap-4">
@@ -469,8 +453,6 @@ export default function Members() {
                   onChange={(v) => setField('city', v)} />
               </div>
             </div>
-
-            {/* Club */}
             <div className="grid grid-cols-2 gap-4">
               <FormField label="Mitgliedsnummer" id="member_number" value={form.member_number}
                 onChange={(v) => setField('member_number', v)} />
@@ -486,33 +468,25 @@ export default function Members() {
                 </Select>
               </div>
             </div>
-
-            {/* Ratings */}
             <div className="grid grid-cols-2 gap-4">
               <FormField label="TTR-Wert" id="ttr_rating" value={form.ttr_rating} error={errors.ttr_rating}
                 type="number" onChange={(v) => setField('ttr_rating', v)} />
               <FormField label="QTTR-Wert" id="qttr_rating" value={form.qttr_rating} error={errors.qttr_rating}
                 type="number" onChange={(v) => setField('qttr_rating', v)} />
             </div>
-
-            {/* Dates */}
             <div className="grid grid-cols-2 gap-4">
               <FormField label="Eintrittsdatum *" id="entry_date" value={form.entry_date} error={errors.entry_date}
                 type="date" onChange={(v) => setField('entry_date', v)} />
               {editingMember && (
-                <FormField label="Austrittsdatum" id="exit_date" value={editingMember.exit_date ?? ''} type="date"
+                <FormField label="Austrittsdatum" id="exit_date" value={editingMember.exitDate ?? ''} type="date"
                   onChange={() => {}} />
               )}
             </div>
-
-            {/* Notes */}
             <div className="space-y-1.5">
               <Label htmlFor="notes">Notizen</Label>
               <Textarea id="notes" value={form.notes} onChange={(e) => setField('notes', e.target.value)}
                 rows={3} placeholder="Optionale Anmerkungen…" />
             </div>
-
-            {/* Active */}
             <div className="flex items-center gap-3">
               <Switch id="is_active" checked={form.is_active}
                 onCheckedChange={(v) => setField('is_active', v)} />
@@ -548,8 +522,6 @@ export default function Members() {
     </div>
   );
 }
-
-/* ---- Helper components ---- */
 
 function DetailRow({ label, value }: { label: string; value: string | null | undefined }) {
   return (
