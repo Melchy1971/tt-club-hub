@@ -86,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       role: roleIsValid ? primaryRole! : null,
       member: member ?? null,
-      isAuthenticated: !!session && !problem && !!member && roleIsValid,
+      isAuthenticated: !!(session && !problem && member && roleIsValid),
       problem,
       isLoading: false,
     }));
