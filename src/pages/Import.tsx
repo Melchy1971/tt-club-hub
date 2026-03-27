@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Upload, FileText, AlertCircle, CheckCircle2, X, Download } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
@@ -139,6 +140,7 @@ interface RowValidation {
   data: Record<string, any>;
   errors: string[];
   warnings: string[];
+  isDuplicate?: boolean;
 }
 
 function validateRow(raw: Record<string, string>): RowValidation {
@@ -229,6 +231,8 @@ export default function Import() {
   const [validatedRows, setValidatedRows] = useState<RowValidation[]>([]);
   const [fileName, setFileName] = useState('');
   const [dragOver, setDragOver] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
+  const [skipDuplicates, setSkipDuplicates] = useState(true);
 
   /* Upload */
   const handleFile = useCallback((file: File) => {
@@ -273,7 +277,8 @@ export default function Import() {
     });
   };
 
-  const proceedToPreview = () => {
+
+  const proceedToPreview = async () => {
     // Check required columns mapped
     const mapped = new Set(Object.values(columnMapping));
     const missing = CSV_COLUMNS.filter((c) => c.required && !mapped.has(c.key));
@@ -282,15 +287,65 @@ export default function Import() {
       return;
     }
 
-    // Build row objects
+    setIsChecking(true);
+
+    // Fetch existing members for duplicate check
+    let existingEmails = new Set<string>();
+    let existingMemberNumbers = new Set<string>();
+    try {
+      const { data: existing } = await supabase
+        .from('members')
+        .select('email, member_number');
+      (existing ?? []).forEach((m) => {
+        if (m.email) existingEmails.add(m.email.toLowerCase());
+        if (m.member_number) existingMemberNumbers.add(m.member_number.toLowerCase());
+      });
+    } catch { /* ignore, proceed without duplicate check */ }
+
+    // Build row objects and check duplicates
+    const seenEmails = new Set<string>();
+    const seenMemberNumbers = new Set<string>();
+
     const validated = csvRows.map((row) => {
       const raw: Record<string, string> = {};
       Object.entries(columnMapping).forEach(([colIdx, dbKey]) => {
         raw[dbKey] = row[Number(colIdx)] ?? '';
       });
-      return validateRow(raw);
+      const result = validateRow(raw);
+
+      // Duplicate check: existing DB
+      const email = result.data.email?.toLowerCase();
+      if (email && existingEmails.has(email)) {
+        result.warnings.push(`Duplikat: E-Mail "${result.data.email}" existiert bereits`);
+        result.isDuplicate = true;
+      }
+      const mn = result.data.member_number?.toLowerCase();
+      if (mn && existingMemberNumbers.has(mn)) {
+        result.warnings.push(`Duplikat: Mitgliedsnr. "${result.data.member_number}" existiert bereits`);
+        result.isDuplicate = true;
+      }
+
+      // Duplicate check: within CSV
+      if (email) {
+        if (seenEmails.has(email)) {
+          result.warnings.push(`Duplikat in CSV: E-Mail "${result.data.email}"`);
+          result.isDuplicate = true;
+        }
+        seenEmails.add(email);
+      }
+      if (mn) {
+        if (seenMemberNumbers.has(mn)) {
+          result.warnings.push(`Duplikat in CSV: Mitgliedsnr. "${result.data.member_number}"`);
+          result.isDuplicate = true;
+        }
+        seenMemberNumbers.add(mn);
+      }
+
+      return result;
     });
+
     setValidatedRows(validated);
+    setIsChecking(false);
     setStep('preview');
   };
 
@@ -316,7 +371,8 @@ export default function Import() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const validRows = validatedRows.filter((r) => r.errors.length === 0);
+  const duplicateRows = validatedRows.filter((r) => r.isDuplicate && r.errors.length === 0);
+  const validRows = validatedRows.filter((r) => r.errors.length === 0 && (!skipDuplicates || !r.isDuplicate));
   const errorRows = validatedRows.filter((r) => r.errors.length > 0);
 
   const handleImport = () => {
@@ -461,7 +517,9 @@ export default function Import() {
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={reset}>Zurück</Button>
-              <Button onClick={proceedToPreview}>Weiter zur Vorschau</Button>
+              <Button onClick={proceedToPreview} disabled={isChecking}>
+                {isChecking ? 'Prüfe Duplikate…' : 'Weiter zur Vorschau'}
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -492,7 +550,16 @@ export default function Import() {
             </Card>
             <Card className="flex-1">
               <CardContent className="pt-6 flex items-center gap-3">
-                <AlertCircle className="h-8 w-8 text-yellow-500" />
+                <AlertCircle className="h-8 w-8 text-amber-500" />
+                <div>
+                  <p className="text-2xl font-bold">{duplicateRows.length}</p>
+                  <p className="text-sm text-muted-foreground">Duplikate</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="flex-1">
+              <CardContent className="pt-6 flex items-center gap-3">
+                <AlertCircle className="h-8 w-8 text-amber-500" />
                 <div>
                   <p className="text-2xl font-bold">{validatedRows.filter((r) => r.warnings.length > 0).length}</p>
                   <p className="text-sm text-muted-foreground">Warnungen</p>
@@ -500,6 +567,21 @@ export default function Import() {
               </CardContent>
             </Card>
           </div>
+
+          {duplicateRows.length > 0 && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="flex items-center justify-between">
+                <span>
+                  {duplicateRows.length} Duplikat{duplicateRows.length !== 1 ? 'e' : ''} erkannt (gleiche E-Mail oder Mitgliedsnr.).
+                </span>
+                <label className="flex items-center gap-2 cursor-pointer ml-4 shrink-0">
+                  <Switch checked={skipDuplicates} onCheckedChange={setSkipDuplicates} />
+                  <span className="text-sm">Duplikate überspringen</span>
+                </label>
+              </AlertDescription>
+            </Alert>
+          )}
 
           {errorRows.length > 0 && (
             <Alert variant="destructive">
@@ -532,13 +614,18 @@ export default function Import() {
                   </TableHeader>
                   <TableBody>
                     {validatedRows.map((row, i) => (
-                      <TableRow key={i} className={row.errors.length > 0 ? 'bg-destructive/5' : ''}>
+                      <TableRow key={i} className={cn(
+                        row.errors.length > 0 ? 'bg-destructive/5' : '',
+                        row.isDuplicate && skipDuplicates ? 'opacity-50' : '',
+                      )}>
                         <TableCell className="text-muted-foreground">{i + 1}</TableCell>
                         <TableCell>
                           {row.errors.length > 0 ? (
                             <Badge variant="destructive" className="text-xs">Fehler</Badge>
+                          ) : row.isDuplicate ? (
+                            <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">Duplikat</Badge>
                           ) : row.warnings.length > 0 ? (
-                            <Badge variant="outline" className="text-xs border-yellow-500 text-yellow-600">Warnung</Badge>
+                            <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">Warnung</Badge>
                           ) : (
                             <Badge variant="secondary" className="text-xs">OK</Badge>
                           )}
