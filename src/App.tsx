@@ -15,6 +15,7 @@ import SettingsPage from "./pages/SettingsPage";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
+import PlaceholderPage from "./pages/PlaceholderPage";
 
 const queryClient = new QueryClient();
 
@@ -35,7 +36,15 @@ const App = () => (
                   <Route path="/mitglieder" element={<Members />} />
                   <Route path="/mannschaften" element={<Teams />} />
                   <Route path="/spielbetrieb" element={<Matches />} />
+                  <Route path="/ersatzstellung" element={<PlaceholderPage title="Ersatzstellung" />} />
+                  <Route path="/training" element={<PlaceholderPage title="Training" />} />
+                  <Route path="/kommunikation" element={<PlaceholderPage title="Kommunikation" />} />
+                  <Route path="/vorstand" element={<PlaceholderPage title="Vorstand" />} />
+                  <Route path="/import" element={<PlaceholderPage title="Import" />} />
+                  <Route path="/admin" element={<PlaceholderPage title="Administration" />} />
                   <Route path="/einstellungen" element={<SettingsPage />} />
+                  <Route path="/profil" element={<PlaceholderPage title="Profil" />} />
+                  <Route path="/info" element={<PlaceholderPage title="Info" />} />
                 </Route>
               </Route>
               <Route path="*" element={<NotFound />} />

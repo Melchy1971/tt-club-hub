@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ...prev,
       user: {
         id: supaUser.id,
-        email: supaUser.email,
+        email: supaUser.email ?? null,
         name: supaUser.user_metadata?.full_name ?? null,
         role: roleIsValid ? primaryRole! : null,
       },
