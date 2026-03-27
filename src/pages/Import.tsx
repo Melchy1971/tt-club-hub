@@ -604,14 +604,32 @@ export default function Import() {
           {duplicateRows.length > 0 && (
             <Alert>
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="flex items-center justify-between">
-                <span>
+              <AlertDescription className="space-y-3">
+                <p>
                   {duplicateRows.length} Duplikat{duplicateRows.length !== 1 ? 'e' : ''} erkannt (gleiche E-Mail oder Mitgliedsnr.).
-                </span>
-                <label className="flex items-center gap-2 cursor-pointer ml-4 shrink-0">
-                  <Switch checked={skipDuplicates} onCheckedChange={setSkipDuplicates} />
-                  <span className="text-sm">Duplikate überspringen</span>
-                </label>
+                </p>
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="duplicateMode"
+                      checked={duplicateMode === 'skip'}
+                      onChange={() => setDuplicateMode('skip')}
+                      className="accent-primary"
+                    />
+                    <span className="text-sm">Duplikate überspringen</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="duplicateMode"
+                      checked={duplicateMode === 'update'}
+                      onChange={() => setDuplicateMode('update')}
+                      className="accent-primary"
+                    />
+                    <span className="text-sm">Bestehende Mitglieder aktualisieren</span>
+                  </label>
+                </div>
               </AlertDescription>
             </Alert>
           )}
