@@ -40,7 +40,7 @@ export const ROUTES: RouteConfig[] = [
 
   { path: '/kommunikation', name: 'Kommunikation', module: 'communication', icon: MessageSquare, group: 'club', minRoles: ['trainer', 'vorstand', 'admin', 'developer'] },
   { path: '/vorstand', name: 'Vorstand', module: 'board', icon: Landmark, group: 'club', minRoles: ['vorstand', 'admin', 'developer'] },
-  { path: '/import', name: 'Import', module: 'import', icon: Upload, group: 'club', minRoles: ['admin', 'developer'] },
+  
 
   { path: '/admin', name: 'Admin', module: 'admin', icon: ShieldAlert, group: 'system', minRoles: ['admin', 'developer'] },
   { path: '/rollen', name: 'Rollen & Rechte', module: 'roles', icon: Shield, group: 'system', minRoles: ['admin', 'developer'] },
