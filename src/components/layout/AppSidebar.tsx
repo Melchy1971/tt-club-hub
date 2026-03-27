@@ -1,24 +1,9 @@
-import {
-  LayoutDashboard,
-  Shield,
-  CalendarDays,
-  UserCheck,
-  Dumbbell,
-  MessageSquare,
-  Landmark,
-  Upload,
-  ShieldAlert,
-  Settings,
-  UserCircle,
-  Info,
-  LogOut,
-  ChevronDown,
-} from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
-import { hasPermission, isAdmin, isStaff } from '@/lib/permissions';
-import type { AppRole, Permission } from '@/types/auth';
+import { useNavigationPermissions } from '@/hooks/useNavigationPermissions';
+import type { RouteConfig } from '@/routes/navigation';
 import {
   Sidebar,
   SidebarContent,
@@ -34,60 +19,21 @@ import {
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
-interface NavItem {
-  title: string;
-  url: string;
-  icon: React.ElementType;
-  requiredPermission?: Permission;
-  requiredRole?: (role: AppRole | null | undefined) => boolean;
-}
-
-const sportNav: NavItem[] = [
-  { title: 'Dashboard', url: '/', icon: LayoutDashboard },
-  { title: 'Mannschaften', url: '/mannschaften', icon: Shield, requiredPermission: 'team:read' },
-  { title: 'Spielplan', url: '/spielbetrieb', icon: CalendarDays, requiredPermission: 'match:read' },
-  { title: 'Ersatzstellung', url: '/ersatzstellung', icon: UserCheck, requiredPermission: 'substitute:read' },
-  { title: 'Training', url: '/training', icon: Dumbbell, requiredPermission: 'training:read' },
-];
-
-const clubNav: NavItem[] = [
-  { title: 'Kommunikation', url: '/kommunikation', icon: MessageSquare, requiredRole: isStaff },
-  { title: 'Vorstand', url: '/vorstand', icon: Landmark, requiredRole: isStaff },
-  { title: 'Import', url: '/import', icon: Upload, requiredRole: isAdmin },
-];
-
-const systemNav: NavItem[] = [
-  { title: 'Admin', url: '/admin', icon: ShieldAlert, requiredRole: isAdmin },
-  { title: 'Einstellungen', url: '/einstellungen', icon: Settings, requiredPermission: 'settings:read' },
-  { title: 'Info', url: '/info', icon: Info },
-];
-
-function filterNav(items: NavItem[], role: AppRole | null | undefined): NavItem[] {
-  return items.filter((item) => {
-    if (item.requiredRole) return item.requiredRole(role);
-    if (item.requiredPermission) return hasPermission(role, item.requiredPermission);
-    return true;
-  });
-}
-
 export function AppSidebar() {
-  const { signOut, user, role } = useAuth();
+  const { signOut, user } = useAuth();
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const location = useLocation();
+  const { navGroups } = useNavigationPermissions();
 
   const isActive = (path: string) =>
     path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
-
-  const filteredSport = filterNav(sportNav, role);
-  const filteredClub = filterNav(clubNav, role);
-  const filteredSystem = filterNav(systemNav, role);
 
   const initials = user?.name
     ? user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
     : user?.email?.[0]?.toUpperCase() ?? '?';
 
-  const renderGroup = (label: string, items: NavItem[]) => {
+  const renderGroup = (label: string, items: RouteConfig[]) => {
     if (items.length === 0) return null;
     return (
       <SidebarGroup key={label}>
@@ -95,16 +41,16 @@ export function AppSidebar() {
         <SidebarGroupContent>
           <SidebarMenu>
             {items.map((item) => (
-              <SidebarMenuItem key={item.url}>
-                <SidebarMenuButton asChild isActive={isActive(item.url)}>
+              <SidebarMenuItem key={item.path}>
+                <SidebarMenuButton asChild isActive={isActive(item.path)}>
                   <NavLink
-                    to={item.url}
-                    end={item.url === '/'}
+                    to={item.path}
+                    end={item.path === '/'}
                     className="hover:bg-sidebar-accent/50"
                     activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                   >
-                    <item.icon className="mr-2 h-4 w-4 shrink-0" />
-                    {!collapsed && <span>{item.title}</span>}
+                    {item.icon && <item.icon className="mr-2 h-4 w-4 shrink-0" />}
+                    {!collapsed && <span>{item.name}</span>}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -136,9 +82,9 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="gap-0">
-        {renderGroup('Sportbetrieb', filteredSport)}
-        {renderGroup('Vereinsführung', filteredClub)}
-        {renderGroup('System', filteredSystem)}
+        {renderGroup('Sportbetrieb', navGroups.sport)}
+        {renderGroup('Vereinsführung', navGroups.club)}
+        {renderGroup('System', navGroups.system)}
       </SidebarContent>
 
       <SidebarFooter className="p-3 border-t border-sidebar-border">
