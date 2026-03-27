@@ -11,6 +11,19 @@ import {
   Settings,
   Info,
   UserCircle,
+  Calendar,
+} from 'lucide-react';
+  Shield,
+  CalendarDays,
+  UserCheck,
+  Dumbbell,
+  MessageSquare,
+  Landmark,
+  Upload,
+  ShieldAlert,
+  Settings,
+  Info,
+  UserCircle,
 } from 'lucide-react';
 import type { AppRole, Permission } from '@/types/auth';
 
@@ -40,6 +53,7 @@ export const ROUTES: RouteConfig[] = [
   { path: '/import', name: 'Import', module: 'import', icon: Upload, group: 'club', minRoles: ['admin', 'developer'] },
 
   { path: '/admin', name: 'Admin', module: 'admin', icon: ShieldAlert, group: 'system', minRoles: ['admin', 'developer'] },
+  { path: '/saisons', name: 'Saisons', module: 'seasons', icon: Calendar, group: 'system', requiredPermission: 'season:read' },
   { path: '/einstellungen', name: 'Einstellungen', module: 'settings', icon: Settings, group: 'system', requiredPermission: 'settings:read' },
   { path: '/info', name: 'Info', module: 'info', icon: Info, group: 'system' },
 
