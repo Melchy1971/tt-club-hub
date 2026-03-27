@@ -35,7 +35,6 @@ export type MatchStatus = Enums<'match_status'>;
 export type Gender = Enums<'gender'>;
 
 export * from './member';
-export * from './matchRoster';
 
 // === Dashboard ===
 export interface DashboardStats {
