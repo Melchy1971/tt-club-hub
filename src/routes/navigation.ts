@@ -13,18 +13,6 @@ import {
   UserCircle,
   Calendar,
 } from 'lucide-react';
-  Shield,
-  CalendarDays,
-  UserCheck,
-  Dumbbell,
-  MessageSquare,
-  Landmark,
-  Upload,
-  ShieldAlert,
-  Settings,
-  Info,
-  UserCircle,
-} from 'lucide-react';
 import type { AppRole, Permission } from '@/types/auth';
 
 export type NavGroup = 'sport' | 'club' | 'system';
