@@ -10,8 +10,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import Members from "./pages/Members";
 import Teams from "./pages/Teams";
-import Schedule from "./pages/Schedule";
-import ScheduleTeam from "./pages/ScheduleTeam";
+import Matches from "./pages/Matches";
 import SettingsPage from "./pages/SettingsPage";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
@@ -39,8 +38,7 @@ const App = () => (
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/mitglieder" element={<Members />} />
                   <Route path="/mannschaften" element={<Teams />} />
-                  <Route path="/spielbetrieb" element={<Schedule />} />
-                  <Route path="/spielbetrieb/team/:teamId" element={<ScheduleTeam />} />
+                  <Route path="/spielbetrieb" element={<Matches />} />
                   <Route path="/ersatzstellung" element={<PlaceholderPage title="Ersatzstellung" />} />
                   <Route path="/training" element={<PlaceholderPage title="Training" />} />
                   <Route path="/kommunikation" element={<PlaceholderPage title="Kommunikation" />} />
