@@ -567,7 +567,7 @@ export default function Import() {
               <CardContent className="pt-6 flex items-center gap-3">
                 <CheckCircle2 className="h-8 w-8 text-green-500" />
                 <div>
-                  <p className="text-2xl font-bold">{validRows.length}</p>
+                  <p className="text-2xl font-bold">{totalImportable}</p>
                   <p className="text-sm text-muted-foreground">Gültige Zeilen</p>
                 </div>
               </CardContent>
@@ -682,11 +682,11 @@ export default function Import() {
             <Button variant="outline" onClick={() => setStep('mapping')}>Zurück</Button>
             <Button
               onClick={handleImport}
-              disabled={validRows.length === 0 || importMut.isPending}
+              disabled={totalImportable === 0 || importMut.isPending}
             >
               {importMut.isPending
                 ? 'Importiere…'
-                : `${validRows.length} Mitglied${validRows.length !== 1 ? 'er' : ''} importieren`}
+                : `${totalImportable} Mitglied${totalImportable !== 1 ? 'er' : ''} importieren${importableDuplicateUpdates.length > 0 ? ` (${importableDuplicateUpdates.length} Updates)` : ''}`}
             </Button>
           </div>
         </div>
@@ -700,7 +700,7 @@ export default function Import() {
             <div>
               <h2 className="text-xl font-semibold">Import abgeschlossen</h2>
               <p className="text-muted-foreground">
-                {validRows.length} Mitglied{validRows.length !== 1 ? 'er' : ''} wurden erfolgreich importiert.
+                Der Import wurde erfolgreich durchgeführt.
               </p>
             </div>
             <div className="flex justify-center gap-2">
