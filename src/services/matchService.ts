@@ -1,6 +1,30 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { ScheduleMatch, ScheduleMatchInsert, ScheduleMatchUpdate } from '@/types';
 
+/** Venue-Daten die via JOIN geladen werden. */
+export interface VenueSummary {
+  name: string;
+  street: string | null;
+  city: string | null;
+  zip_code: string | null;
+}
+
+/** ScheduleMatch mit optionalem Venue-Join. */
+export type ScheduleMatchFull = ScheduleMatch & {
+  venues: VenueSummary | null;
+};
+
+/** Formatiert eine Venue-Adresse für die Anzeige. */
+export function formatVenueAddress(venue: VenueSummary | null | undefined): string {
+  if (!venue) return '';
+  const parts: string[] = [venue.name];
+  const address = [venue.street, [venue.zip_code, venue.city].filter(Boolean).join(' ')]
+    .filter(Boolean)
+    .join(', ');
+  if (address) parts.push(address);
+  return parts.join(' · ');
+}
+
 export const matchService = {
   async getAll(): Promise<ScheduleMatch[]> {
     const { data, error } = await supabase
@@ -21,6 +45,21 @@ export const matchService = {
     return data ?? [];
   },
 
+  /**
+   * Team-Spielplan mit gejointen Venue-Daten.
+   * Nutzt idx_schedule_matches_season_team_date für den Lookup.
+   */
+  async getByTeamWithVenue(teamId: string): Promise<ScheduleMatchFull[]> {
+    const { data, error } = await supabase
+      .from('schedule_matches')
+      .select('*, venues(name, street, city, zip_code)')
+      .eq('team_id', teamId)
+      .order('match_date', { ascending: true })
+      .order('match_time', { ascending: true, nullsFirst: false });
+    if (error) throw error;
+    return (data ?? []) as unknown as ScheduleMatchFull[];
+  },
+
   async getBySeason(seasonId: string): Promise<ScheduleMatch[]> {
     const { data, error } = await supabase
       .from('schedule_matches')
@@ -29,6 +68,22 @@ export const matchService = {
       .order('match_date', { ascending: true });
     if (error) throw error;
     return data ?? [];
+  },
+
+  /**
+   * Alle Spiele einer Saison mit Team-Grunddaten (für Übersichtsseite).
+   * Gibt Match-Count pro Team ermöglichend zurück.
+   */
+  async getBySeasonWithTeam(
+    seasonId: string,
+  ): Promise<(ScheduleMatch & { teams: { name: string } | null })[]> {
+    const { data, error } = await supabase
+      .from('schedule_matches')
+      .select('*, teams(name)')
+      .eq('season_id', seasonId)
+      .order('match_date', { ascending: true });
+    if (error) throw error;
+    return (data ?? []) as unknown as (ScheduleMatch & { teams: { name: string } | null })[];
   },
 
   async getById(id: string): Promise<ScheduleMatch | null> {
