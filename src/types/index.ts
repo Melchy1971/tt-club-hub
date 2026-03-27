@@ -1,33 +1,37 @@
-// === Auth / Rollen ===
-export type { AppRole, AuthUser, Permission } from './auth';
-export { APP_ROLES, ROLE_PERMISSIONS } from './auth';
+// Re-export generated Supabase types for convenience
+import type { Tables, TablesInsert, TablesUpdate, Enums } from '@/integrations/supabase/types';
 
-// === API / Result-Typen ===
-export type {
-  ApiResult,
-  AppError,
-  AppErrorCode,
-  Err,
-  MatchId,
-  MemberId,
-  Ok,
-  PaginatedData,
-  PaginatedResult,
-  PaginationParams,
-  SeasonId,
-  TeamId,
-} from './api';
-export { asMatchId, asMemberId, asSeasonId, asTeamId } from './api';
+// === Supabase Table Row Types ===
+export type Member = Tables<'members'>;
+export type MemberInsert = TablesInsert<'members'>;
+export type MemberUpdate = TablesUpdate<'members'>;
 
-// === Domain-Typen ===
-export type { Member, MemberCreate, MemberGender, MemberStatus, MemberUpdate } from './domain/member';
-export { memberFullName } from './domain/member';
+export type Team = Tables<'teams'>;
+export type TeamInsert = TablesInsert<'teams'>;
+export type TeamUpdate = TablesUpdate<'teams'>;
 
-export type { Team, TeamCreate, TeamMember, TeamUpdate } from './domain/team';
+export type TeamMember = Tables<'team_members'>;
+export type TeamMemberInsert = TablesInsert<'team_members'>;
 
-export type { Match, MatchCreate, MatchStatus, MatchUpdate, SingleMatch } from './domain/match';
+export type Season = Tables<'seasons'>;
+export type SeasonInsert = TablesInsert<'seasons'>;
 
-export type { AgeGroup, Season, SeasonCreate, SeasonUpdate } from './domain/season';
+export type ScheduleMatch = Tables<'schedule_matches'>;
+export type ScheduleMatchInsert = TablesInsert<'schedule_matches'>;
+export type ScheduleMatchUpdate = TablesUpdate<'schedule_matches'>;
+
+export type Venue = Tables<'venues'>;
+export type VenueInsert = TablesInsert<'venues'>;
+
+export type Role = Tables<'roles'>;
+export type UserRole = Tables<'user_roles'>;
+export type ClubSettings = Tables<'club_settings'>;
+
+// === Enum Types ===
+export type AppRole = Enums<'app_role'>;
+export type AgeGroup = Enums<'age_group'>;
+export type MatchStatus = Enums<'match_status'>;
+export type Gender = Enums<'gender'>;
 
 // === Dashboard ===
 export interface DashboardStats {

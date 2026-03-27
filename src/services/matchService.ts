@@ -1,66 +1,72 @@
 import { supabase } from '@/integrations/supabase/client';
-import { err, ok } from '@/lib/api';
-import { fromSupabaseError } from '@/lib/error';
-import type { ApiResult, MatchId, TeamId } from '@/types/api';
-import type { Match, MatchCreate, MatchUpdate } from '@/types/domain/match';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const cast = <T>(v: unknown): T => v as T;
+import type { ScheduleMatch, ScheduleMatchInsert, ScheduleMatchUpdate } from '@/types';
 
 export const matchService = {
-  async getAll(): Promise<ApiResult<Match[]>> {
+  async getAll(): Promise<ScheduleMatch[]> {
     const { data, error } = await supabase
-      .from('matches')
-      .select('*, team:teams(id, name, league)')
-      .order('date', { ascending: true });
-    if (error) return err(fromSupabaseError(error));
-    return ok(cast<Match[]>(data));
+      .from('schedule_matches')
+      .select('*')
+      .order('match_date', { ascending: true });
+    if (error) throw error;
+    return data ?? [];
   },
 
-  async getByTeam(teamId: TeamId): Promise<ApiResult<Match[]>> {
+  async getByTeam(teamId: string): Promise<ScheduleMatch[]> {
     const { data, error } = await supabase
-      .from('matches')
-      .select('*, team:teams(id, name, league)')
+      .from('schedule_matches')
+      .select('*')
       .eq('team_id', teamId)
-      .order('date', { ascending: true });
-    if (error) return err(fromSupabaseError(error));
-    return ok(cast<Match[]>(data));
+      .order('match_date', { ascending: true });
+    if (error) throw error;
+    return data ?? [];
   },
 
-  async getById(id: MatchId): Promise<ApiResult<Match>> {
+  async getBySeason(seasonId: string): Promise<ScheduleMatch[]> {
     const { data, error } = await supabase
-      .from('matches')
-      .select('*, team:teams(id, name, league)')
+      .from('schedule_matches')
+      .select('*')
+      .eq('season_id', seasonId)
+      .order('match_date', { ascending: true });
+    if (error) throw error;
+    return data ?? [];
+  },
+
+  async getById(id: string): Promise<ScheduleMatch | null> {
+    const { data, error } = await supabase
+      .from('schedule_matches')
+      .select('*')
       .eq('id', id)
-      .single();
-    if (error) return err(fromSupabaseError(error));
-    return ok(cast<Match>(data));
+      .maybeSingle();
+    if (error) throw error;
+    return data;
   },
 
-  async create(input: MatchCreate): Promise<ApiResult<Match>> {
+  async create(match: ScheduleMatchInsert): Promise<ScheduleMatch> {
     const { data, error } = await supabase
-      .from('matches')
-      .insert(input)
+      .from('schedule_matches')
+      .insert(match)
       .select()
       .single();
-    if (error) return err(fromSupabaseError(error));
-    return ok(cast<Match>(data));
+    if (error) throw error;
+    return data;
   },
 
-  async update(id: MatchId, input: MatchUpdate): Promise<ApiResult<Match>> {
+  async update(id: string, updates: ScheduleMatchUpdate): Promise<ScheduleMatch> {
     const { data, error } = await supabase
-      .from('matches')
-      .update({ ...input, updated_at: new Date().toISOString() })
+      .from('schedule_matches')
+      .update(updates)
       .eq('id', id)
       .select()
       .single();
-    if (error) return err(fromSupabaseError(error));
-    return ok(cast<Match>(data));
+    if (error) throw error;
+    return data;
   },
 
-  async delete(id: MatchId): Promise<ApiResult<void>> {
-    const { error } = await supabase.from('matches').delete().eq('id', id);
-    if (error) return err(fromSupabaseError(error));
-    return ok(undefined);
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('schedule_matches')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
   },
 };

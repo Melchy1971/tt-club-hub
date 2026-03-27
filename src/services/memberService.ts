@@ -1,58 +1,62 @@
 import { supabase } from '@/integrations/supabase/client';
-import { err, ok } from '@/lib/api';
-import { fromSupabaseError } from '@/lib/error';
-import type { ApiResult, MemberId } from '@/types/api';
-import type { Member, MemberCreate, MemberUpdate } from '@/types/domain/member';
-
-// Typcast-Helfer, da Supabase-Types noch nicht mit dem Schema synchronisiert sind.
-// TODO: Nach `supabase gen types typescript` entfernen und echte DB-Typen verwenden.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const cast = <T>(v: unknown): T => v as T;
+import type { Member, MemberInsert, MemberUpdate } from '@/types';
 
 export const memberService = {
-  async getAll(): Promise<ApiResult<Member[]>> {
+  async getAll(): Promise<Member[]> {
     const { data, error } = await supabase
       .from('members')
       .select('*')
-      .order('last_name');
-    if (error) return err(fromSupabaseError(error));
-    return ok(cast<Member[]>(data));
+      .order('last_name', { ascending: true });
+    if (error) throw error;
+    return data ?? [];
   },
 
-  async getById(id: MemberId): Promise<ApiResult<Member>> {
+  async getActive(): Promise<Member[]> {
+    const { data, error } = await supabase
+      .from('members')
+      .select('*')
+      .eq('is_active', true)
+      .order('last_name', { ascending: true });
+    if (error) throw error;
+    return data ?? [];
+  },
+
+  async getById(id: string): Promise<Member | null> {
     const { data, error } = await supabase
       .from('members')
       .select('*')
       .eq('id', id)
-      .single();
-    if (error) return err(fromSupabaseError(error));
-    return ok(cast<Member>(data));
+      .maybeSingle();
+    if (error) throw error;
+    return data;
   },
 
-  async create(input: MemberCreate): Promise<ApiResult<Member>> {
+  async create(member: MemberInsert): Promise<Member> {
     const { data, error } = await supabase
       .from('members')
-      .insert(input)
+      .insert(member)
       .select()
       .single();
-    if (error) return err(fromSupabaseError(error));
-    return ok(cast<Member>(data));
+    if (error) throw error;
+    return data;
   },
 
-  async update(id: MemberId, input: MemberUpdate): Promise<ApiResult<Member>> {
+  async update(id: string, updates: MemberUpdate): Promise<Member> {
     const { data, error } = await supabase
       .from('members')
-      .update({ ...input, updated_at: new Date().toISOString() })
+      .update(updates)
       .eq('id', id)
       .select()
       .single();
-    if (error) return err(fromSupabaseError(error));
-    return ok(cast<Member>(data));
+    if (error) throw error;
+    return data;
   },
 
-  async delete(id: MemberId): Promise<ApiResult<void>> {
-    const { error } = await supabase.from('members').delete().eq('id', id);
-    if (error) return err(fromSupabaseError(error));
-    return ok(undefined);
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('members')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
   },
 };

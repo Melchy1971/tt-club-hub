@@ -1,66 +1,90 @@
 import { supabase } from '@/integrations/supabase/client';
-import { err, ok } from '@/lib/api';
-import { fromSupabaseError } from '@/lib/error';
-import type { ApiResult, TeamId } from '@/types/api';
-import type { Team, TeamCreate, TeamMember, TeamUpdate } from '@/types/domain/team';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const cast = <T>(v: unknown): T => v as T;
+import type { Team, TeamInsert, TeamUpdate, TeamMember, TeamMemberInsert } from '@/types';
 
 export const teamService = {
-  async getAll(): Promise<ApiResult<Team[]>> {
+  async getAll(): Promise<Team[]> {
     const { data, error } = await supabase
       .from('teams')
       .select('*')
-      .order('name');
-    if (error) return err(fromSupabaseError(error));
-    return ok(cast<Team[]>(data));
+      .order('name', { ascending: true });
+    if (error) throw error;
+    return data ?? [];
   },
 
-  async getById(id: TeamId): Promise<ApiResult<Team>> {
+  async getBySeason(seasonId: string): Promise<Team[]> {
+    const { data, error } = await supabase
+      .from('teams')
+      .select('*')
+      .eq('season_id', seasonId)
+      .order('name', { ascending: true });
+    if (error) throw error;
+    return data ?? [];
+  },
+
+  async getById(id: string): Promise<Team | null> {
     const { data, error } = await supabase
       .from('teams')
       .select('*')
       .eq('id', id)
-      .single();
-    if (error) return err(fromSupabaseError(error));
-    return ok(cast<Team>(data));
+      .maybeSingle();
+    if (error) throw error;
+    return data;
   },
 
-  async create(input: TeamCreate): Promise<ApiResult<Team>> {
+  async create(team: TeamInsert): Promise<Team> {
     const { data, error } = await supabase
       .from('teams')
-      .insert(input)
+      .insert(team)
       .select()
       .single();
-    if (error) return err(fromSupabaseError(error));
-    return ok(cast<Team>(data));
+    if (error) throw error;
+    return data;
   },
 
-  async update(id: TeamId, input: TeamUpdate): Promise<ApiResult<Team>> {
+  async update(id: string, updates: TeamUpdate): Promise<Team> {
     const { data, error } = await supabase
       .from('teams')
-      .update({ ...input, updated_at: new Date().toISOString() })
+      .update(updates)
       .eq('id', id)
       .select()
       .single();
-    if (error) return err(fromSupabaseError(error));
-    return ok(cast<Team>(data));
+    if (error) throw error;
+    return data;
   },
 
-  async delete(id: TeamId): Promise<ApiResult<void>> {
-    const { error } = await supabase.from('teams').delete().eq('id', id);
-    if (error) return err(fromSupabaseError(error));
-    return ok(undefined);
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('teams')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
   },
 
-  async getMembers(teamId: TeamId): Promise<ApiResult<TeamMember[]>> {
+  async getMembers(teamId: string): Promise<TeamMember[]> {
     const { data, error } = await supabase
       .from('team_members')
-      .select('*, member:members(*)')
+      .select('*')
       .eq('team_id', teamId)
-      .order('position');
-    if (error) return err(fromSupabaseError(error));
-    return ok(cast<TeamMember[]>(data));
+      .order('position', { ascending: true });
+    if (error) throw error;
+    return data ?? [];
+  },
+
+  async addMember(entry: TeamMemberInsert): Promise<TeamMember> {
+    const { data, error } = await supabase
+      .from('team_members')
+      .insert(entry)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async removeMember(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('team_members')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
   },
 };
