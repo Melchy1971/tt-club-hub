@@ -16,6 +16,7 @@ import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import PlaceholderPage from "./pages/PlaceholderPage";
+import Seasons from "./pages/Seasons";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +44,7 @@ const App = () => (
                   <Route path="/import" element={<PlaceholderPage title="Import" />} />
                   <Route path="/admin" element={<PlaceholderPage title="Administration" />} />
                   <Route path="/einstellungen" element={<SettingsPage />} />
+                  <Route path="/saisons" element={<Seasons />} />
                   <Route path="/profil" element={<PlaceholderPage title="Profil" />} />
                   <Route path="/info" element={<PlaceholderPage title="Info" />} />
                 </Route>
