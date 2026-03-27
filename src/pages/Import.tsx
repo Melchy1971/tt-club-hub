@@ -139,6 +139,7 @@ interface RowValidation {
   data: Record<string, any>;
   errors: string[];
   warnings: string[];
+  isDuplicate?: boolean;
 }
 
 function validateRow(raw: Record<string, string>): RowValidation {
@@ -368,7 +369,9 @@ export default function Import() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const validRows = validatedRows.filter((r) => r.errors.length === 0);
+  const [skipDuplicates, setSkipDuplicates] = useState(true);
+  const duplicateRows = validatedRows.filter((r) => r.isDuplicate && r.errors.length === 0);
+  const validRows = validatedRows.filter((r) => r.errors.length === 0 && (!skipDuplicates || !r.isDuplicate));
   const errorRows = validatedRows.filter((r) => r.errors.length > 0);
 
   const handleImport = () => {
