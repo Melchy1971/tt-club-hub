@@ -22,11 +22,8 @@ export function ProtectedRoute({ allowedRoles, fallbackPath = '/' }: ProtectedRo
 
   const guard = evaluateGuard({ isAuthenticated, role, problem }, allowedRoles);
   if (!guard.allowed) {
-    // fehlendes Profil → zurück zur Auth-Seite, damit ggf. Onboarding greift
-    const target =
-      guard.reason === 'MISSING_MEMBER' || guard.reason === 'NO_USER_ROLES'
-        ? '/auth'
-        : fallbackPath;
+    const authReasons = ['NO_SESSION', 'MISSING_MEMBER', 'NO_USER_ROLES', 'INVALID_ROLE'] as const;
+    const target = (authReasons as readonly string[]).includes(guard.reason) ? '/auth' : fallbackPath;
     return <Navigate to={target} replace />;
   }
 
