@@ -4,6 +4,7 @@ import { Upload, FileText, AlertCircle, CheckCircle2, X, Download } from 'lucide
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -234,6 +235,8 @@ export default function Import() {
   const [fileName, setFileName] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+  const [importTotal, setImportTotal] = useState(0);
   
   const [duplicateMode, setDuplicateMode] = useState<DuplicateMode>('skip');
 
@@ -357,23 +360,30 @@ export default function Import() {
   /* Import */
   const importMut = useMutation({
     mutationFn: async ({ inserts, updates }: { inserts: Record<string, any>[]; updates: { id: string; data: Record<string, any> }[] }) => {
+      const total = inserts.length + updates.length;
+      setImportTotal(total);
+      setImportProgress(0);
+
       const chunkSize = 100;
       let insertedCount = 0;
       let updatedCount = 0;
+      let processed = 0;
 
-      // Insert new rows
       for (let i = 0; i < inserts.length; i += chunkSize) {
         const chunk = inserts.slice(i, i + chunkSize);
         const { error } = await supabase.from('members').insert(chunk as any);
         if (error) throw new Error(`Fehler beim Einfügen (Zeile ${i + 1}): ${error.message}`);
         insertedCount += chunk.length;
+        processed += chunk.length;
+        setImportProgress(processed);
       }
 
-      // Update existing rows
       for (const { id, data } of updates) {
         const { error } = await supabase.from('members').update(data as any).eq('id', id);
         if (error) throw new Error(`Fehler beim Aktualisieren (${id}): ${error.message}`);
         updatedCount++;
+        processed++;
+        setImportProgress(processed);
       }
 
       return { insertedCount, updatedCount };
@@ -695,14 +705,29 @@ export default function Import() {
             </CardContent>
           </Card>
 
+          {importMut.isPending && importTotal > 0 && (
+            <Card>
+              <CardContent className="pt-6 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Importiere Mitglieder…</span>
+                  <span className="text-muted-foreground">{importProgress} / {importTotal}</span>
+                </div>
+                <Progress value={(importProgress / importTotal) * 100} className="h-2" />
+                <p className="text-xs text-muted-foreground">
+                  {Math.round((importProgress / importTotal) * 100)}% abgeschlossen
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setStep('mapping')}>Zurück</Button>
+            <Button variant="outline" onClick={() => setStep('mapping')} disabled={importMut.isPending}>Zurück</Button>
             <Button
               onClick={handleImport}
               disabled={totalImportable === 0 || importMut.isPending}
             >
               {importMut.isPending
-                ? 'Importiere…'
+                ? `Importiere… (${importProgress}/${importTotal})`
                 : `${totalImportable} Mitglied${totalImportable !== 1 ? 'er' : ''} importieren${importableDuplicateUpdates.length > 0 ? ` (${importableDuplicateUpdates.length} Updates)` : ''}`}
             </Button>
           </div>
