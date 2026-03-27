@@ -273,7 +273,9 @@ export default function Import() {
     });
   };
 
-  const proceedToPreview = () => {
+  const [isChecking, setIsChecking] = useState(false);
+
+  const proceedToPreview = async () => {
     // Check required columns mapped
     const mapped = new Set(Object.values(columnMapping));
     const missing = CSV_COLUMNS.filter((c) => c.required && !mapped.has(c.key));
@@ -282,15 +284,65 @@ export default function Import() {
       return;
     }
 
-    // Build row objects
+    setIsChecking(true);
+
+    // Fetch existing members for duplicate check
+    let existingEmails = new Set<string>();
+    let existingMemberNumbers = new Set<string>();
+    try {
+      const { data: existing } = await supabase
+        .from('members')
+        .select('email, member_number');
+      (existing ?? []).forEach((m) => {
+        if (m.email) existingEmails.add(m.email.toLowerCase());
+        if (m.member_number) existingMemberNumbers.add(m.member_number.toLowerCase());
+      });
+    } catch { /* ignore, proceed without duplicate check */ }
+
+    // Build row objects and check duplicates
+    const seenEmails = new Set<string>();
+    const seenMemberNumbers = new Set<string>();
+
     const validated = csvRows.map((row) => {
       const raw: Record<string, string> = {};
       Object.entries(columnMapping).forEach(([colIdx, dbKey]) => {
         raw[dbKey] = row[Number(colIdx)] ?? '';
       });
-      return validateRow(raw);
+      const result = validateRow(raw);
+
+      // Duplicate check: existing DB
+      const email = result.data.email?.toLowerCase();
+      if (email && existingEmails.has(email)) {
+        result.warnings.push(`Duplikat: E-Mail "${result.data.email}" existiert bereits`);
+        result.isDuplicate = true;
+      }
+      const mn = result.data.member_number?.toLowerCase();
+      if (mn && existingMemberNumbers.has(mn)) {
+        result.warnings.push(`Duplikat: Mitgliedsnr. "${result.data.member_number}" existiert bereits`);
+        result.isDuplicate = true;
+      }
+
+      // Duplicate check: within CSV
+      if (email) {
+        if (seenEmails.has(email)) {
+          result.warnings.push(`Duplikat in CSV: E-Mail "${result.data.email}"`);
+          result.isDuplicate = true;
+        }
+        seenEmails.add(email);
+      }
+      if (mn) {
+        if (seenMemberNumbers.has(mn)) {
+          result.warnings.push(`Duplikat in CSV: Mitgliedsnr. "${result.data.member_number}"`);
+          result.isDuplicate = true;
+        }
+        seenMemberNumbers.add(mn);
+      }
+
+      return result;
     });
+
     setValidatedRows(validated);
+    setIsChecking(false);
     setStep('preview');
   };
 
