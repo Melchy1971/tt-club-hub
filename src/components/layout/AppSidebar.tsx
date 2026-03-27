@@ -105,12 +105,19 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-3">
-        {!collapsed && (
-          <p className="text-xs text-sidebar-foreground/50">
-            © 2026 TT-Manager Pro
+      <SidebarFooter className="p-3 space-y-2">
+        {!collapsed && user && (
+          <p className="text-xs text-sidebar-foreground/50 truncate">
+            {user.email}
           </p>
         )}
+        <button
+          onClick={signOut}
+          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+        >
+          <LogOut className="h-4 w-4 shrink-0" />
+          {!collapsed && <span>Abmelden</span>}
+        </button>
       </SidebarFooter>
     </Sidebar>
   );
