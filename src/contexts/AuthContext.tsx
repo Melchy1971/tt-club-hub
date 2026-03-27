@@ -41,14 +41,18 @@ const resolvePrimaryRole = (roles: Array<{ role: AppRole | null }> | null | unde
 const AuthContext = createContext<AuthContextValue>(initialContext);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthContextValue>(initialContext);
+  const [state, setState] = useState<AuthContextValue>({
+    ...initialContext,
+    isLoading: true,
+  });
   const requestVersionRef = useRef(0);
+  const initializedRef = useRef(false);
 
   const loadUserData = useCallback(async (session: Session | null) => {
     const requestVersion = ++requestVersionRef.current;
 
     if (!session?.user) {
-      if (requestVersion !== requestVersionRef.current) return;
+      // No session – immediately stop loading (no async work needed)
       setState((prev) => ({
         ...prev,
         user: null,
@@ -113,17 +117,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let isMounted = true;
 
+    // Restore session first – this is the source of truth
+    supabase.auth.getSession().then(({ data: { session: existing } }) => {
+      if (!isMounted) return;
+      initializedRef.current = true;
+      void loadUserData(existing);
+    });
+
+    // Listen for subsequent changes (sign-in, sign-out, token refresh)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, newSession) => {
       if (!isMounted) return;
-      setState((prev) => ({ ...prev, isLoading: true }));
+      // Only set loading for changes AFTER initial load
+      if (initializedRef.current) {
+        setState((prev) => ({ ...prev, isLoading: true }));
+      }
       void loadUserData(newSession);
-    });
-
-    void supabase.auth.getSession().then(({ data: { session: existing } }) => {
-      if (!isMounted) return;
-      void loadUserData(existing);
     });
 
     return () => {
