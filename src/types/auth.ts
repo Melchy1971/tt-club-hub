@@ -1,3 +1,5 @@
+import type { Enums, Tables } from '@/integrations/supabase/types';
+
 // === Rollen ===
 export const APP_ROLES = [
   'admin',
@@ -8,7 +10,9 @@ export const APP_ROLES = [
   'developer',
 ] as const;
 
-export type AppRole = (typeof APP_ROLES)[number];
+export type AppRole = Enums<'app_role'>;
+export type RoleRow = Tables<'roles'>;
+export type UserRoleRow = Tables<'user_roles'>;
 
 // === Berechtigungen ===
 export type Permission =
@@ -100,10 +104,35 @@ export const ROLE_PERMISSIONS: Record<AppRole, Permission[]> = {
   mitglied: ['member:read', 'team:read', 'match:read'],
 };
 
-// === Auth-User ===
+// === Auth-Fehler ===
+export type AuthProblem =
+  | 'NO_SESSION'
+  | 'NO_USER_ROLES'
+  | 'INVALID_ROLE'
+  | 'MISSING_MEMBER'
+  | 'UNKNOWN';
+
+// === Auth-Modelle ===
 export interface AuthUser {
   readonly id: string;
-  email: string;
-  name: string;
-  role: AppRole;
+  email: string | null;
+  name?: string | null;
+  role: AppRole | null;
+}
+
+export interface AuthContextValue {
+  user: AuthUser | null;
+  session: import('@supabase/supabase-js').Session | null;
+  role: AppRole | null;
+  member: Tables<'members'> | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  problem: AuthProblem | null;
+  refresh: () => Promise<void>;
+  signOut: () => Promise<void>;
+}
+
+export interface GuardResult {
+  allowed: boolean;
+  reason: 'OK' | AuthProblem | 'ROLE_DENIED';
 }
