@@ -357,33 +357,60 @@ export default function Import() {
 
   /* Import */
   const importMut = useMutation({
-    mutationFn: async (rows: Record<string, any>[]) => {
-      // Batch insert in chunks of 100
+    mutationFn: async ({ inserts, updates }: { inserts: Record<string, any>[]; updates: { id: string; data: Record<string, any> }[] }) => {
       const chunkSize = 100;
-      let inserted = 0;
-      for (let i = 0; i < rows.length; i += chunkSize) {
-        const chunk = rows.slice(i, i + chunkSize);
+      let insertedCount = 0;
+      let updatedCount = 0;
+
+      // Insert new rows
+      for (let i = 0; i < inserts.length; i += chunkSize) {
+        const chunk = inserts.slice(i, i + chunkSize);
         const { error } = await supabase.from('members').insert(chunk as any);
-        if (error) throw new Error(`Fehler bei Zeile ${i + 1}: ${error.message}`);
-        inserted += chunk.length;
+        if (error) throw new Error(`Fehler beim Einfügen (Zeile ${i + 1}): ${error.message}`);
+        insertedCount += chunk.length;
       }
-      return inserted;
+
+      // Update existing rows
+      for (const { id, data } of updates) {
+        const { error } = await supabase.from('members').update(data as any).eq('id', id);
+        if (error) throw new Error(`Fehler beim Aktualisieren (${id}): ${error.message}`);
+        updatedCount++;
+      }
+
+      return { insertedCount, updatedCount };
     },
-    onSuccess: (count) => {
-      toast.success(`${count} Mitglied${count !== 1 ? 'er' : ''} erfolgreich importiert`);
+    onSuccess: ({ insertedCount, updatedCount }) => {
+      const parts: string[] = [];
+      if (insertedCount > 0) parts.push(`${insertedCount} neu importiert`);
+      if (updatedCount > 0) parts.push(`${updatedCount} aktualisiert`);
+      toast.success(`Mitglieder: ${parts.join(', ')}`);
       queryClient.invalidateQueries({ queryKey: ['members'] });
       setStep('done');
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const duplicateRows = validatedRows.filter((r) => r.isDuplicate && r.errors.length === 0);
-  const validRows = validatedRows.filter((r) => r.errors.length === 0 && (!skipDuplicates || !r.isDuplicate));
+  const duplicateRows = validatedRows.filter((r) => r.isDuplicate && r.errors.length === 0 && r.existingMemberId);
+  const csvOnlyDuplicates = validatedRows.filter((r) => r.isDuplicate && r.errors.length === 0 && !r.existingMemberId);
+  const newRows = validatedRows.filter((r) => r.errors.length === 0 && !r.isDuplicate);
   const errorRows = validatedRows.filter((r) => r.errors.length > 0);
 
+  const importableNewRows = [...newRows, ...csvOnlyDuplicates.filter((_, i) => i === 0 || !skipDuplicates)];
+  const importableDuplicateUpdates = duplicateMode === 'update' ? duplicateRows : [];
+  const skippedDuplicates = duplicateMode === 'skip' ? duplicateRows : [];
+
+  const totalImportable = importableNewRows.length + importableDuplicateUpdates.length;
+
   const handleImport = () => {
-    if (validRows.length === 0) { toast.error('Keine gültigen Zeilen zum Importieren'); return; }
-    importMut.mutate(validRows.map((r) => r.data));
+    if (totalImportable === 0) { toast.error('Keine Zeilen zum Importieren'); return; }
+
+    const inserts = importableNewRows.map((r) => r.data);
+    const updates = importableDuplicateUpdates.map((r) => ({
+      id: r.existingMemberId!,
+      data: r.data,
+    }));
+
+    importMut.mutate({ inserts, updates });
   };
 
   const reset = () => {
