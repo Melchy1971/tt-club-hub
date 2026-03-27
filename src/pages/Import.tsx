@@ -614,13 +614,18 @@ export default function Import() {
                   </TableHeader>
                   <TableBody>
                     {validatedRows.map((row, i) => (
-                      <TableRow key={i} className={row.errors.length > 0 ? 'bg-destructive/5' : ''}>
+                      <TableRow key={i} className={cn(
+                        row.errors.length > 0 ? 'bg-destructive/5' : '',
+                        row.isDuplicate && skipDuplicates ? 'opacity-50' : '',
+                      )}>
                         <TableCell className="text-muted-foreground">{i + 1}</TableCell>
                         <TableCell>
                           {row.errors.length > 0 ? (
                             <Badge variant="destructive" className="text-xs">Fehler</Badge>
+                          ) : row.isDuplicate ? (
+                            <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">Duplikat</Badge>
                           ) : row.warnings.length > 0 ? (
-                            <Badge variant="outline" className="text-xs border-yellow-500 text-yellow-600">Warnung</Badge>
+                            <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">Warnung</Badge>
                           ) : (
                             <Badge variant="secondary" className="text-xs">OK</Badge>
                           )}
