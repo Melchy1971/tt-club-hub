@@ -117,17 +117,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let isMounted = true;
 
+    // Restore session first – this is the source of truth
+    supabase.auth.getSession().then(({ data: { session: existing } }) => {
+      if (!isMounted) return;
+      initializedRef.current = true;
+      void loadUserData(existing);
+    });
+
+    // Listen for subsequent changes (sign-in, sign-out, token refresh)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, newSession) => {
       if (!isMounted) return;
-      setState((prev) => ({ ...prev, isLoading: true }));
+      // Only set loading for changes AFTER initial load
+      if (initializedRef.current) {
+        setState((prev) => ({ ...prev, isLoading: true }));
+      }
       void loadUserData(newSession);
-    });
-
-    void supabase.auth.getSession().then(({ data: { session: existing } }) => {
-      if (!isMounted) return;
-      void loadUserData(existing);
     });
 
     return () => {
