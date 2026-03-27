@@ -41,14 +41,18 @@ const resolvePrimaryRole = (roles: Array<{ role: AppRole | null }> | null | unde
 const AuthContext = createContext<AuthContextValue>(initialContext);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthContextValue>(initialContext);
+  const [state, setState] = useState<AuthContextValue>({
+    ...initialContext,
+    isLoading: true,
+  });
   const requestVersionRef = useRef(0);
+  const initializedRef = useRef(false);
 
   const loadUserData = useCallback(async (session: Session | null) => {
     const requestVersion = ++requestVersionRef.current;
 
     if (!session?.user) {
-      if (requestVersion !== requestVersionRef.current) return;
+      // No session – immediately stop loading (no async work needed)
       setState((prev) => ({
         ...prev,
         user: null,
