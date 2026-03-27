@@ -517,7 +517,9 @@ export default function Import() {
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={reset}>Zurück</Button>
-              <Button onClick={proceedToPreview}>Weiter zur Vorschau</Button>
+              <Button onClick={proceedToPreview} disabled={isChecking}>
+                {isChecking ? 'Prüfe Duplikate…' : 'Weiter zur Vorschau'}
+              </Button>
             </div>
           </CardContent>
         </Card>
