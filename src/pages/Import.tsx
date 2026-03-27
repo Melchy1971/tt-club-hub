@@ -704,14 +704,29 @@ export default function Import() {
             </CardContent>
           </Card>
 
+          {importMut.isPending && importTotal > 0 && (
+            <Card>
+              <CardContent className="pt-6 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Importiere Mitglieder…</span>
+                  <span className="text-muted-foreground">{importProgress} / {importTotal}</span>
+                </div>
+                <Progress value={(importProgress / importTotal) * 100} className="h-2" />
+                <p className="text-xs text-muted-foreground">
+                  {Math.round((importProgress / importTotal) * 100)}% abgeschlossen
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setStep('mapping')}>Zurück</Button>
+            <Button variant="outline" onClick={() => setStep('mapping')} disabled={importMut.isPending}>Zurück</Button>
             <Button
               onClick={handleImport}
               disabled={totalImportable === 0 || importMut.isPending}
             >
               {importMut.isPending
-                ? 'Importiere…'
+                ? `Importiere… (${importProgress}/${importTotal})`
                 : `${totalImportable} Mitglied${totalImportable !== 1 ? 'er' : ''} importieren${importableDuplicateUpdates.length > 0 ? ` (${importableDuplicateUpdates.length} Updates)` : ''}`}
             </Button>
           </div>
