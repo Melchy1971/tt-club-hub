@@ -26,7 +26,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/common/EmptyState';
 import { Constants } from '@/integrations/supabase/types';
-import type { Member, MemberInsert } from '@/types';
+import type { MemberInsert } from '@/types';
+import type { MemberUI, MemberCreateDTO } from '@/types/member';
 
 const AGE_GROUP_LABELS: Record<string, string> = {
   herren: 'Herren', damen: 'Damen',
@@ -62,44 +63,43 @@ const emptyForm = {
 
 type FormState = typeof emptyForm;
 
-function memberToForm(m: Member): FormState {
+function memberToForm(m: MemberUI): FormState {
   return {
-    first_name: m.first_name,
-    last_name: m.last_name,
+    first_name: m.firstName,
+    last_name: m.lastName,
     email: m.email ?? '',
     phone: m.phone ?? '',
-    date_of_birth: m.date_of_birth ?? '',
-    gender: m.gender ?? '',
+    date_of_birth: '',
+    gender: '',
     street: m.street ?? '',
-    zip_code: m.zip_code ?? '',
+    zip_code: m.zipCode ?? '',
     city: m.city ?? '',
-    member_number: m.member_number ?? '',
-    age_group: m.age_group ?? '',
-    ttr_rating: m.ttr_rating?.toString() ?? '',
-    qttr_rating: m.qttr_rating?.toString() ?? '',
-    entry_date: m.entry_date,
-    notes: m.notes ?? '',
-    is_active: m.is_active,
+    member_number: m.memberNumber ?? '',
+    age_group: m.ageGroup ?? '',
+    ttr_rating: m.ttr?.toString() ?? '',
+    qttr_rating: m.qttr?.toString() ?? '',
+    entry_date: m.entryDate ?? new Date().toISOString().slice(0, 10),
+    notes: '',
+    is_active: m.isActive,
   };
 }
 
-function formToInsert(f: FormState): MemberInsert {
+function formToInsert(f: FormState): MemberCreateDTO {
   return {
     first_name: f.first_name.trim(),
     last_name: f.last_name.trim(),
     email: f.email.trim() || null,
     phone: f.phone.trim() || null,
     date_of_birth: f.date_of_birth || null,
-    gender: (f.gender || null) as MemberInsert['gender'],
+    gender: (f.gender || null) as MemberCreateDTO['gender'],
     street: f.street.trim() || null,
     zip_code: f.zip_code.trim() || null,
     city: f.city.trim() || null,
     member_number: f.member_number.trim() || null,
-    age_group: (f.age_group || null) as MemberInsert['age_group'],
+    age_group: (f.age_group || null) as MemberCreateDTO['age_group'],
     ttr_rating: f.ttr_rating ? parseInt(f.ttr_rating, 10) : null,
     qttr_rating: f.qttr_rating ? parseInt(f.qttr_rating, 10) : null,
     entry_date: f.entry_date,
-    notes: f.notes.trim() || null,
     is_active: f.is_active,
   };
 }
