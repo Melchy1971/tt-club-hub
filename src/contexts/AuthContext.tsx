@@ -82,10 +82,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: supaUser.email ?? null,
         name:
           supaUser.user_metadata?.full_name ??
-          [supaUser.user_metadata?.first_name, supaUser.user_metadata?.last_name]
+          ([supaUser.user_metadata?.first_name, supaUser.user_metadata?.last_name]
             .filter(Boolean)
-            .join(' ') ||
-          null,
+            .join(' ') || null),
         role: roleIsValid ? primaryRole : null,
       },
       session,
