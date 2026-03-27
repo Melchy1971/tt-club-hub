@@ -547,7 +547,16 @@ export default function Import() {
             </Card>
             <Card className="flex-1">
               <CardContent className="pt-6 flex items-center gap-3">
-                <AlertCircle className="h-8 w-8 text-yellow-500" />
+                <AlertCircle className="h-8 w-8 text-amber-500" />
+                <div>
+                  <p className="text-2xl font-bold">{duplicateRows.length}</p>
+                  <p className="text-sm text-muted-foreground">Duplikate</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="flex-1">
+              <CardContent className="pt-6 flex items-center gap-3">
+                <AlertCircle className="h-8 w-8 text-amber-500" />
                 <div>
                   <p className="text-2xl font-bold">{validatedRows.filter((r) => r.warnings.length > 0).length}</p>
                   <p className="text-sm text-muted-foreground">Warnungen</p>
@@ -555,6 +564,21 @@ export default function Import() {
               </CardContent>
             </Card>
           </div>
+
+          {duplicateRows.length > 0 && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="flex items-center justify-between">
+                <span>
+                  {duplicateRows.length} Duplikat{duplicateRows.length !== 1 ? 'e' : ''} erkannt (gleiche E-Mail oder Mitgliedsnr.).
+                </span>
+                <label className="flex items-center gap-2 cursor-pointer ml-4 shrink-0">
+                  <Switch checked={skipDuplicates} onCheckedChange={setSkipDuplicates} />
+                  <span className="text-sm">Duplikate überspringen</span>
+                </label>
+              </AlertDescription>
+            </Alert>
+          )}
 
           {errorRows.length > 0 && (
             <Alert variant="destructive">
