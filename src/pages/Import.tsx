@@ -141,7 +141,10 @@ interface RowValidation {
   errors: string[];
   warnings: string[];
   isDuplicate?: boolean;
+  existingMemberId?: string; // ID of existing member if duplicate
 }
+
+type DuplicateMode = 'skip' | 'update';
 
 function validateRow(raw: Record<string, string>): RowValidation {
   const errors: string[] = [];
@@ -233,6 +236,7 @@ export default function Import() {
   const [dragOver, setDragOver] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
   const [skipDuplicates, setSkipDuplicates] = useState(true);
+  const [duplicateMode, setDuplicateMode] = useState<DuplicateMode>('skip');
 
   /* Upload */
   const handleFile = useCallback((file: File) => {
@@ -290,17 +294,17 @@ export default function Import() {
     setIsChecking(true);
 
     // Fetch existing members for duplicate check
-    let existingEmails = new Set<string>();
-    let existingMemberNumbers = new Set<string>();
+    const existingByEmail = new Map<string, string>(); // email -> id
+    const existingByMemberNumber = new Map<string, string>(); // member_number -> id
     try {
       const { data: existing } = await supabase
         .from('members')
-        .select('email, member_number');
+        .select('id, email, member_number');
       (existing ?? []).forEach((m) => {
-        if (m.email) existingEmails.add(m.email.toLowerCase());
-        if (m.member_number) existingMemberNumbers.add(m.member_number.toLowerCase());
+        if (m.email) existingByEmail.set(m.email.toLowerCase(), m.id);
+        if (m.member_number) existingByMemberNumber.set(m.member_number.toLowerCase(), m.id);
       });
-    } catch { /* ignore, proceed without duplicate check */ }
+    } catch { /* ignore */ }
 
     // Build row objects and check duplicates
     const seenEmails = new Set<string>();
@@ -315,14 +319,16 @@ export default function Import() {
 
       // Duplicate check: existing DB
       const email = result.data.email?.toLowerCase();
-      if (email && existingEmails.has(email)) {
+      if (email && existingByEmail.has(email)) {
         result.warnings.push(`Duplikat: E-Mail "${result.data.email}" existiert bereits`);
         result.isDuplicate = true;
+        result.existingMemberId = existingByEmail.get(email);
       }
       const mn = result.data.member_number?.toLowerCase();
-      if (mn && existingMemberNumbers.has(mn)) {
+      if (mn && existingByMemberNumber.has(mn)) {
         result.warnings.push(`Duplikat: Mitgliedsnr. "${result.data.member_number}" existiert bereits`);
         result.isDuplicate = true;
+        result.existingMemberId = result.existingMemberId || existingByMemberNumber.get(mn);
       }
 
       // Duplicate check: within CSV
