@@ -24,6 +24,20 @@ const initialContext: AuthContextValue = {
   signOut: async () => {},
 };
 
+const ROLE_PRIORITY: AppRole[] = ['developer', 'admin', 'vorstand', 'trainer', 'spieler', 'mitglied'];
+
+const resolvePrimaryRole = (roles: Array<{ role: AppRole | null }> | null | undefined): AppRole | null => {
+  const validRoles = (roles ?? [])
+    .map((entry) => entry.role)
+    .filter((role): role is AppRole => !!role && APP_ROLES.includes(role));
+
+  for (const candidate of ROLE_PRIORITY) {
+    if (validRoles.includes(candidate)) return candidate;
+  }
+
+  return null;
+};
+
 const AuthContext = createContext<AuthContextValue>(initialContext);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -60,8 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       problem = 'UNKNOWN';
     }
 
-    const primaryRole = roles?.[0]?.role as AppRole | undefined;
-    const roleIsValid = !!primaryRole && APP_ROLES.includes(primaryRole);
+    const primaryRole = resolvePrimaryRole((roles as Array<{ role: AppRole | null }>) ?? []);
+    const roleIsValid = !!primaryRole;
 
     if (!roles?.length) {
       problem = 'NO_USER_ROLES';
