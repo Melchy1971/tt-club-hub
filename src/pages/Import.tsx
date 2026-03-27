@@ -234,6 +234,8 @@ export default function Import() {
   const [fileName, setFileName] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+  const [importTotal, setImportTotal] = useState(0);
   
   const [duplicateMode, setDuplicateMode] = useState<DuplicateMode>('skip');
 
@@ -357,23 +359,30 @@ export default function Import() {
   /* Import */
   const importMut = useMutation({
     mutationFn: async ({ inserts, updates }: { inserts: Record<string, any>[]; updates: { id: string; data: Record<string, any> }[] }) => {
+      const total = inserts.length + updates.length;
+      setImportTotal(total);
+      setImportProgress(0);
+
       const chunkSize = 100;
       let insertedCount = 0;
       let updatedCount = 0;
+      let processed = 0;
 
-      // Insert new rows
       for (let i = 0; i < inserts.length; i += chunkSize) {
         const chunk = inserts.slice(i, i + chunkSize);
         const { error } = await supabase.from('members').insert(chunk as any);
         if (error) throw new Error(`Fehler beim Einfügen (Zeile ${i + 1}): ${error.message}`);
         insertedCount += chunk.length;
+        processed += chunk.length;
+        setImportProgress(processed);
       }
 
-      // Update existing rows
       for (const { id, data } of updates) {
         const { error } = await supabase.from('members').update(data as any).eq('id', id);
         if (error) throw new Error(`Fehler beim Aktualisieren (${id}): ${error.message}`);
         updatedCount++;
+        processed++;
+        setImportProgress(processed);
       }
 
       return { insertedCount, updatedCount };
