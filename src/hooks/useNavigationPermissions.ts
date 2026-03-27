@@ -29,6 +29,7 @@ export const useNavigationPermissions = () => {
         groups[route.group].push(route);
       }
     }
+    console.log('[NAV] role:', role, 'system routes:', groups.system.map(r => r.name));
     return groups;
   }, [allowedRoutes]);
 
