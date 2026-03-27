@@ -34,6 +34,8 @@ export type AgeGroup = Enums<'age_group'>;
 export type MatchStatus = Enums<'match_status'>;
 export type Gender = Enums<'gender'>;
 
+export * from './member';
+
 // === Dashboard ===
 export interface DashboardStats {
   totalMembers: number;

@@ -1,13 +1,18 @@
 import { z } from 'zod';
 
-export const memberGenderSchema = z.enum(['männlich', 'weiblich', 'divers']);
+const dateString = z
+  .string()
+  .trim()
+  .refine((v) => !v || !Number.isNaN(Date.parse(v)), 'Ungültiges Datum');
+
+export const memberGenderSchema = z.enum(['maennlich', 'weiblich', 'divers']);
 
 export const memberCreateSchema = z.object({
   first_name: z.string().min(1, 'Vorname ist erforderlich').max(100),
   last_name: z.string().min(1, 'Nachname ist erforderlich').max(100),
-  email: z.string().email('Ungültige E-Mail-Adresse'),
+  email: z.string().email('Ungültige E-Mail-Adresse').nullable().optional(),
   phone: z.string().max(30).nullable().optional(),
-  date_of_birth: z.string().date('Ungültiges Datum').nullable().optional(),
+  date_of_birth: dateString.nullable().optional(),
   gender: memberGenderSchema.nullable().optional(),
   street: z.string().max(200).nullable().optional(),
   zip_code: z
@@ -17,12 +22,13 @@ export const memberCreateSchema = z.object({
     .optional(),
   city: z.string().max(100).nullable().optional(),
   member_number: z.string().max(20).nullable().optional(),
-  entry_date: z.string().date('Ungültiges Eintrittsdatum'),
-  exit_date: z.string().date('Ungültiges Austrittsdatum').nullable().optional(),
+  entry_date: dateString.optional(),
+  exit_date: dateString.nullable().optional(),
   is_active: z.boolean().default(true),
   ttr_rating: z.number().int().min(0).max(3500).nullable().optional(),
   qttr_rating: z.number().int().min(0).max(3500).nullable().optional(),
-  club_id: z.string().uuid('Ungültige Verein-ID').nullable().optional(),
+  age_group: z.string().nullable().optional(),
+  user_id: z.string().uuid('Ungültige User-ID').nullable().optional(),
 });
 
 export const memberUpdateSchema = memberCreateSchema.partial();
