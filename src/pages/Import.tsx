@@ -3,7 +3,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Upload, FileText, AlertCircle, CheckCircle2, X, Download } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
@@ -141,7 +140,10 @@ interface RowValidation {
   errors: string[];
   warnings: string[];
   isDuplicate?: boolean;
+  existingMemberId?: string; // ID of existing member if duplicate
 }
+
+type DuplicateMode = 'skip' | 'update';
 
 function validateRow(raw: Record<string, string>): RowValidation {
   const errors: string[] = [];
@@ -232,7 +234,8 @@ export default function Import() {
   const [fileName, setFileName] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
-  const [skipDuplicates, setSkipDuplicates] = useState(true);
+  
+  const [duplicateMode, setDuplicateMode] = useState<DuplicateMode>('skip');
 
   /* Upload */
   const handleFile = useCallback((file: File) => {
@@ -290,17 +293,17 @@ export default function Import() {
     setIsChecking(true);
 
     // Fetch existing members for duplicate check
-    let existingEmails = new Set<string>();
-    let existingMemberNumbers = new Set<string>();
+    const existingByEmail = new Map<string, string>(); // email -> id
+    const existingByMemberNumber = new Map<string, string>(); // member_number -> id
     try {
       const { data: existing } = await supabase
         .from('members')
-        .select('email, member_number');
+        .select('id, email, member_number');
       (existing ?? []).forEach((m) => {
-        if (m.email) existingEmails.add(m.email.toLowerCase());
-        if (m.member_number) existingMemberNumbers.add(m.member_number.toLowerCase());
+        if (m.email) existingByEmail.set(m.email.toLowerCase(), m.id);
+        if (m.member_number) existingByMemberNumber.set(m.member_number.toLowerCase(), m.id);
       });
-    } catch { /* ignore, proceed without duplicate check */ }
+    } catch { /* ignore */ }
 
     // Build row objects and check duplicates
     const seenEmails = new Set<string>();
@@ -315,14 +318,16 @@ export default function Import() {
 
       // Duplicate check: existing DB
       const email = result.data.email?.toLowerCase();
-      if (email && existingEmails.has(email)) {
+      if (email && existingByEmail.has(email)) {
         result.warnings.push(`Duplikat: E-Mail "${result.data.email}" existiert bereits`);
         result.isDuplicate = true;
+        result.existingMemberId = existingByEmail.get(email);
       }
       const mn = result.data.member_number?.toLowerCase();
-      if (mn && existingMemberNumbers.has(mn)) {
+      if (mn && existingByMemberNumber.has(mn)) {
         result.warnings.push(`Duplikat: Mitgliedsnr. "${result.data.member_number}" existiert bereits`);
         result.isDuplicate = true;
+        result.existingMemberId = result.existingMemberId || existingByMemberNumber.get(mn);
       }
 
       // Duplicate check: within CSV
@@ -351,33 +356,60 @@ export default function Import() {
 
   /* Import */
   const importMut = useMutation({
-    mutationFn: async (rows: Record<string, any>[]) => {
-      // Batch insert in chunks of 100
+    mutationFn: async ({ inserts, updates }: { inserts: Record<string, any>[]; updates: { id: string; data: Record<string, any> }[] }) => {
       const chunkSize = 100;
-      let inserted = 0;
-      for (let i = 0; i < rows.length; i += chunkSize) {
-        const chunk = rows.slice(i, i + chunkSize);
+      let insertedCount = 0;
+      let updatedCount = 0;
+
+      // Insert new rows
+      for (let i = 0; i < inserts.length; i += chunkSize) {
+        const chunk = inserts.slice(i, i + chunkSize);
         const { error } = await supabase.from('members').insert(chunk as any);
-        if (error) throw new Error(`Fehler bei Zeile ${i + 1}: ${error.message}`);
-        inserted += chunk.length;
+        if (error) throw new Error(`Fehler beim Einfügen (Zeile ${i + 1}): ${error.message}`);
+        insertedCount += chunk.length;
       }
-      return inserted;
+
+      // Update existing rows
+      for (const { id, data } of updates) {
+        const { error } = await supabase.from('members').update(data as any).eq('id', id);
+        if (error) throw new Error(`Fehler beim Aktualisieren (${id}): ${error.message}`);
+        updatedCount++;
+      }
+
+      return { insertedCount, updatedCount };
     },
-    onSuccess: (count) => {
-      toast.success(`${count} Mitglied${count !== 1 ? 'er' : ''} erfolgreich importiert`);
+    onSuccess: ({ insertedCount, updatedCount }) => {
+      const parts: string[] = [];
+      if (insertedCount > 0) parts.push(`${insertedCount} neu importiert`);
+      if (updatedCount > 0) parts.push(`${updatedCount} aktualisiert`);
+      toast.success(`Mitglieder: ${parts.join(', ')}`);
       queryClient.invalidateQueries({ queryKey: ['members'] });
       setStep('done');
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const duplicateRows = validatedRows.filter((r) => r.isDuplicate && r.errors.length === 0);
-  const validRows = validatedRows.filter((r) => r.errors.length === 0 && (!skipDuplicates || !r.isDuplicate));
+  const duplicateRows = validatedRows.filter((r) => r.isDuplicate && r.errors.length === 0 && r.existingMemberId);
+  const csvOnlyDuplicates = validatedRows.filter((r) => r.isDuplicate && r.errors.length === 0 && !r.existingMemberId);
+  const newRows = validatedRows.filter((r) => r.errors.length === 0 && !r.isDuplicate);
   const errorRows = validatedRows.filter((r) => r.errors.length > 0);
 
+  const importableNewRows = newRows;
+  const importableDuplicateUpdates = duplicateMode === 'update' ? duplicateRows : [];
+  const skippedDuplicates = duplicateMode === 'skip' ? duplicateRows : [];
+
+  const totalImportable = importableNewRows.length + importableDuplicateUpdates.length;
+
   const handleImport = () => {
-    if (validRows.length === 0) { toast.error('Keine gültigen Zeilen zum Importieren'); return; }
-    importMut.mutate(validRows.map((r) => r.data));
+    if (totalImportable === 0) { toast.error('Keine Zeilen zum Importieren'); return; }
+
+    const inserts = importableNewRows.map((r) => r.data);
+    const updates = importableDuplicateUpdates.map((r) => ({
+      id: r.existingMemberId!,
+      data: r.data,
+    }));
+
+    importMut.mutate({ inserts, updates });
   };
 
   const reset = () => {
@@ -534,7 +566,7 @@ export default function Import() {
               <CardContent className="pt-6 flex items-center gap-3">
                 <CheckCircle2 className="h-8 w-8 text-green-500" />
                 <div>
-                  <p className="text-2xl font-bold">{validRows.length}</p>
+                  <p className="text-2xl font-bold">{totalImportable}</p>
                   <p className="text-sm text-muted-foreground">Gültige Zeilen</p>
                 </div>
               </CardContent>
@@ -571,14 +603,32 @@ export default function Import() {
           {duplicateRows.length > 0 && (
             <Alert>
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="flex items-center justify-between">
-                <span>
+              <AlertDescription className="space-y-3">
+                <p>
                   {duplicateRows.length} Duplikat{duplicateRows.length !== 1 ? 'e' : ''} erkannt (gleiche E-Mail oder Mitgliedsnr.).
-                </span>
-                <label className="flex items-center gap-2 cursor-pointer ml-4 shrink-0">
-                  <Switch checked={skipDuplicates} onCheckedChange={setSkipDuplicates} />
-                  <span className="text-sm">Duplikate überspringen</span>
-                </label>
+                </p>
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="duplicateMode"
+                      checked={duplicateMode === 'skip'}
+                      onChange={() => setDuplicateMode('skip')}
+                      className="accent-primary"
+                    />
+                    <span className="text-sm">Duplikate überspringen</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="duplicateMode"
+                      checked={duplicateMode === 'update'}
+                      onChange={() => setDuplicateMode('update')}
+                      className="accent-primary"
+                    />
+                    <span className="text-sm">Bestehende Mitglieder aktualisieren</span>
+                  </label>
+                </div>
               </AlertDescription>
             </Alert>
           )}
@@ -616,7 +666,7 @@ export default function Import() {
                     {validatedRows.map((row, i) => (
                       <TableRow key={i} className={cn(
                         row.errors.length > 0 ? 'bg-destructive/5' : '',
-                        row.isDuplicate && skipDuplicates ? 'opacity-50' : '',
+                        row.isDuplicate && duplicateMode === 'skip' ? 'opacity-50' : '',
                       )}>
                         <TableCell className="text-muted-foreground">{i + 1}</TableCell>
                         <TableCell>
@@ -649,11 +699,11 @@ export default function Import() {
             <Button variant="outline" onClick={() => setStep('mapping')}>Zurück</Button>
             <Button
               onClick={handleImport}
-              disabled={validRows.length === 0 || importMut.isPending}
+              disabled={totalImportable === 0 || importMut.isPending}
             >
               {importMut.isPending
                 ? 'Importiere…'
-                : `${validRows.length} Mitglied${validRows.length !== 1 ? 'er' : ''} importieren`}
+                : `${totalImportable} Mitglied${totalImportable !== 1 ? 'er' : ''} importieren${importableDuplicateUpdates.length > 0 ? ` (${importableDuplicateUpdates.length} Updates)` : ''}`}
             </Button>
           </div>
         </div>
@@ -667,7 +717,7 @@ export default function Import() {
             <div>
               <h2 className="text-xl font-semibold">Import abgeschlossen</h2>
               <p className="text-muted-foreground">
-                {validRows.length} Mitglied{validRows.length !== 1 ? 'er' : ''} wurden erfolgreich importiert.
+                Der Import wurde erfolgreich durchgeführt.
               </p>
             </div>
             <div className="flex justify-center gap-2">
