@@ -11,6 +11,8 @@ import Dashboard from "./pages/Dashboard";
 import Members from "./pages/Members";
 import Teams from "./pages/Teams";
 import Matches from "./pages/Matches";
+import Schedule from "./pages/Schedule";
+import TeamSchedule from "./pages/TeamSchedule";
 import SettingsPage from "./pages/SettingsPage";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
@@ -39,6 +41,8 @@ const App = () => (
                   <Route path="/mitglieder" element={<Members />} />
                   <Route path="/mannschaften" element={<Teams />} />
                   <Route path="/spielbetrieb" element={<Matches />} />
+                  <Route path="/spielplan" element={<Schedule />} />
+                  <Route path="/spielplan/team/:teamId" element={<TeamSchedule />} />
                   <Route path="/ersatzstellung" element={<PlaceholderPage title="Ersatzstellung" />} />
                   <Route path="/training" element={<PlaceholderPage title="Training" />} />
                   <Route path="/kommunikation" element={<PlaceholderPage title="Kommunikation" />} />
