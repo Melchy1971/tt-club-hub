@@ -75,17 +75,23 @@ export const teamAssignmentService = {
     return tryCatch(async () => {
       let query = supabase
         .from('team_members')
-        .select(seasonId ? '*, teams!inner(season_id)' : '*')
+        .select('*')
         .eq('member_id', memberId);
 
       if (seasonId) {
-        query = query.eq('teams.season_id', seasonId);
+        // Filter by season via a sub-query on team_id
+        const { data: teamIds } = await supabase
+          .from('teams')
+          .select('id')
+          .eq('season_id', seasonId);
+        const ids = (teamIds ?? []).map((t) => t.id);
+        if (ids.length === 0) return [];
+        query = query.in('team_id', ids);
       }
 
       const { data, error } = await query;
       if (error) throw fromSupabaseError(error);
-      // teams-Join aus der Response entfernen; nur team_members-Felder zurückgeben.
-      return (data ?? []).map(({ teams: _t, ...row }) => row as unknown as TeamMember);
+      return (data ?? []) as TeamMember[];
     }, toAppError);
   },
 

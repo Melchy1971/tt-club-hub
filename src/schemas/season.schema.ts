@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
-export const ageGroupSchema = z.enum(['erwachsene', 'jugend']);
+// Re-use the canonical ageGroupSchema from team.schema to avoid duplicate exports
+import { ageGroupSchema } from './team.schema';
+export { ageGroupSchema as seasonAgeGroupSchema };
 
 export const seasonCreateSchema = z
   .object({
