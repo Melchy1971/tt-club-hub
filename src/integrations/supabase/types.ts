@@ -192,6 +192,7 @@ export type Database = {
         Row: {
           away_score: number | null
           away_team: string
+          code: string | null
           created_at: string
           home_score: number | null
           home_team: string
@@ -200,6 +201,7 @@ export type Database = {
           match_date: string
           match_day: number | null
           match_time: string | null
+          pin: string | null
           report_text: string | null
           season_id: string
           status: Database["public"]["Enums"]["match_status"]
@@ -210,6 +212,7 @@ export type Database = {
         Insert: {
           away_score?: number | null
           away_team: string
+          code?: string | null
           created_at?: string
           home_score?: number | null
           home_team: string
@@ -218,6 +221,7 @@ export type Database = {
           match_date: string
           match_day?: number | null
           match_time?: string | null
+          pin?: string | null
           report_text?: string | null
           season_id: string
           status?: Database["public"]["Enums"]["match_status"]
@@ -228,6 +232,7 @@ export type Database = {
         Update: {
           away_score?: number | null
           away_team?: string
+          code?: string | null
           created_at?: string
           home_score?: number | null
           home_team?: string
@@ -236,6 +241,7 @@ export type Database = {
           match_date?: string
           match_day?: number | null
           match_time?: string | null
+          pin?: string | null
           report_text?: string | null
           season_id?: string
           status?: Database["public"]["Enums"]["match_status"]

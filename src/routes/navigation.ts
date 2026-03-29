@@ -34,7 +34,8 @@ export const ROUTES: RouteConfig[] = [
   { path: '/', name: 'Dashboard', module: 'dashboard', icon: LayoutDashboard, group: 'sport', exact: true },
   { path: '/mitglieder', name: 'Mitglieder', module: 'members', icon: Users, group: 'sport', requiredPermission: 'member:read' },
   { path: '/mannschaften', name: 'Mannschaften', module: 'teams', icon: Shield, group: 'sport', requiredPermission: 'team:read' },
-  { path: '/spielbetrieb', name: 'Spielplan', module: 'matches', icon: CalendarDays, group: 'sport', requiredPermission: 'match:read' },
+  { path: '/spielbetrieb', name: 'Spielbetrieb', module: 'matches', icon: CalendarDays, group: 'sport', requiredPermission: 'match:read' },
+  { path: '/spielplan', name: 'Spielplan', module: 'schedule', icon: CalendarDays, group: 'sport', requiredPermission: 'match:read' },
   { path: '/ersatzstellung', name: 'Ersatzstellung', module: 'substitutes', icon: UserCheck, group: 'sport', requiredPermission: 'substitute:read' },
   { path: '/training', name: 'Training', module: 'training', icon: Dumbbell, group: 'sport', requiredPermission: 'training:read' },
 

@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
-export const ageGroupSchema = z.enum(['erwachsene', 'jugend']);
+// Re-use the canonical ageGroupSchema from team.schema to avoid duplicate exports
+import { ageGroupSchema } from './team.schema';
+export { ageGroupSchema as seasonAgeGroupSchema };
 
 export const seasonCreateSchema = z
   .object({
@@ -8,7 +10,7 @@ export const seasonCreateSchema = z
     start_date: z.string().date('Ungültiges Startdatum'),
     end_date: z.string().date('Ungültiges Enddatum'),
     is_current: z.boolean().default(false),
-    age_group: ageGroupSchema.default('erwachsene'),
+    age_group: ageGroupSchema.default('herren'),
   })
   .refine((data) => data.start_date < data.end_date, {
     message: 'Startdatum muss vor dem Enddatum liegen',
