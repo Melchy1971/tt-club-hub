@@ -2,15 +2,18 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, Edit, Trophy, Home, Plane, MapPin, KeyRound } from 'lucide-react';
+import { ArrowLeft, Edit, Trophy, Home, Plane, MapPin, KeyRound, Users, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { EditResultDialog } from '@/components/schedule/EditResultDialog';
 import { EditMatchDialog } from '@/components/schedule/EditMatchDialog';
 import { BulkPinCodeDialog } from '@/components/schedule/BulkPinCodeDialog';
+import { AvailabilityDialog } from '@/components/schedule/AvailabilityDialog';
+import { LineupDialog } from '@/components/schedule/LineupDialog';
 import type { ScheduleMatch, ScheduleMatchUpdate } from '@/types';
 
 const STATUS_LABELS: Record<string, string> = {
