@@ -65,6 +65,90 @@ export type Database = {
         }
         Relationships: []
       }
+      match_availability: {
+        Row: {
+          created_at: string
+          id: string
+          match_id: string
+          member_id: string
+          note: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          match_id: string
+          member_id: string
+          note?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          match_id?: string
+          member_id?: string
+          note?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_availability_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_availability_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      match_lineup: {
+        Row: {
+          created_at: string
+          id: string
+          match_id: string
+          member_id: string
+          position: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          match_id: string
+          member_id: string
+          position?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          match_id?: string
+          member_id?: string
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_lineup_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_lineup_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       members: {
         Row: {
           age_group: Database["public"]["Enums"]["age_group"] | null
