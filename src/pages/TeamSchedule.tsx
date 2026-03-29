@@ -47,6 +47,8 @@ export default function TeamSchedule() {
   const queryClient = useQueryClient();
   const [editResultMatch, setEditResultMatch] = useState<ScheduleMatch | null>(null);
   const [editMatch, setEditMatch] = useState<ScheduleMatch | null>(null);
+  const [availabilityMatch, setAvailabilityMatch] = useState<ScheduleMatch | null>(null);
+  const [lineupMatch, setLineupMatch] = useState<ScheduleMatch | null>(null);
   const [bulkPinOpen, setBulkPinOpen] = useState(false);
 
   const { data: team } = useQuery({
