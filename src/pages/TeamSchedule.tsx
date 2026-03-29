@@ -327,6 +327,24 @@ export default function TeamSchedule() {
           setBulkPinOpen(false);
         }}
       />
+
+      {availabilityMatch && teamId && (
+        <AvailabilityDialog
+          match={availabilityMatch}
+          teamId={teamId}
+          open={!!availabilityMatch}
+          onOpenChange={(open) => !open && setAvailabilityMatch(null)}
+        />
+      )}
+
+      {lineupMatch && teamId && (
+        <LineupDialog
+          match={lineupMatch}
+          teamId={teamId}
+          open={!!lineupMatch}
+          onOpenChange={(open) => !open && setLineupMatch(null)}
+        />
+      )}
     </div>
   );
 }
