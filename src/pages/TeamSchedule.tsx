@@ -2,15 +2,18 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, Edit, Trophy, Home, Plane, MapPin, KeyRound } from 'lucide-react';
+import { ArrowLeft, Edit, Trophy, Home, Plane, MapPin, KeyRound, Users, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { EditResultDialog } from '@/components/schedule/EditResultDialog';
 import { EditMatchDialog } from '@/components/schedule/EditMatchDialog';
 import { BulkPinCodeDialog } from '@/components/schedule/BulkPinCodeDialog';
+import { AvailabilityDialog } from '@/components/schedule/AvailabilityDialog';
+import { LineupDialog } from '@/components/schedule/LineupDialog';
 import type { ScheduleMatch, ScheduleMatchUpdate } from '@/types';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -44,6 +47,8 @@ export default function TeamSchedule() {
   const queryClient = useQueryClient();
   const [editResultMatch, setEditResultMatch] = useState<ScheduleMatch | null>(null);
   const [editMatch, setEditMatch] = useState<ScheduleMatch | null>(null);
+  const [availabilityMatch, setAvailabilityMatch] = useState<ScheduleMatch | null>(null);
+  const [lineupMatch, setLineupMatch] = useState<ScheduleMatch | null>(null);
   const [bulkPinOpen, setBulkPinOpen] = useState(false);
 
   const { data: team } = useQuery({
@@ -165,7 +170,7 @@ export default function TeamSchedule() {
                 <TableHead>Pin</TableHead>
                 <TableHead>Code</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="w-20"></TableHead>
+                <TableHead className="w-32"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -247,13 +252,34 @@ export default function TeamSchedule() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setEditMatch(match)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
+                      <TooltipProvider>
+                        <div className="flex items-center gap-1">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" onClick={() => setAvailabilityMatch(match)}>
+                                <Users className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Verfügbarkeiten</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" onClick={() => setLineupMatch(match)}>
+                                <ClipboardList className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Aufstellung</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" onClick={() => setEditMatch(match)}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Bearbeiten</TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </TooltipProvider>
                     </TableCell>
                   </TableRow>
                 );
@@ -301,6 +327,24 @@ export default function TeamSchedule() {
           setBulkPinOpen(false);
         }}
       />
+
+      {availabilityMatch && teamId && (
+        <AvailabilityDialog
+          match={availabilityMatch}
+          teamId={teamId}
+          open={!!availabilityMatch}
+          onOpenChange={(open) => !open && setAvailabilityMatch(null)}
+        />
+      )}
+
+      {lineupMatch && teamId && (
+        <LineupDialog
+          match={lineupMatch}
+          teamId={teamId}
+          open={!!lineupMatch}
+          onOpenChange={(open) => !open && setLineupMatch(null)}
+        />
+      )}
     </div>
   );
 }

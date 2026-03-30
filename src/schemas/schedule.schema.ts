@@ -68,7 +68,30 @@ export const scheduleMatchCreateSchema = z
     if (data.status === 'beendet') scoreRefinement(data, ctx);
   });
 
-export const scheduleMatchUpdateSchema = scheduleMatchCreateSchema
+// Extract the inner object schema before superRefine to allow .partial()
+const scheduleMatchBaseSchema = z.object({
+  season_id: z.string().uuid('Ungültige Saison-ID'),
+  team_id: z.string().uuid('Ungültige Mannschafts-ID'),
+  match_date: z.string().date('Datum im Format YYYY-MM-DD angeben'),
+  match_time: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/, 'Zeit im Format HH:MM angeben')
+    .nullable()
+    .optional(),
+  match_day: z.number().int().min(1).max(99).nullable().optional(),
+  home_team: z.string().min(1, 'Heimmannschaft ist erforderlich').max(150),
+  away_team: z.string().min(1, 'Gastmannschaft ist erforderlich').max(150),
+  is_home: z.boolean(),
+  home_score: scoreField,
+  away_score: scoreField,
+  venue_id: z.string().uuid('Ungültige Hallen-ID').nullable().optional(),
+  status: matchStatusSchema.default('geplant'),
+  pin: z.string().max(20).nullable().optional(),
+  code: z.string().max(20).nullable().optional(),
+  report_text: z.string().max(5000).nullable().optional(),
+});
+
+export const scheduleMatchUpdateSchema = scheduleMatchBaseSchema
   .partial()
   .omit({ season_id: true, team_id: true });
 

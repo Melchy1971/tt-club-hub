@@ -24,6 +24,11 @@ export type ScheduleMatchUpdate = TablesUpdate<'schedule_matches'>;
 export type Venue = Tables<'venues'>;
 export type VenueInsert = TablesInsert<'venues'>;
 
+export type MatchAvailability = Tables<'match_availability'>;
+export type MatchAvailabilityInsert = TablesInsert<'match_availability'>;
+export type MatchLineup = Tables<'match_lineup'>;
+export type MatchLineupInsert = TablesInsert<'match_lineup'>;
+
 export type Role = Tables<'roles'>;
 export type UserRole = Tables<'user_roles'>;
 export type ClubSettings = Tables<'club_settings'>;
