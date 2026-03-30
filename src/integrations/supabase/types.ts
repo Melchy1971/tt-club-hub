@@ -390,6 +390,74 @@ export type Database = {
         }
         Relationships: []
       }
+      substitute_requests: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          match_id: string
+          note: string | null
+          requesting_member_id: string
+          status: Database["public"]["Enums"]["substitute_status"]
+          substitute_member_id: string | null
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          match_id: string
+          note?: string | null
+          requesting_member_id: string
+          status?: Database["public"]["Enums"]["substitute_status"]
+          substitute_member_id?: string | null
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          match_id?: string
+          note?: string | null
+          requesting_member_id?: string
+          status?: Database["public"]["Enums"]["substitute_status"]
+          substitute_member_id?: string | null
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "substitute_requests_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "substitute_requests_requesting_member_id_fkey"
+            columns: ["requesting_member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "substitute_requests_substitute_member_id_fkey"
+            columns: ["substitute_member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "substitute_requests_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_members: {
         Row: {
           created_at: string
@@ -585,6 +653,7 @@ export type Database = {
         | "verschoben"
         | "abgesagt"
       permission_level: "none" | "read" | "write"
+      substitute_status: "pending" | "accepted" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -737,6 +806,7 @@ export const Constants = {
       gender: ["maennlich", "weiblich", "divers"],
       match_status: ["geplant", "laufend", "beendet", "verschoben", "abgesagt"],
       permission_level: ["none", "read", "write"],
+      substitute_status: ["pending", "accepted", "rejected"],
     },
   },
 } as const
