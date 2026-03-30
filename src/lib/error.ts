@@ -35,7 +35,11 @@ export const errors = {
 
 // === Supabase-Fehler normalisieren ===
 
-export function fromSupabaseError(error: { message: string; code?: string }): AppError {
+export function fromSupabaseError(error: unknown): AppError {
+  if (error == null || typeof error !== 'object' || !('message' in error)) {
+    return errors.internal(getErrorMessage(error));
+  }
+  const e = error as { message: string; code?: string };
   switch (error.code) {
     case 'PGRST116':
       return errors.notFound('Datensatz');
