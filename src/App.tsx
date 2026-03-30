@@ -19,6 +19,7 @@ import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import PlaceholderPage from "./pages/PlaceholderPage";
+import Training from "./pages/Training";
 import ImportPage from "./pages/Import";
 import Seasons from "./pages/Seasons";
 import Roles from "./pages/Roles";
@@ -45,7 +46,7 @@ const App = () => (
                   <Route path="/spielplan" element={<Schedule />} />
                   <Route path="/spielplan/team/:teamId" element={<TeamSchedule />} />
                   <Route path="/ersatzstellung" element={<Substitutes />} />
-                  <Route path="/training" element={<PlaceholderPage title="Training" />} />
+                  <Route path="/training" element={<Training />} />
                   <Route path="/kommunikation" element={<PlaceholderPage title="Kommunikation" />} />
                   <Route path="/vorstand" element={<PlaceholderPage title="Vorstand" />} />
                   <Route path="/import" element={<ImportPage />} />

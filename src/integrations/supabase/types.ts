@@ -551,6 +551,66 @@ export type Database = {
           },
         ]
       }
+      training_bookings: {
+        Row: {
+          booking_date: string
+          created_at: string
+          created_by: string
+          end_time: string | null
+          id: string
+          location: string | null
+          note: string | null
+          partner_id: string
+          requester_id: string
+          start_time: string
+          status: Database["public"]["Enums"]["training_booking_status"]
+          updated_at: string
+        }
+        Insert: {
+          booking_date: string
+          created_at?: string
+          created_by: string
+          end_time?: string | null
+          id?: string
+          location?: string | null
+          note?: string | null
+          partner_id: string
+          requester_id: string
+          start_time: string
+          status?: Database["public"]["Enums"]["training_booking_status"]
+          updated_at?: string
+        }
+        Update: {
+          booking_date?: string
+          created_at?: string
+          created_by?: string
+          end_time?: string | null
+          id?: string
+          location?: string | null
+          note?: string | null
+          partner_id?: string
+          requester_id?: string
+          start_time?: string
+          status?: Database["public"]["Enums"]["training_booking_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_bookings_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_bookings_requester_id_fkey"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           assigned_by: string | null
@@ -654,6 +714,7 @@ export type Database = {
         | "abgesagt"
       permission_level: "none" | "read" | "write"
       substitute_status: "pending" | "accepted" | "rejected"
+      training_booking_status: "pending" | "confirmed" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -807,6 +868,7 @@ export const Constants = {
       match_status: ["geplant", "laufend", "beendet", "verschoben", "abgesagt"],
       permission_level: ["none", "read", "write"],
       substitute_status: ["pending", "accepted", "rejected"],
+      training_booking_status: ["pending", "confirmed", "cancelled"],
     },
   },
 } as const
