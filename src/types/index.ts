@@ -44,6 +44,9 @@ export type TrainingBookingUpdate = TablesUpdate<'training_bookings'>;
 
 export type BookingStatus = 'pending' | 'confirmed' | 'waitlisted' | 'cancelled';
 
+// === News ===
+export type { NewsArticle, NewsArticleUI, NewsCreateDTO, NewsUpdateDTO, NewsFilter, NewsStatus, NewsVisibility } from './domain/news';
+
 // === Enum Types ===
 export type AppRole = Enums<'app_role'>;
 export type AgeGroup = Enums<'age_group'>;
