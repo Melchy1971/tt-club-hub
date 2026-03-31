@@ -33,6 +33,17 @@ export type Role = Tables<'roles'>;
 export type UserRole = Tables<'user_roles'>;
 export type ClubSettings = Tables<'club_settings'>;
 
+// === Training ===
+export type TrainingSession = Tables<'training_sessions'>;
+export type TrainingSessionInsert = TablesInsert<'training_sessions'>;
+export type TrainingSessionUpdate = TablesUpdate<'training_sessions'>;
+
+export type TrainingBooking = Tables<'training_bookings'>;
+export type TrainingBookingInsert = TablesInsert<'training_bookings'>;
+export type TrainingBookingUpdate = TablesUpdate<'training_bookings'>;
+
+export type BookingStatus = 'pending' | 'confirmed' | 'waitlisted' | 'cancelled';
+
 // === Enum Types ===
 export type AppRole = Enums<'app_role'>;
 export type AgeGroup = Enums<'age_group'>;
