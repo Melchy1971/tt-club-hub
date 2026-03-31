@@ -20,6 +20,7 @@ import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import Communication from "./pages/Communication";
+import Board from "./pages/Board";
 import Training from "./pages/Training";
 import ImportPage from "./pages/Import";
 import Seasons from "./pages/Seasons";
@@ -49,7 +50,7 @@ const App = () => (
                   <Route path="/ersatzstellung" element={<Substitutes />} />
                   <Route path="/training" element={<Training />} />
                   <Route path="/kommunikation" element={<Communication />} />
-                  <Route path="/vorstand" element={<PlaceholderPage title="Vorstand" />} />
+                  <Route path="/vorstand" element={<Board />} />
                   <Route path="/import" element={<ImportPage />} />
                   <Route path="/admin" element={<PlaceholderPage title="Administration" />} />
                   <Route path="/rollen" element={<Roles />} />

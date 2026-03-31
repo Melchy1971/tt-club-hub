@@ -248,6 +248,77 @@ export type Database = {
           },
         ]
       }
+      meeting_documents: {
+        Row: {
+          created_at: string
+          file_url: string
+          id: string
+          meeting_id: string
+          title: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          file_url: string
+          id?: string
+          meeting_id: string
+          title: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string
+          file_url?: string
+          id?: string
+          meeting_id?: string
+          title?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_documents_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meetings: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          location: string | null
+          meeting_date: string
+          meeting_time: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          location?: string | null
+          meeting_date: string
+          meeting_time?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          location?: string | null
+          meeting_date?: string
+          meeting_time?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       members: {
         Row: {
           age_group: Database["public"]["Enums"]["age_group"] | null
@@ -326,6 +397,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          image_url: string | null
           is_published: boolean
           published_at: string | null
           title: string
@@ -336,6 +408,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          image_url?: string | null
           is_published?: boolean
           published_at?: string | null
           title: string
@@ -346,6 +419,7 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          image_url?: string | null
           is_published?: boolean
           published_at?: string | null
           title?: string
