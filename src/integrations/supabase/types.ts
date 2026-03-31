@@ -65,6 +65,105 @@ export type Database = {
         }
         Relationships: []
       }
+      communication_list_members: {
+        Row: {
+          created_at: string
+          id: string
+          list_id: string
+          member_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          list_id: string
+          member_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          list_id?: string
+          member_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_list_members_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "communication_lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_list_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      communication_lists: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          list_type: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          list_type?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          list_type?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      documents: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          file_url: string | null
+          id: string
+          title: string
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          title: string
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          title?: string
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Relationships: []
+      }
       match_availability: {
         Row: {
           created_at: string
@@ -218,6 +317,39 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
           zip_code?: string | null
+        }
+        Relationships: []
+      }
+      news: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string
+          id: string
+          is_published: boolean
+          published_at: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          published_at?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          published_at?: string | null
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
