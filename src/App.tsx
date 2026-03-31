@@ -19,6 +19,7 @@ import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import PlaceholderPage from "./pages/PlaceholderPage";
+import Communication from "./pages/Communication";
 import Training from "./pages/Training";
 import ImportPage from "./pages/Import";
 import Seasons from "./pages/Seasons";
