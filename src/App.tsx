@@ -48,7 +48,7 @@ const App = () => (
                   <Route path="/spielplan/team/:teamId" element={<TeamSchedule />} />
                   <Route path="/ersatzstellung" element={<Substitutes />} />
                   <Route path="/training" element={<Training />} />
-                  <Route path="/kommunikation" element={<PlaceholderPage title="Kommunikation" />} />
+                  <Route path="/kommunikation" element={<Communication />} />
                   <Route path="/vorstand" element={<PlaceholderPage title="Vorstand" />} />
                   <Route path="/import" element={<ImportPage />} />
                   <Route path="/admin" element={<PlaceholderPage title="Administration" />} />
