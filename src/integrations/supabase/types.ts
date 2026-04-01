@@ -454,6 +454,7 @@ export type Database = {
           is_active: boolean
           last_name: string
           member_number: string | null
+          mobile: string | null
           notes: string | null
           phone: string | null
           qttr_rating: number | null
@@ -477,6 +478,7 @@ export type Database = {
           is_active?: boolean
           last_name: string
           member_number?: string | null
+          mobile?: string | null
           notes?: string | null
           phone?: string | null
           qttr_rating?: number | null
@@ -500,6 +502,7 @@ export type Database = {
           is_active?: boolean
           last_name?: string
           member_number?: string | null
+          mobile?: string | null
           notes?: string | null
           phone?: string | null
           qttr_rating?: number | null
