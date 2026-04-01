@@ -53,7 +53,7 @@ const App = () => (
                   <Route path="/kommunikation" element={<Communication />} />
                   <Route path="/vorstand" element={<Board />} />
                   <Route path="/import" element={<ImportPage />} />
-                  <Route path="/admin" element={<PlaceholderPage title="Administration" />} />
+                  <Route path="/admin" element={<Admin />} />
                   <Route path="/rollen" element={<Roles />} />
                   <Route path="/einstellungen" element={<SettingsPage />} />
                   <Route path="/saisons" element={<Seasons />} />
