@@ -66,7 +66,7 @@ export function buildRatingExport(
     team:     '–',
   }));
 
-  const tableSection: ExportTableSection<RatingRow> = {
+  const tableSection: ExportTableSection = {
     type:  'table',
     title: `${filtered.length} Mitglieder`,
     columns: [
