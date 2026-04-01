@@ -1,5 +1,20 @@
 import type { FieldValues, UseFormReturn } from 'react-hook-form';
 
+function flattenDirtyPaths(value: unknown, prefix = ''): string[] {
+  if (value === true) {
+    return prefix ? [prefix] : [];
+  }
+
+  if (!value || typeof value !== 'object') {
+    return [];
+  }
+
+  return Object.entries(value as Record<string, unknown>).flatMap(([key, nested]) => {
+    const nextPrefix = prefix ? `${prefix}.${key}` : key;
+    return flattenDirtyPaths(nested, nextPrefix);
+  });
+}
+
 export function hasFormErrors<TFieldValues extends FieldValues>(form: UseFormReturn<TFieldValues>): boolean {
   return Object.keys(form.formState.errors).length > 0;
 }
@@ -7,13 +22,9 @@ export function hasFormErrors<TFieldValues extends FieldValues>(form: UseFormRet
 export function createDirtyStateSummary<TFieldValues extends FieldValues>(
   form: UseFormReturn<TFieldValues>,
 ): { isDirty: boolean; dirtyFields: string[] } {
-  const dirtyEntries = Object.entries(form.formState.dirtyFields)
-    .filter(([, isDirty]) => Boolean(isDirty))
-    .map(([key]) => key);
-
   return {
     isDirty: form.formState.isDirty,
-    dirtyFields: dirtyEntries,
+    dirtyFields: flattenDirtyPaths(form.formState.dirtyFields),
   };
 }
 
