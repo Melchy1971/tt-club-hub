@@ -34,18 +34,31 @@ export const teamService = {
    *
    * Filter-Optionen:
    *   season_id   – nur Mannschaften dieser Saison
+   *   season_phase_id – nur Mannschaften dieser Saisonphase
    *   is_active   – Aktiv-/Inaktiv-Filter
-   *   active_season – ignoriert season_id und nimmt stattdessen die aktuelle Saison
-   *                   (seasons.is_current = true); nutzt den idx_teams_season_active-Index.
+   *   active_phase – ignoriert season_id/season_phase_id und nimmt stattdessen
+   *                  die aktive Phase (season_phases.is_active = true)
+   *   active_season – deprecated Fallback auf altes Saisonmodell (seasons.is_current = true)
    */
   async list(filters: TeamFilterInput = {}): Promise<ApiResult<Team[]>> {
     const parsed = teamFilterSchema.safeParse(filters);
     if (!parsed.success) {
       return err(errors.validation(parsed.error.message));
     }
-    const { is_active, season_id, season_phase_id, active_season } = parsed.data;
+    const { is_active, season_id, season_phase_id, active_phase, active_season } = parsed.data;
 
     return tryCatch(async () => {
+      if (active_phase) {
+        let q = supabase
+          .from('teams')
+          .select('*, season_phases!inner(id, is_active)')
+          .eq('season_phases.is_active', true);
+        if (is_active !== undefined) q = q.eq('is_active', is_active);
+        const { data, error } = await q.order('name');
+        if (error) throw fromSupabaseError(error);
+        return (data ?? []).map(({ season_phases: _sp, ...team }) => team as unknown as Team);
+      }
+
       if (active_season) {
         // JOIN auf seasons, damit kein zweiter Round-Trip nötig ist.
         // idx_teams_season_active_only (partial WHERE is_active=true) wird genutzt,
@@ -72,12 +85,11 @@ export const teamService = {
   },
 
   /**
-   * Alle aktiven Mannschaften der aktuell gesetzten Saison (is_current = true).
-   * Kurzform für list({ active_season: true, is_active: true }).
-   * Nutzt idx_teams_season_active_only.
+   * Alle aktiven Mannschaften der aktuell aktiven Saisonphase.
+   * Kurzform für list({ active_phase: true, is_active: true }).
    */
   async getByActiveSeason(): Promise<ApiResult<Team[]>> {
-    return teamService.list({ active_season: true, is_active: true });
+    return teamService.list({ active_phase: true, is_active: true });
   },
 
   async getById(id: string): Promise<ApiResult<Team | null>> {
