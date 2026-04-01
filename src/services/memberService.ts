@@ -40,11 +40,11 @@ export const mapMemberDbToUI = (row: Member): MemberUI => ({
   updatedAt: row.updated_at,
 });
 
-export const mapMemberCreateDtoToDb = (payload: MemberCreateDTO): MemberCreateDTO =>
-  memberCreateSchema.parse(payload);
+export const mapMemberCreateDtoToDb = (payload: MemberCreateDTO) =>
+  memberCreateSchema.parse(payload) as MemberCreateDTO;
 
-export const mapMemberUpdateDtoToDb = (payload: MemberUpdateDTO): MemberUpdateDTO =>
-  memberUpdateSchema.parse(payload);
+export const mapMemberUpdateDtoToDb = (payload: MemberUpdateDTO) =>
+  memberUpdateSchema.parse(payload) as MemberUpdateDTO;
 
 const handleError = (error: any, context: string) => {
   const message = error?.message ?? 'Unbekannter Fehler';

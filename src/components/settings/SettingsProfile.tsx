@@ -509,6 +509,7 @@ export default function SettingsProfile() {
         zip_code: member.zip_code ?? '',
         city: member.city ?? '',
         date_of_birth: member.date_of_birth ?? null,
+        entry_date: member.entry_date ?? null,
         ttr_rating: member.ttr_rating ?? null,
         qttr_rating: member.qttr_rating ?? null,
       });
