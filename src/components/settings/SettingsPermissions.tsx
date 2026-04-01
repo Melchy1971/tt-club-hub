@@ -66,7 +66,7 @@ export default function SettingsPermissions() {
                 <TableHead className="sticky left-0 bg-card z-10">Modul</TableHead>
                 {roles.map((role) => (
                   <TableHead key={role.id} className="text-center min-w-[120px]">
-                    {APP_ROLE_LABELS[role.name]}
+                    {APP_ROLE_LABELS[role.name as keyof typeof APP_ROLE_LABELS] ?? role.display_name}
                   </TableHead>
                 ))}
               </TableRow>

@@ -223,7 +223,7 @@ export const teamService = {
 
       const captainByTeam = new Map<string, TeamOverview['captain']>();
       for (const row of captainRows ?? []) {
-        const memberData = row.members as unknown as { id: string; first_name: string; last_name: string } | null;
+        const memberData = row.members as unknown as TeamOverview['captain'];
         captainByTeam.set(row.id, memberData ?? null);
       }
 
