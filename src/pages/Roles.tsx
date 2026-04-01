@@ -18,20 +18,25 @@ import {
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Constants } from '@/integrations/supabase/types';
 import type { AppRole } from '@/types/auth';
 import {
-  APP_ROLE_LABELS,
   MODULE_KEYS,
-  moduleLabels,
-  permissionLabels,
+  SYSTEM_APP_ROLES,
   type ModuleKey,
   type PermissionLevel,
 } from '@/constants/permissionsMatrix';
-
-// --- Constants ---
-
-const SYSTEM_ROLES = Constants.public.Enums.app_role;
+import {
+  APP_ROLE_LABELS,
+  MODULE_LABELS,
+  PERMISSION_LEVEL_LABELS,
+} from '@/constants/permissionLabels';
+import {
+  assertRoleMutable,
+  resolveRolePermissions,
+  validateRolePermissionsPayload,
+  type RolePermissionsMap,
+  type RoleWithPermissions,
+} from '@/lib/auth/permissionsResolver';
 
 type PermLevel = PermissionLevel;
 
@@ -41,13 +46,12 @@ const LEVEL_COLORS: Record<PermLevel, string> = {
   write: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
 };
 
-// --- Types ---
-
 interface RoleModulePerm {
-  id: string;
-  role: AppRole;
+  roleId: string;
+  roleName: AppRole;
   module: ModuleKey;
   level: PermLevel;
+  isSystem: boolean;
 }
 
 interface UserRoleRow {
@@ -64,16 +68,23 @@ interface MemberRow {
   email: string | null;
 }
 
-// --- Data fetching ---
-
 async function fetchPermissions(): Promise<RoleModulePerm[]> {
   const { data, error } = await supabase
-    .from('role_module_permissions')
-    .select('*')
-    .order('role')
-    .order('module');
+    .from('roles')
+    .select('id, name, permissions, is_system')
+    .order('name');
   if (error) throw error;
-  return (data ?? []) as RoleModulePerm[];
+
+  return ((data ?? []) as RoleWithPermissions[]).flatMap((role) => {
+    const permissions = resolveRolePermissions(role);
+    return MODULE_KEYS.map((module): RoleModulePerm => ({
+      roleId: role.id,
+      roleName: role.name,
+      module,
+      level: permissions[module],
+      isSystem: !!role.is_system,
+    }));
+  });
 }
 
 async function fetchUserRoles(): Promise<UserRoleRow[]> {
@@ -92,8 +103,6 @@ async function fetchMembers(): Promise<MemberRow[]> {
   return (data ?? []) as MemberRow[];
 }
 
-// --- Component ---
-
 export default function Roles() {
   const queryClient = useQueryClient();
   const { role: currentRole } = useAuth();
@@ -103,41 +112,54 @@ export default function Roles() {
   const { data: userRoles = [] } = useQuery({ queryKey: ['user_roles'], queryFn: fetchUserRoles });
   const { data: members = [] } = useQuery({ queryKey: ['members_linked'], queryFn: fetchMembers });
 
-  // Local editable state for the matrix
   const [editedPerms, setEditedPerms] = useState<Record<string, PermLevel>>({});
   const [assignOpen, setAssignOpen] = useState(false);
   const [assignUserId, setAssignUserId] = useState('');
   const [assignRole, setAssignRole] = useState<AppRole | ''>('');
 
-  // Build permission lookup: role:module → level
-  const permLookup = (role: string, module: ModuleKey): PermLevel => {
+  const permLookup = (role: AppRole, module: ModuleKey): PermLevel => {
     const key = `${role}:${module}`;
     if (editedPerms[key] !== undefined) return editedPerms[key];
-    const found = perms.find((p) => p.role === role && p.module === module);
+    const found = perms.find((p) => p.roleName === role && p.module === module);
     return found?.level ?? 'none';
   };
 
   const hasChanges = Object.keys(editedPerms).length > 0;
 
-  // --- Mutations ---
-
   const saveMut = useMutation({
     mutationFn: async () => {
       for (const [key, level] of Object.entries(editedPerms)) {
         const [role, module] = key.split(':');
-        const existing = perms.find((p) => p.role === role && p.module === module);
-        if (existing) {
-          const { error } = await supabase
-            .from('role_module_permissions')
-            .update({ level } as any)
-            .eq('id', existing.id);
-          if (error) throw error;
-        } else {
-          const { error } = await supabase
-            .from('role_module_permissions')
-            .insert({ role, module, level } as any);
-          if (error) throw error;
+        const roleName = role as AppRole;
+        const moduleKey = module as ModuleKey;
+
+        const roleEntries = perms.filter((entry) => entry.roleName === roleName);
+        const roleEntry = roleEntries[0];
+        if (!roleEntry) throw new Error(`Rolle ${roleName} nicht gefunden`);
+
+        const mutability = assertRoleMutable({
+          id: roleEntry.roleId,
+          name: roleName,
+          is_system: roleEntry.isSystem,
+        });
+        if (!mutability.mutable) throw new Error(mutability.reason);
+
+        const currentMatrix = roleEntries.reduce((acc, entry) => ({
+          ...acc,
+          [entry.module]: entry.level,
+        }), {} as RolePermissionsMap);
+
+        const nextPermissions: RolePermissionsMap = { ...currentMatrix, [moduleKey]: level };
+        const validation = validateRolePermissionsPayload(nextPermissions);
+        if (!validation.valid) {
+          throw new Error(validation.errors.join(', '));
         }
+
+        const { error } = await supabase
+          .from('roles')
+          .update({ permissions: nextPermissions } as never)
+          .eq('id', roleEntry.roleId);
+        if (error) throw error;
       }
     },
     onSuccess: () => {
@@ -175,7 +197,7 @@ export default function Roles() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  function setPermLevel(role: string, module: ModuleKey, level: PermLevel) {
+  function setPermLevel(role: AppRole, module: ModuleKey, level: PermLevel) {
     setEditedPerms((prev) => ({ ...prev, [`${role}:${module}`]: level }));
   }
 
@@ -184,7 +206,6 @@ export default function Roles() {
     return m ? `${m.last_name}, ${m.first_name}` : userId.slice(0, 8) + '…';
   }
 
-  // Members that have a user_id but are not yet in the assign select
   const assignableMembers = members.filter((m) => m.user_id);
 
   return (
@@ -215,14 +236,13 @@ export default function Roles() {
           <TabsTrigger value="roles">Rollenliste</TabsTrigger>
         </TabsList>
 
-        {/* --- Permission Matrix --- */}
         <TabsContent value="matrix" className="mt-4">
           <div className="rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="sticky left-0 bg-background z-10 min-w-[140px]">Modul</TableHead>
-                {SYSTEM_ROLES.map((r) => (
+                  {SYSTEM_APP_ROLES.map((r) => (
                     <TableHead key={r} className="text-center min-w-[120px]">
                       {APP_ROLE_LABELS[r] ?? r}
                     </TableHead>
@@ -233,9 +253,9 @@ export default function Roles() {
                 {MODULE_KEYS.map((mod) => (
                   <TableRow key={mod}>
                     <TableCell className="sticky left-0 bg-background z-10 font-medium">
-                      {moduleLabels[mod]}
+                      {MODULE_LABELS[mod]}
                     </TableCell>
-                    {SYSTEM_ROLES.map((role) => {
+                    {SYSTEM_APP_ROLES.map((role) => {
                       const level = permLookup(role, mod);
                       return (
                         <TableCell key={role} className="text-center p-1">
@@ -244,18 +264,18 @@ export default function Roles() {
                               value={level}
                               onValueChange={(v) => setPermLevel(role, mod, v as PermLevel)}
                             >
-                                <SelectTrigger className="h-8 text-xs w-full">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                {(Object.entries(permissionLabels) as [PermLevel, string][]).map(([value, label]) => (
+                              <SelectTrigger className="h-8 text-xs w-full">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {(Object.entries(PERMISSION_LEVEL_LABELS) as [PermLevel, string][]).map(([value, label]) => (
                                   <SelectItem key={value} value={value}>{label}</SelectItem>
                                 ))}
-                                </SelectContent>
-                              </Select>
+                              </SelectContent>
+                            </Select>
                           ) : (
                             <Badge className={`text-xs ${LEVEL_COLORS[level]}`}>
-                              {permissionLabels[level]}
+                              {PERMISSION_LEVEL_LABELS[level]}
                             </Badge>
                           )}
                         </TableCell>
@@ -268,7 +288,6 @@ export default function Roles() {
           </div>
         </TabsContent>
 
-        {/* --- Role Assignments --- */}
         <TabsContent value="assignments" className="mt-4">
           {userRoles.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">Keine Rollenzuweisungen vorhanden.</div>
@@ -309,7 +328,6 @@ export default function Roles() {
           )}
         </TabsContent>
 
-        {/* --- Role List --- */}
         <TabsContent value="roles" className="mt-4">
           <div className="rounded-md border">
             <Table>
@@ -321,7 +339,7 @@ export default function Roles() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {SYSTEM_ROLES.map((r) => {
+                {SYSTEM_APP_ROLES.map((r) => {
                   const count = userRoles.filter((ur) => ur.role === r).length;
                   return (
                     <TableRow key={r}>
@@ -344,7 +362,6 @@ export default function Roles() {
         </TabsContent>
       </Tabs>
 
-      {/* --- Assign Role Dialog --- */}
       <Dialog open={assignOpen} onOpenChange={(o) => !o && setAssignOpen(false)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -369,7 +386,7 @@ export default function Roles() {
               <Select value={assignRole} onValueChange={(v) => setAssignRole(v as AppRole)}>
                 <SelectTrigger><SelectValue placeholder="Rolle auswählen" /></SelectTrigger>
                 <SelectContent>
-                  {SYSTEM_ROLES.map((r) => (
+                  {SYSTEM_APP_ROLES.map((r) => (
                     <SelectItem key={r} value={r}>{APP_ROLE_LABELS[r] ?? r}</SelectItem>
                   ))}
                 </SelectContent>

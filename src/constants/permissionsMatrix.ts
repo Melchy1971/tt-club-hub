@@ -1,9 +1,7 @@
-import type { Database } from '@/integrations/supabase/types';
 import type { AppRole } from '@/types/auth';
 
 export const PERMISSION_LEVELS = ['none', 'read', 'write'] as const;
-
-export type PermissionLevel = Database['public']['Enums']['permission_level'];
+export type PermissionLevel = (typeof PERMISSION_LEVELS)[number];
 export const MODULE_KEYS = [
   'members',
   'teams',
@@ -20,46 +18,17 @@ export const MODULE_KEYS = [
 ] as const;
 
 export type ModuleKey = (typeof MODULE_KEYS)[number];
-
-export const APP_ROLE_LABELS: Record<AppRole, string> = {
-  developer: 'Entwickler',
-  admin: 'Administrator',
-  vorstand: 'Vorstand',
-  trainer: 'Trainer',
-  spieler: 'Spieler',
-  mitglied: 'Mitglied',
-};
-
-export const moduleLabels: Record<ModuleKey, string> = {
-  members: 'Mitglieder',
-  teams: 'Mannschaften',
-  matches: 'Spiele',
-  schedule: 'Spielplan',
-  seasons: 'Saisons',
-  training: 'Training',
-  substitutes: 'Ersatzstellung',
-  communication: 'Kommunikation',
-  board: 'Vorstand',
-  settings: 'Einstellungen',
-  import: 'Import',
-  admin: 'Administration',
-};
-
-export const permissionLabels: Record<PermissionLevel, string> = {
-  none: 'Keine',
-  read: 'Lesen',
-  write: 'Schreiben',
-};
+export const SYSTEM_APP_ROLES: readonly AppRole[] = [
+  'developer',
+  'admin',
+  'vorstand',
+  'trainer',
+  'spieler',
+  'mitglied',
+] as const;
 
 export const isPermissionLevel = (value: string): value is PermissionLevel =>
   (PERMISSION_LEVELS as readonly string[]).includes(value);
 
-export const fallbackModuleLabel = 'Unbekanntes Modul';
-
-export const getModuleLabel = (module: string): string => {
-  if (module in moduleLabels) {
-    return moduleLabels[module as ModuleKey];
-  }
-
-  return `${fallbackModuleLabel} (${module})`;
-};
+export const isModuleKey = (value: string): value is ModuleKey =>
+  (MODULE_KEYS as readonly string[]).includes(value);

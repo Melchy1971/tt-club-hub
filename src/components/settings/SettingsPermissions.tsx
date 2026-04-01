@@ -5,12 +5,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import {
-  APP_ROLE_LABELS,
   MODULE_KEYS,
-  getModuleLabel,
-  permissionLabels,
   type PermissionLevel,
 } from '@/constants/permissionsMatrix';
+import {
+  APP_ROLE_LABELS,
+  getModuleLabel,
+  PERMISSION_LEVEL_LABELS,
+} from '@/constants/permissionLabels';
 import {
   assertRoleMutable,
   resolveRolePermissions,
@@ -94,7 +96,7 @@ export default function SettingsPermissions() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {(Object.entries(permissionLabels) as [PermissionLevel, string][]).map(([value, label]) => (
+                            {(Object.entries(PERMISSION_LEVEL_LABELS) as [PermissionLevel, string][]).map(([value, label]) => (
                               <SelectItem key={value} value={value}>{label}</SelectItem>
                             ))}
                           </SelectContent>
