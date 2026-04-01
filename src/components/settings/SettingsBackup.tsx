@@ -36,7 +36,7 @@ export default function SettingsBackup() {
     setExporting(true);
     try {
       for (const key of selected) {
-        const { data, error } = await supabase.from(key as any).select('*');
+        const { data, error } = await (supabase as any).from(key).select('*');
         if (error || !data?.length) continue;
 
         const columns: ExportColumn[] = Object.keys(data[0]).map((k) => ({
@@ -46,13 +46,14 @@ export default function SettingsBackup() {
 
         const doc: ExportDocument = {
           title: `Backup – ${key}`,
+          filename: `backup_${key}_${new Date().toISOString().split('T')[0]}`,
           generatedAt: new Date().toISOString(),
           sections: [
             {
-              type: 'table',
+              type: 'table' as const,
               columns,
-              rows: data,
-            } as ExportTableSection,
+              rows: data as Record<string, unknown>[],
+            },
           ],
         };
 
