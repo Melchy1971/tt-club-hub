@@ -10,11 +10,15 @@ import {
   scheduleMatchFilterSchema,
   bulkPinCodeSchema,
   clickTTRowSchema,
+  vereinsspielplanRowSchema,
+  matchResultUpdateSchema,
   type ScheduleMatchCreateInput,
   type ScheduleMatchUpdateInput,
   type ScheduleMatchFilterInput,
   type BulkPinCodeInput,
   type ClickTTRow,
+  type VereinsspielplanRow,
+  type MatchResultUpdateInput,
 } from '@/schemas/schedule.schema';
 
 // ─── UI-Typ ────────────────────────────────────────────────────────────────────
@@ -169,6 +173,124 @@ export function parseScore(
   return { homeScore: parseInt(m[1], 10), awayScore: parseInt(m[2], 10) };
 }
 
+// ─── Vereinsspielplan-Normalisierung ────────────────────────────────────────────
+
+/**
+ * Parst "DD.MM.YYYY HH:MM" aus dem Termin-Feld.
+ * Gibt { date: "YYYY-MM-DD", time: "HH:MM" } zurück.
+ */
+export function parseTermin(raw: string): { date: string; time: string | null } | null {
+  const trimmed = raw.trim();
+  // "DD.MM.YYYY HH:MM"
+  const m = trimmed.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})\s+(\d{1,2}):(\d{2})$/);
+  if (m) {
+    const [, d, mo, y, h, min] = m;
+    return {
+      date: `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`,
+      time: `${h.padStart(2, '0')}:${min}`,
+    };
+  }
+  // Fallback: nur Datum ohne Zeit
+  const dateOnly = parseGermanDate(trimmed);
+  if (dateOnly) return { date: dateOnly, time: null };
+  return null;
+}
+
+/**
+ * Leitet die Runde (VR/RR/Pokal) in einen phase_type-kompatiblen Wert ab.
+ * VR → first_half, RR → second_half, Pokal/sonstige → null (kein Phase-Mapping)
+ */
+export function mapRundeToPhaseType(runde: string): 'first_half' | 'second_half' | null {
+  const normalized = runde.trim().toUpperCase();
+  if (normalized === 'VR') return 'first_half';
+  if (normalized === 'RR') return 'second_half';
+  return null;
+}
+
+export interface VereinsspielplanImportRow {
+  rowIndex: number;
+  match: ScheduleMatchInsert;
+  staffel: string;
+  runde: string;
+}
+
+export interface VereinsspielplanImportResult {
+  imported: VereinsspielplanImportRow[];
+  errors: Array<{ rowIndex: number; message: string }>;
+}
+
+/**
+ * Normalisiert rohe Vereinsspielplan-CSV-Zeilen zu Import-Objekten.
+ *
+ * @param rows          Rohdaten aus dem CSV-Import (Array von Objekten)
+ * @param teamId        UUID der Mannschaft
+ * @param seasonId      UUID der Saison
+ * @param seasonPhaseId UUID der Saisonphase
+ * @param clubName      Vereinsname für Heim/Auswärts-Erkennung (z.B. "TTC Zaberfeld")
+ */
+export function normalizeVereinsspielplanRows(
+  rows: unknown[],
+  teamId: string,
+  seasonId: string,
+  seasonPhaseId: string,
+  clubName: string,
+): VereinsspielplanImportResult {
+  const imported: VereinsspielplanImportRow[] = [];
+  const rowErrors: Array<{ rowIndex: number; message: string }> = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const parsed = vereinsspielplanRowSchema.safeParse(rows[i]);
+    if (!parsed.success) {
+      rowErrors.push({
+        rowIndex: i,
+        message: parsed.error.issues.map((iss) => iss.message).join('; '),
+      });
+      continue;
+    }
+
+    const row: VereinsspielplanRow = parsed.data;
+
+    // "spielfrei"-Einträge überspringen
+    const homeNorm = row.HeimMannschaft.trim().toLowerCase();
+    const awayNorm = row.GastMannschaft.trim().toLowerCase();
+    if (homeNorm === 'spielfrei' || awayNorm === 'spielfrei') {
+      continue;
+    }
+
+    const terminParsed = parseTermin(row.Termin);
+    if (!terminParsed) {
+      rowErrors.push({ rowIndex: i, message: `Ungültiger Termin: "${row.Termin}"` });
+      continue;
+    }
+
+    const isHome = deriveIsHome(row.HeimMannschaft, clubName);
+
+    const insert: ScheduleMatchInsert = {
+      team_id: teamId,
+      season_id: seasonId,
+      season_phase_id: seasonPhaseId,
+      match_day: null,
+      match_date: terminParsed.date,
+      match_time: terminParsed.time,
+      home_team: row.HeimMannschaft.trim(),
+      away_team: row.GastMannschaft.trim(),
+      is_home: isHome,
+      home_score: null,
+      away_score: null,
+      status: 'geplant',
+    };
+
+    imported.push({
+      rowIndex: i,
+      match: insert,
+      staffel: row.Staffel,
+      runde: row.Runde,
+    });
+  }
+
+  return { imported, errors: rowErrors };
+}
+
 // ─── click-TT Normalisierung ───────────────────────────────────────────────────
 
 export interface ClickTTImportRow {
@@ -184,11 +306,6 @@ export interface ClickTTImportResult {
 
 /**
  * Normalisiert rohe click-TT-Zeilen zu `ScheduleMatchInsert`-Objekten.
- *
- * @param rows        Rohdaten aus dem click-TT-Export
- * @param teamId      UUID der eigenen Mannschaft
- * @param seasonId    UUID der Saison
- * @param clubTeamName Vereinsname wie in click-TT (für Home/Away-Derivation)
  */
 export function normalizeClickTTRows(
   rows: unknown[],
@@ -229,9 +346,6 @@ export function normalizeClickTTRows(
       homeScore = scoreParsed.homeScore;
       awayScore = scoreParsed.awayScore;
       status = 'beendet';
-    } else if (matchDate < todayISO()) {
-      // Datum liegt in der Vergangenheit, kein Ergebnis → vermutlich verschoben
-      status = 'geplant'; // Vorsichtig: Nutzer soll manuell anpassen
     }
 
     const insert: ScheduleMatchInsert = {
@@ -255,6 +369,16 @@ export function normalizeClickTTRows(
   return { imported, errors: rowErrors };
 }
 
+// ─── Duplikaterkennung ─────────────────────────────────────────────────────────
+
+/**
+ * Erzeugt einen Deduplizierungs-Schlüssel für ein Spiel.
+ * Kombination aus Datum + Heim + Auswärts identifiziert ein Spiel eindeutig.
+ */
+function matchDedupKey(m: { match_date: string; home_team: string; away_team: string }): string {
+  return `${m.match_date}::${m.home_team.toLowerCase().trim()}::${m.away_team.toLowerCase().trim()}`;
+}
+
 // ─── Service ───────────────────────────────────────────────────────────────────
 
 export const scheduleService = {
@@ -268,14 +392,17 @@ export const scheduleService = {
     const { team_id, season_id, season_phase_id, active_phase, status, is_home, from_date, to_date, match_day } = parsed.data;
 
     return tryCatch(async () => {
-      let q = supabase.from('schedule_matches').select('*');
+      let selectStr = '*';
+      if (active_phase) {
+        selectStr = '*, season_phases!inner(id, is_active)';
+      }
+
+      let q = supabase.from('schedule_matches').select(selectStr);
       if (team_id)    q = q.eq('team_id', team_id);
       if (season_id)  q = q.eq('season_id', season_id);
       if (season_phase_id) q = q.eq('season_phase_id', season_phase_id);
       if (active_phase) {
-        q = q
-          .select('*, season_phases!inner(id, is_active)')
-          .eq('season_phases.is_active', true);
+        q = q.eq('season_phases.is_active' as any, true);
       }
       if (status)     q = q.eq('status', status);
       if (is_home != null) q = q.eq('is_home', is_home);
@@ -285,9 +412,9 @@ export const scheduleService = {
 
       const { data, error } = await q.order('match_date').order('match_time', { nullsFirst: false });
       if (error) throw error;
-      return sortMatches((data ?? []).map((row) => {
-        const { season_phases: _sp, ...match } = row as ScheduleMatch & { season_phases?: unknown };
-        return toUI(match);
+      return sortMatches((data ?? []).map((row: any) => {
+        const { season_phases: _sp, ...match } = row;
+        return toUI(match as ScheduleMatch);
       }));
     }, fromSupabaseError);
   },
@@ -318,6 +445,67 @@ export const scheduleService = {
         .limit(limit);
       if (error) throw error;
       return (data ?? []).map(toUI);
+    }, fromSupabaseError);
+  },
+
+  async getRecent(teamId: string, limit = 5): Promise<ApiResult<ScheduleMatchUI[]>> {
+    return tryCatch(async () => {
+      const { data, error } = await supabase
+        .from('schedule_matches')
+        .select('*')
+        .eq('team_id', teamId)
+        .eq('status', 'beendet')
+        .order('match_date', { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return (data ?? []).map(toUI);
+    }, fromSupabaseError);
+  },
+
+  // --- Statistiken ---
+
+  async getTeamStats(teamId: string, seasonPhaseId?: string): Promise<ApiResult<{
+    total: number;
+    wins: number;
+    losses: number;
+    draws: number;
+    pending: number;
+    winRate: number;
+  }>> {
+    return tryCatch(async () => {
+      let q = supabase
+        .from('schedule_matches')
+        .select('home_score, away_score, is_home, status')
+        .eq('team_id', teamId);
+      if (seasonPhaseId) q = q.eq('season_phase_id', seasonPhaseId);
+
+      const { data, error } = await q;
+      if (error) throw error;
+
+      const matches = data ?? [];
+      let wins = 0, losses = 0, draws = 0, pending = 0;
+
+      for (const m of matches) {
+        if (m.status !== 'beendet' || m.home_score == null || m.away_score == null) {
+          pending++;
+          continue;
+        }
+        const ownScore = m.is_home ? m.home_score : m.away_score;
+        const oppScore = m.is_home ? m.away_score : m.home_score;
+        if (ownScore > oppScore) wins++;
+        else if (ownScore < oppScore) losses++;
+        else draws++;
+      }
+
+      const completed = wins + losses + draws;
+      return {
+        total: matches.length,
+        wins,
+        losses,
+        draws,
+        pending,
+        winRate: completed > 0 ? Math.round((wins / completed) * 100) : 0,
+      };
     }, fromSupabaseError);
   },
 
@@ -356,6 +544,30 @@ export const scheduleService = {
     }, fromSupabaseError);
   },
 
+  /** Ergebnis eines Spiels setzen (inkl. Status → beendet). */
+  async updateResult(id: string, payload: MatchResultUpdateInput): Promise<ApiResult<ScheduleMatchUI>> {
+    const parsed = matchResultUpdateSchema.safeParse(payload);
+    if (!parsed.success) {
+      return err(errors.validation(parsed.error.message, parsed.error.issues));
+    }
+    return tryCatch(async () => {
+      const patch = {
+        home_score: parsed.data.home_score,
+        away_score: parsed.data.away_score,
+        status: parsed.data.status ?? ('beendet' as const),
+        ...(parsed.data.report_text !== undefined ? { report_text: parsed.data.report_text } : {}),
+      };
+      const { data, error } = await supabase
+        .from('schedule_matches')
+        .update(patch)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return toUI(data);
+    }, fromSupabaseError);
+  },
+
   async remove(id: string): Promise<ApiResult<void>> {
     return tryCatch(async () => {
       const { error } = await supabase.from('schedule_matches').delete().eq('id', id);
@@ -365,11 +577,6 @@ export const scheduleService = {
 
   // --- Bulk pin/code ---
 
-  /**
-   * Aktualisiert PIN und/oder Code für mehrere Spiele in einem Batch.
-   * Jedes Update läuft als einzelnes PATCH – bei Teilfehlern werden erfolgreiche
-   * Einträge in `updated` und fehlgeschlagene in `failed` zurückgegeben.
-   */
   async bulkUpdatePinCode(
     input: BulkPinCodeInput,
   ): Promise<ApiResult<{ updated: string[]; failed: Array<{ id: string; message: string }> }>> {
@@ -406,15 +613,6 @@ export const scheduleService = {
 
   // --- click-TT Import ---
 
-  /**
-   * Importiert normalisierte click-TT-Zeilen in die DB.
-   *
-   * @param rows          Rohe click-TT-Export-Zeilen (Array of plain objects)
-   * @param teamId        UUID der Mannschaft
-   * @param seasonId      UUID der Saison
-   * @param clubTeamName  Vereinsname für Home/Away-Derivation
-   * @param skipDuplicates Wenn true, werden bereits vorhandene match_day+team_id-Kombos übersprungen
-   */
   async importFromClickTT(
     rows: unknown[],
     teamId: string,
@@ -430,11 +628,7 @@ export const scheduleService = {
     }>
   > {
     const { imported, errors: parseErrors } = normalizeClickTTRows(
-      rows,
-      teamId,
-      seasonId,
-      seasonPhaseId,
-      clubTeamName,
+      rows, teamId, seasonId, seasonPhaseId, clubTeamName,
     );
 
     if (imported.length === 0) {
@@ -445,7 +639,6 @@ export const scheduleService = {
     let skipped = 0;
 
     if (skipDuplicates) {
-      // Vorhandene Spieltage für diese Mannschaft/Saison laden
       const { data: existing } = await supabase
         .from('schedule_matches')
         .select('match_day')
@@ -466,6 +659,76 @@ export const scheduleService = {
       const { error } = await supabase.from('schedule_matches').insert(toInsert);
       if (error) throw error;
       return { inserted: toInsert.length, skipped, parseErrors };
+    }, fromSupabaseError);
+  },
+
+  // --- Vereinsspielplan Import ---
+
+  /**
+   * Importiert Vereinsspielplan-CSV-Zeilen (Format: Termin;Wochentag;Staffel;Runde;HalleNr;HeimMannschaft;GastMannschaft).
+   *
+   * Duplikaterkennung basiert auf Datum + Heimmannschaft + Gastmannschaft.
+   *
+   * @param rows          Rohdaten aus dem CSV (Array von Objekten mit Spaltenheadern als Keys)
+   * @param teamId        UUID der Mannschaft
+   * @param seasonId      UUID der Saison
+   * @param seasonPhaseId UUID der Saisonphase
+   * @param clubName      Vereinsname für Heim/Auswärts-Erkennung (z.B. "TTC Zaberfeld")
+   * @param skipDuplicates Wenn true, werden bereits vorhandene Spiele übersprungen
+   */
+  async importFromVereinsspielplan(
+    rows: unknown[],
+    teamId: string,
+    seasonId: string,
+    seasonPhaseId: string,
+    clubName: string,
+    skipDuplicates = true,
+  ): Promise<
+    ApiResult<{
+      inserted: number;
+      skipped: number;
+      parseErrors: Array<{ rowIndex: number; message: string }>;
+      staffelInfo: string[];
+    }>
+  > {
+    const { imported, errors: parseErrors } = normalizeVereinsspielplanRows(
+      rows, teamId, seasonId, seasonPhaseId, clubName,
+    );
+
+    // Sammle eindeutige Staffeln für Info
+    const staffelInfo = Array.from(new Set(imported.map((r) => r.staffel)));
+
+    if (imported.length === 0) {
+      return ok({ inserted: 0, skipped: 0, parseErrors, staffelInfo });
+    }
+
+    let toInsert = imported.map((r) => r.match);
+    let skipped = 0;
+
+    if (skipDuplicates) {
+      const { data: existing } = await supabase
+        .from('schedule_matches')
+        .select('match_date, home_team, away_team')
+        .eq('team_id', teamId)
+        .eq('season_phase_id', seasonPhaseId);
+
+      const existingKeys = new Set(
+        (existing ?? []).map((r) => matchDedupKey(r)),
+      );
+
+      const before = toInsert.length;
+      toInsert = toInsert.filter((m) => !existingKeys.has(matchDedupKey(m)));
+      skipped = before - toInsert.length;
+    }
+
+    if (toInsert.length === 0) {
+      return ok({ inserted: 0, skipped, parseErrors, staffelInfo });
+    }
+
+    return tryCatch(async () => {
+      const { error } = await supabase.from('schedule_matches').insert(toInsert);
+      if (error) throw error;
+      return { inserted: toInsert.length, skipped, parseErrors, staffelInfo };
     }, fromSupabaseError);
   },
 };

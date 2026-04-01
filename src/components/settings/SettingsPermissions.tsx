@@ -26,9 +26,9 @@ export default function SettingsPermissions() {
   const { data: roles = [] } = useQuery({
     queryKey: ['role-module-permissions'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('roles').select('id, name, permissions, is_system').order('name');
+      const { data, error } = await supabase.from('roles').select('id, name, display_name, description').order('name');
       if (error) throw error;
-      return data;
+      return (data ?? []) as Array<{ id: string; name: string; display_name: string; description: string | null }>;
     },
   });
 
@@ -66,7 +66,7 @@ export default function SettingsPermissions() {
                 <TableHead className="sticky left-0 bg-card z-10">Modul</TableHead>
                 {roles.map((role) => (
                   <TableHead key={role.id} className="text-center min-w-[120px]">
-                    {APP_ROLE_LABELS[role.name]}
+                    {APP_ROLE_LABELS[role.name as keyof typeof APP_ROLE_LABELS] ?? role.display_name}
                   </TableHead>
                 ))}
               </TableRow>
@@ -76,9 +76,10 @@ export default function SettingsPermissions() {
                 <TableRow key={mod}>
                   <TableCell className="sticky left-0 bg-card z-10 font-medium">{getModuleLabel(mod)}</TableCell>
                   {roles.map((role) => {
-                    const matrix = resolveRolePermissions(role);
+                    const roleWithPerms = { id: role.id, name: role.name as any } as import('@/lib/auth/permissionsResolver').RoleWithPermissions;
+                    const matrix = resolveRolePermissions(roleWithPerms);
                     const level = matrix[mod];
-                    const mutability = assertRoleMutable(role);
+                    const mutability = assertRoleMutable(roleWithPerms);
 
                     return (
                       <TableCell key={role.id} className="text-center">

@@ -195,12 +195,12 @@ export const teamService = {
    */
   async listOverview(filters: TeamFilterInput = {}): Promise<ApiResult<TeamOverview[]>> {
     const teamsResult = await this.list(filters);
-    if (!teamsResult.ok) return teamsResult as ApiResult<TeamOverview[]>;
+    if (!teamsResult.success) return teamsResult as ApiResult<TeamOverview[]>;
 
     return tryCatch(async () => {
       const teams = teamsResult.data;
-      if (teams.length === 0) return [];
-      const teamIds = teams.map((team) => team.id);
+      if (teams.length === 0) return [] as TeamOverview[];
+      const teamIds = teams.map((team: Team) => team.id);
 
       const [{ data: rosterRows, error: rosterError }, { data: captainRows, error: captainError }] = await Promise.all([
         supabase
@@ -223,11 +223,12 @@ export const teamService = {
 
       const captainByTeam = new Map<string, TeamOverview['captain']>();
       for (const row of captainRows ?? []) {
-        captainByTeam.set(row.id, (row.members?.[0] ?? null) as TeamOverview['captain']);
+        const memberData = row.members as unknown as TeamOverview['captain'];
+        captainByTeam.set(row.id, memberData ?? null);
       }
 
-      return teams.map((team) => ({
-        ...team,
+      return teams.map((team: Team): TeamOverview => ({
+        ...(team as any),
         captain: captainByTeam.get(team.id) ?? null,
         roster_size: rosterCountByTeam.get(team.id) ?? 0,
       }));

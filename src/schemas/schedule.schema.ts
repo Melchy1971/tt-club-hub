@@ -143,6 +143,37 @@ export const clickTTRowSchema = z.object({
   venue: z.string().optional().default(''),
 });
 
+// === Vereinsspielplan Import ===
+// Spalten: Termin;Wochentag;Staffel;Runde;HalleNr;HeimMannschaft;GastMannschaft
+
+export const vereinsspielplanRowSchema = z.object({
+  /** Termin im Format "DD.MM.YYYY HH:MM" */
+  Termin: z.string().min(1, 'Termin fehlt'),
+  /** Wochentag z.B. "Sa.", "So.", "Fr." – informativ */
+  Wochentag: z.string().optional().default(''),
+  /** Staffel z.B. "Erwachsene Bezirksliga", "Jugend 19 Kreisliga A1 VR" */
+  Staffel: z.string().min(1, 'Staffel fehlt'),
+  /** Runde z.B. "VR", "RR", "Pokal" */
+  Runde: z.string().optional().default(''),
+  /** Hallennummer (kann leer sein) */
+  HalleNr: z.string().optional().default(''),
+  /** Heimmannschaft */
+  HeimMannschaft: z.string().min(1, 'Heimmannschaft fehlt').max(200),
+  /** Gastmannschaft */
+  GastMannschaft: z.string().min(1, 'Gastmannschaft fehlt').max(200),
+});
+
+// === Ergebnis-Update ===
+
+export const matchResultUpdateSchema = z
+  .object({
+    home_score: z.number().int().min(0).max(9),
+    away_score: z.number().int().min(0).max(9),
+    status: matchStatusSchema.optional(),
+    report_text: z.string().max(5000).nullable().optional(),
+  })
+  .superRefine((data, ctx) => scoreRefinement(data, ctx));
+
 export type MatchStatusValue = z.infer<typeof matchStatusSchema>;
 export type ScheduleMatchCreateInput = z.infer<typeof scheduleMatchCreateSchema>;
 export type ScheduleMatchUpdateInput = z.infer<typeof scheduleMatchUpdateSchema>;
@@ -150,3 +181,5 @@ export type ScheduleMatchFilterInput = z.infer<typeof scheduleMatchFilterSchema>
 export type PinCodeEntry = z.infer<typeof pinCodeEntrySchema>;
 export type BulkPinCodeInput = z.infer<typeof bulkPinCodeSchema>;
 export type ClickTTRow = z.infer<typeof clickTTRowSchema>;
+export type VereinsspielplanRow = z.infer<typeof vereinsspielplanRowSchema>;
+export type MatchResultUpdateInput = z.infer<typeof matchResultUpdateSchema>;
