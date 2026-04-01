@@ -19,6 +19,7 @@ export const SETTINGS_PERMISSION_MODEL: Record<SettingsSubpageId, SettingsPermis
   security: {},
   backup: { read: 'admin:all', write: 'admin:all' },
   danger: { read: 'admin:all', write: 'admin:all' },
+  developer: {},
 };
 
 export function getSettingsPermissionRule(id: SettingsSubpageId): SettingsPermissionRule {

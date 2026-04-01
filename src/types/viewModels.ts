@@ -57,9 +57,42 @@ export interface PublicClubInfoViewModel {
   clubNumber: string | null;
   association: string | null;
   website: string | null;
+}
+
+export interface InternalClubInfoViewModel {
   contactEmail: string | null;
   contactPhone: string | null;
   street: string | null;
   zipCode: string | null;
   city: string | null;
+}
+
+export interface ToolMetadataViewModel {
+  version: string;
+  buildDate: string;
+  supportEmail: string;
+}
+
+export type LicenseStatus = 'active' | 'inactive' | 'expired' | 'revoked';
+
+export interface LicenseViewModel {
+  serialKey: string;
+  status: LicenseStatus;
+  activatedAt: string | null;
+  validUntil: string | null;
+}
+
+export interface DeveloperInfoViewModel {
+  internalClubInfo: InternalClubInfoViewModel | null;
+  toolMetadata: ToolMetadataViewModel;
+  license: LicenseViewModel | null;
+}
+
+export interface SecurityCheckResultViewModel {
+  passed: boolean;
+  checks: Array<{
+    key: string;
+    passed: boolean;
+    message: string;
+  }>;
 }

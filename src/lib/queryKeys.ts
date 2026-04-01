@@ -166,6 +166,8 @@ export const profileInfoKeys = {
   all: ['profile-info'] as const,
   memberViewModel: (userId: string) => [...profileInfoKeys.all, 'member-view-model', userId] as const,
   publicClubInfo: () => [...profileInfoKeys.all, 'public-club-info'] as const,
+  developerInfo: () => [...profileInfoKeys.all, 'developer-info'] as const,
+  securityCheck: () => [...profileInfoKeys.all, 'security-check'] as const,
 };
 
 // ── Club Settings ─────────────────────────────────────────────

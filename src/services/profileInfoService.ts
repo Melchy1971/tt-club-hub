@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { infoService } from '@/services/infoService';
 import type { AppRole } from '@/types/auth';
 import type {
   MemberProfilePermissionViewModel,
@@ -210,26 +211,6 @@ export const profileInfoService = {
   },
 
   async getPublicClubInfo(): Promise<PublicClubInfoViewModel | null> {
-    const { data, error } = await supabase
-      .from('club_settings')
-      .select('*')
-      .limit(1)
-      .maybeSingle();
-
-    handleError(error, 'getPublicClubInfo');
-
-    if (!data) return null;
-
-    return {
-      clubName: data.club_name,
-      clubNumber: data.club_number ?? null,
-      association: data.association ?? null,
-      website: data.website ?? null,
-      contactEmail: data.contact_email ?? null,
-      contactPhone: data.contact_phone ?? null,
-      street: data.street ?? null,
-      zipCode: data.zip_code ?? null,
-      city: data.city ?? null,
-    };
+    return infoService.getPublicClubInfo();
   },
 };

@@ -11,6 +11,7 @@ import {
   Users,
   Database,
   SlidersHorizontal,
+  Wrench,
 } from 'lucide-react';
 import SettingsRoles from '@/components/settings/SettingsRoles';
 import SettingsProfile from '@/components/settings/SettingsProfile';
@@ -24,6 +25,7 @@ import SettingsSecurity from '@/components/settings/SettingsSecurity';
 import SettingsBackup from '@/components/settings/SettingsBackup';
 import SettingsDangerZone from '@/components/settings/SettingsDangerZone';
 import SettingsInfo from '@/components/settings/SettingsInfo';
+import SettingsDeveloper from '@/components/settings/SettingsDeveloper';
 import { getSettingsPermissionRule } from './permissions';
 import type { SettingsSubpageDef } from './types';
 
@@ -89,5 +91,13 @@ export const SETTINGS_SUBPAGES: SettingsSubpageDef[] = [
     group: 'admin',
     requiredPermission: getSettingsPermissionRule('danger').read,
     writePermission: getSettingsPermissionRule('danger').write,
+  },
+  {
+    id: 'developer',
+    label: 'Entwicklerbereich',
+    icon: Wrench,
+    component: SettingsDeveloper,
+    group: 'admin',
+    requiredRole: 'developer',
   },
 ];
