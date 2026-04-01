@@ -34,6 +34,7 @@ const profileSchema = z.object({
   zip_code: z.string().max(10).optional().or(z.literal('')),
   city: z.string().max(100).optional().or(z.literal('')),
   date_of_birth: z.string().nullable().optional(),
+  entry_date: z.string().nullable().optional(),
   ttr_rating: z.preprocess(
     (v) => (v === '' || v === null || v === undefined ? null : Number(v)),
     z.number().int().min(0, 'Muss ≥ 0 sein').max(3500).nullable(),
@@ -42,6 +43,14 @@ const profileSchema = z.object({
     (v) => (v === '' || v === null || v === undefined ? null : Number(v)),
     z.number().int().min(0, 'Muss ≥ 0 sein').max(3500).nullable(),
   ),
+}).refine((data) => {
+  if (data.entry_date && data.date_of_birth) {
+    return data.entry_date >= data.date_of_birth;
+  }
+  return true;
+}, {
+  message: 'Mitglied seit darf nicht vor dem Geburtstag liegen',
+  path: ['entry_date'],
 });
 
 const passwordSchema = z.object({
