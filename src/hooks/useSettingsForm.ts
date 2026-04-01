@@ -56,7 +56,7 @@ export function useSettingsForm<TForm extends FieldValues = FieldValues, TData =
   const { isDirty } = form.formState;
 
   const save = useCallback(() => {
-    form.handleSubmit((values) => saveMut.mutate(values))();
+    form.handleSubmit((values: any) => saveMut.mutate(values))();
   }, [form, saveMut]);
 
   const cancel = useCallback(() => {
