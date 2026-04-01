@@ -82,8 +82,11 @@ export const profileInfoService = {
 
     if (!member) return null;
 
+    const targetUserId_ = member.user_id;
+    if (!targetUserId_) return null;
+
     const [{ data: targetRoleRows, error: targetRoleError }, { data: requesterRoleRows, error: requesterRoleError }, { data: teamRows, error: teamError }] = await Promise.all([
-      supabase.from('user_roles').select('role').eq('user_id', member.user_id),
+      supabase.from('user_roles').select('role').eq('user_id', targetUserId_),
       supabase.from('user_roles').select('role').eq('user_id', requesterUserId),
       supabase
         .from('team_members')

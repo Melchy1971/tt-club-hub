@@ -195,7 +195,7 @@ export const teamService = {
    */
   async listOverview(filters: TeamFilterInput = {}): Promise<ApiResult<TeamOverview[]>> {
     const teamsResult = await this.list(filters);
-    if (!teamsResult.ok) return teamsResult as ApiResult<TeamOverview[]>;
+    if (!teamsResult.success) return teamsResult as ApiResult<TeamOverview[]>;
 
     return tryCatch(async () => {
       const teams = teamsResult.data;

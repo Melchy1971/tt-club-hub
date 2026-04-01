@@ -1,5 +1,6 @@
 import type { AppRole, AuthContextValue, GuardResult } from '@/types/auth';
 import { hasPermission, type PermissionDomain } from '@/lib/permissions';
+import type { Permission } from '@/types/auth';
 
 export const hasRole = (
   currentRole: AppRole | null | undefined,

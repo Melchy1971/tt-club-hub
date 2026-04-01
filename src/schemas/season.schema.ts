@@ -34,8 +34,25 @@ export const seasonPhaseCreateSchema = z
     path: ['end_date'],
   });
 
-export const seasonCycleUpdateSchema = seasonCycleCreateSchema.partial();
-export const seasonPhaseUpdateSchema = seasonPhaseCreateSchema.partial();
+const seasonCycleBaseSchema = z.object({
+  name: z.string().min(1, 'Saisonname ist erforderlich').max(100),
+  start_year: z.number().int().min(2000).max(2200),
+  end_year: z.number().int().min(2000).max(2201),
+  is_active: z.boolean().default(false),
+  age_group: ageGroupSchema.default('herren'),
+});
+export const seasonCycleUpdateSchema = seasonCycleBaseSchema.partial();
+
+const seasonPhaseBaseSchema = z.object({
+  season_cycle_id: z.string().uuid('Ungültige Saisonzyklus-ID'),
+  phase_type: phaseTypeSchema,
+  name: z.string().trim().min(1, 'Phasenname ist erforderlich').max(100),
+  start_date: z.string().date('Ungültiges Startdatum'),
+  end_date: z.string().date('Ungültiges Enddatum'),
+  is_active: z.boolean().default(false),
+  sort_order: z.number().int().min(1).max(10).default(1),
+});
+export const seasonPhaseUpdateSchema = seasonPhaseBaseSchema.partial();
 
 export type SeasonCycleCreateInput = z.infer<typeof seasonCycleCreateSchema>;
 export type SeasonCycleUpdateInput = z.infer<typeof seasonCycleUpdateSchema>;
