@@ -503,7 +503,7 @@ interface ParsedMatch {
   homeScore: number | null;
   awayScore: number | null;
   isHome: boolean;
-  status: string;
+  status: 'geplant' | 'laufend' | 'beendet' | 'verschoben' | 'abgesagt';
   error?: string;
 }
 
