@@ -22,6 +22,7 @@ import {
 export interface ScheduleMatchUI {
   id: string;
   seasonId: string;
+  seasonPhaseId: string | null;
   teamId: string;
   matchDate: string;       // ISO YYYY-MM-DD
   matchTime: string | null; // HH:MM
@@ -65,6 +66,7 @@ function toUI(row: ScheduleMatch): ScheduleMatchUI {
   return {
     id: row.id,
     seasonId: row.season_id,
+    seasonPhaseId: row.season_phase_id,
     teamId: row.team_id,
     matchDate: row.match_date,
     matchTime: row.match_time,
@@ -192,6 +194,7 @@ export function normalizeClickTTRows(
   rows: unknown[],
   teamId: string,
   seasonId: string,
+  seasonPhaseId: string,
   clubTeamName: string,
 ): ClickTTImportResult {
   const imported: ClickTTImportRow[] = [];
@@ -234,6 +237,7 @@ export function normalizeClickTTRows(
     const insert: ScheduleMatchInsert = {
       team_id: teamId,
       season_id: seasonId,
+      season_phase_id: seasonPhaseId,
       match_day: row.match_day,
       match_date: matchDate,
       match_time: matchTime,
@@ -261,12 +265,13 @@ export const scheduleService = {
     if (!parsed.success) {
       return err(errors.validation(parsed.error.message, parsed.error.issues));
     }
-    const { team_id, season_id, status, is_home, from_date, to_date, match_day } = parsed.data;
+    const { team_id, season_id, season_phase_id, status, is_home, from_date, to_date, match_day } = parsed.data;
 
     return tryCatch(async () => {
       let q = supabase.from('schedule_matches').select('*');
       if (team_id)    q = q.eq('team_id', team_id);
       if (season_id)  q = q.eq('season_id', season_id);
+      if (season_phase_id) q = q.eq('season_phase_id', season_phase_id);
       if (status)     q = q.eq('status', status);
       if (is_home != null) q = q.eq('is_home', is_home);
       if (from_date)  q = q.gte('match_date', from_date);
@@ -406,6 +411,7 @@ export const scheduleService = {
     rows: unknown[],
     teamId: string,
     seasonId: string,
+    seasonPhaseId: string,
     clubTeamName: string,
     skipDuplicates = true,
   ): Promise<
@@ -419,6 +425,7 @@ export const scheduleService = {
       rows,
       teamId,
       seasonId,
+      seasonPhaseId,
       clubTeamName,
     );
 
@@ -435,7 +442,7 @@ export const scheduleService = {
         .from('schedule_matches')
         .select('match_day')
         .eq('team_id', teamId)
-        .eq('season_id', seasonId);
+        .eq('season_phase_id', seasonPhaseId);
 
       const existingDays = new Set((existing ?? []).map((r) => r.match_day));
       const before = toInsert.length;

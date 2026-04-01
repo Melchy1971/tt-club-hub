@@ -43,7 +43,7 @@ export const teamService = {
     if (!parsed.success) {
       return err(errors.validation(parsed.error.message));
     }
-    const { is_active, season_id, active_season } = parsed.data;
+    const { is_active, season_id, season_phase_id, active_season } = parsed.data;
 
     return tryCatch(async () => {
       if (active_season) {
@@ -63,6 +63,7 @@ export const teamService = {
 
       let query = supabase.from('teams').select('*');
       if (season_id) query = query.eq('season_id', season_id);
+      if (season_phase_id) query = query.eq('season_phase_id', season_phase_id);
       if (is_active !== undefined) query = query.eq('is_active', is_active);
       const { data, error } = await query.order('name');
       if (error) throw fromSupabaseError(error);

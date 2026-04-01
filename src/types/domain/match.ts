@@ -7,6 +7,7 @@ export type MatchStatus = 'geplant' | 'laufend' | 'beendet' | 'verschoben';
 export interface Match {
   readonly id: MatchId;
   season_id: SeasonId;
+  season_phase_id: string;
   team_id: TeamId;
   match_day: number;
   date: string; // ISO-Datum
@@ -37,4 +38,4 @@ export interface SingleMatch {
 }
 
 export type MatchCreate = Omit<Match, 'id' | 'created_at' | 'updated_at' | 'team'>;
-export type MatchUpdate = Partial<Omit<MatchCreate, 'season_id' | 'team_id'>>;
+export type MatchUpdate = Partial<Omit<MatchCreate, 'season_id' | 'season_phase_id' | 'team_id'>>;

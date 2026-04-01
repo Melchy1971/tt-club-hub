@@ -10,6 +10,7 @@ export interface Team {
   /** Nullable in der DB, aber im UI als Pflichtfeld behandelt. */
   league: string | null;
   season_id: SeasonId;
+  season_phase_id: string;
   age_group: AgeGroup;
   division: string | null;
   captain_id: MemberId | null;

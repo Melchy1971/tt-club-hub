@@ -25,6 +25,7 @@ export const teamCreateSchema = z.object({
   // league ist in der DB nullable; im UI aber Pflichtfeld → min(1) erzwingen.
   league: z.string().trim().min(1, 'Liga ist erforderlich').max(100),
   season_id: z.string().uuid('Ungültige Saison-ID'),
+  season_phase_id: z.string().uuid('Ungültige Saisonphasen-ID'),
   age_group: ageGroupSchema.default('herren'),
   division: z.string().trim().max(50).nullable().optional(),
   captain_id: z.string().uuid('Ungültige Spielführer-ID').nullable().optional(),
@@ -36,6 +37,7 @@ export const teamUpdateSchema = teamCreateSchema.partial();
 export const teamFilterSchema = z.object({
   is_active: z.boolean().optional(),
   season_id: z.string().uuid().optional(),
+  season_phase_id: z.string().uuid().optional(),
   /** Wenn true, wird season_id ignoriert und stattdessen is_current=true genutzt. */
   active_season: z.boolean().optional(),
 });

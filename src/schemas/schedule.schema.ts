@@ -45,6 +45,7 @@ export const scoreRefinement = (
 export const scheduleMatchCreateSchema = z
   .object({
     season_id: z.string().uuid('Ungültige Saison-ID'),
+    season_phase_id: z.string().uuid('Ungültige Saisonphasen-ID'),
     team_id: z.string().uuid('Ungültige Mannschafts-ID'),
     match_date: z.string().date('Datum im Format YYYY-MM-DD angeben'),
     match_time: z
@@ -71,6 +72,7 @@ export const scheduleMatchCreateSchema = z
 // Extract the inner object schema before superRefine to allow .partial()
 const scheduleMatchBaseSchema = z.object({
   season_id: z.string().uuid('Ungültige Saison-ID'),
+  season_phase_id: z.string().uuid('Ungültige Saisonphasen-ID'),
   team_id: z.string().uuid('Ungültige Mannschafts-ID'),
   match_date: z.string().date('Datum im Format YYYY-MM-DD angeben'),
   match_time: z
@@ -98,6 +100,7 @@ export const scheduleMatchUpdateSchema = scheduleMatchBaseSchema
 export const scheduleMatchFilterSchema = z.object({
   team_id: z.string().uuid().optional(),
   season_id: z.string().uuid().optional(),
+  season_phase_id: z.string().uuid().optional(),
   status: matchStatusSchema.optional(),
   is_home: z.boolean().optional(),
   from_date: z.string().date().optional(),
