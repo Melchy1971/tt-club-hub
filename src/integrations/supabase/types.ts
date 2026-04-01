@@ -999,37 +999,7 @@ export type Database = {
       }
     }
     Views: {
-      club_public_info: {
-        Row: {
-          association: string | null
-          city: string | null
-          club_name: string | null
-          club_number: string | null
-          contact_email: string | null
-          contact_phone: string | null
-          street: string | null
-          website: string | null
-          zip_code: string | null
-        }
-        Relationships: []
-      }
-      member_profile_view: {
-        Row: {
-          city: string | null
-          email: string | null
-          first_name: string | null
-          id: string | null
-          is_active: boolean | null
-          last_name: string | null
-          phone: string | null
-          qttr_rating: number | null
-          street: string | null
-          ttr_rating: number | null
-          user_id: string | null
-          zip_code: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       has_role: {
