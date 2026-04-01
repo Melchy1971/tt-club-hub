@@ -561,7 +561,7 @@ function ScheduleImportTab() {
 
         let homeScore: number | null = null;
         let awayScore: number | null = null;
-        let status = 'geplant';
+        let status: 'geplant' | 'beendet' = 'geplant';
         const scoreMatch = resultRaw.match(/^(\d+):(\d+)$/);
         if (scoreMatch) {
           homeScore = parseInt(scoreMatch[1], 10);
