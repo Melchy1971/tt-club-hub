@@ -3,7 +3,7 @@
  */
 
 import type { MemberUI } from '@/types/member';
-import type { ExportDocument, ExportTableSection } from './types';
+import type { ExportDocument } from './types';
 import { formatDate } from '@/lib/date';
 
 // ── Zeilen-Shape ──────────────────────────────────────────────
