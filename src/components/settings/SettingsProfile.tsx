@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { format, parse } from 'date-fns';
+import { de } from 'date-fns/locale';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { profileInfoService } from '@/services/profileInfoService';
@@ -16,8 +18,11 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from 'sonner';
-import { Save, Pencil, X, KeyRound, Shield, Users, User, Trophy, Star } from 'lucide-react';
+import { Save, Pencil, X, KeyRound, Shield, Users, User, Trophy, Star, CalendarIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import type { MemberProfileViewModel } from '@/types/viewModels';
 
 const profileSchema = z.object({
@@ -25,9 +30,19 @@ const profileSchema = z.object({
   last_name: z.string().min(1, 'Nachname erforderlich').max(100),
   email: z.string().email('Ungültige E-Mail').max(255),
   phone: z.string().max(30).optional().or(z.literal('')),
+  mobile: z.string().max(30).optional().or(z.literal('')),
   street: z.string().max(200).optional().or(z.literal('')),
   zip_code: z.string().max(10).optional().or(z.literal('')),
   city: z.string().max(100).optional().or(z.literal('')),
+  date_of_birth: z.string().nullable().optional(),
+  ttr_rating: z.preprocess(
+    (v) => (v === '' || v === null || v === undefined ? null : Number(v)),
+    z.number().int().min(0, 'Muss ≥ 0 sein').max(3500).nullable(),
+  ),
+  qttr_rating: z.preprocess(
+    (v) => (v === '' || v === null || v === undefined ? null : Number(v)),
+    z.number().int().min(0, 'Muss ≥ 0 sein').max(3500).nullable(),
+  ),
 });
 
 const passwordSchema = z.object({
