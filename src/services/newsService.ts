@@ -9,15 +9,27 @@ import { newsCreateSchema, newsUpdateSchema } from '@/schemas/news.schema';
 import type { ApiResult } from '@/types/api';
 import type { NewsRow, NewsCreateDTO, NewsUpdateDTO, NewsFilter } from '@/types/domain/news';
 
+function applyPublicationFilter(query: any, filter: NewsFilter) {
+  let q = query;
+  if (filter.status === 'draft') q = q.eq('is_published', false);
+  if (filter.status === 'published') q = q.eq('is_published', true);
+  if (filter.is_published != null) q = q.eq('is_published', filter.is_published);
+  return q;
+}
+
 export const newsService = {
   async list(filter: NewsFilter = {}): Promise<ApiResult<NewsRow[]>> {
     return tryCatch(async () => {
-      let q = supabase.from('news').select('*');
+      let q = applyPublicationFilter(supabase.from('news').select('*'), filter);
 
-      if (filter.is_published != null) q = q.eq('is_published', filter.is_published);
       if (filter.search) {
         q = q.or(`title.ilike.%${filter.search}%,content.ilike.%${filter.search}%`);
       }
+
+      // Aktuell werden veröffentlichte Inhalte als öffentlich betrachtet,
+      // Entwürfe als intern. `audience` dient als API-Vertrag bis eine dedizierte DB-Spalte existiert.
+      if (filter.audience === 'public') q = q.eq('is_published', true);
+      if (filter.audience === 'internal') q = q.eq('is_published', false);
 
       q = q.order('created_at', { ascending: false });
 
@@ -93,7 +105,19 @@ export const newsService = {
     return newsService.update(id, { is_published: false });
   },
 
-  listPublished(filter: Omit<NewsFilter, 'is_published'> = {}) {
-    return newsService.list({ ...filter, is_published: true });
+  listPublished(filter: Omit<NewsFilter, 'is_published' | 'status'> = {}) {
+    return newsService.list({ ...filter, status: 'published' });
+  },
+
+  listDrafts(filter: Omit<NewsFilter, 'is_published' | 'status'> = {}) {
+    return newsService.list({ ...filter, status: 'draft' });
+  },
+
+  listPublic(filter: Omit<NewsFilter, 'audience'> = {}) {
+    return newsService.list({ ...filter, audience: 'public' });
+  },
+
+  listInternal(filter: Omit<NewsFilter, 'audience'> = {}) {
+    return newsService.list({ ...filter, audience: 'internal' });
   },
 };

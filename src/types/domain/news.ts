@@ -3,6 +3,8 @@
  * Spalten: id, title, content, is_published, published_at, author_id, image_url, created_at, updated_at
  */
 
+import type { CommunicationAudience, CommunicationPagination, PublicationStatus } from './communication';
+
 export interface NewsRow {
   id: string;
   title: string;
@@ -30,9 +32,9 @@ export interface NewsUpdateDTO {
   image_url?: string | null;
 }
 
-export interface NewsFilter {
+export interface NewsFilter extends CommunicationPagination {
   is_published?: boolean;
+  status?: PublicationStatus;
+  audience?: CommunicationAudience;
   search?: string;
-  limit?: number;
-  offset?: number;
 }

@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { ok, err } from '@/lib/api';
 import { fromSupabaseError, errors } from '@/lib/error';
 import type { ApiResult } from '@/types/api';
+import type { CommunicationAudience, CommunicationPagination } from '@/types/domain/communication';
 
 // ── Typen ─────────────────────────────────────────────────────
 
@@ -35,6 +36,7 @@ export interface DocumentUI {
   uploadedBy:  string;
   createdAt:   string;
   updatedAt:   string;
+  audience:    Exclude<CommunicationAudience, 'all'>;
 }
 
 export interface DocumentCreateDTO {
@@ -52,9 +54,16 @@ export interface DocumentUpdateDTO {
   category?:    string;
 }
 
-export interface DocumentFilter {
+export interface DocumentFilter extends CommunicationPagination {
   category?: string;
   search?:   string;
+  audience?: CommunicationAudience;
+}
+
+const INTERNAL_CATEGORY_PREFIX = 'internal:';
+
+function deriveAudienceFromCategory(category: string | null): Exclude<CommunicationAudience, 'all'> {
+  return category?.startsWith(INTERNAL_CATEGORY_PREFIX) ? 'internal' : 'public';
 }
 
 // ── Mapping ───────────────────────────────────────────────────
@@ -69,6 +78,7 @@ function mapToUI(row: DocumentRow): DocumentUI {
     uploadedBy:  row.uploaded_by,
     createdAt:   row.created_at,
     updatedAt:   row.updated_at,
+    audience:    deriveAudienceFromCategory(row.category),
   };
 }
 
@@ -83,6 +93,15 @@ export const documentService = {
 
     if (filter.category) q = q.eq('category', filter.category);
     if (filter.search)   q = q.ilike('title', `%${filter.search}%`);
+    if (filter.audience === 'internal') q = q.like('category', `${INTERNAL_CATEGORY_PREFIX}%`);
+    if (filter.audience === 'public') q = q.not('category', 'like', `${INTERNAL_CATEGORY_PREFIX}%`);
+
+    const limit = filter.limit ?? 50;
+    if (filter.offset != null) {
+      q = q.range(filter.offset, filter.offset + limit - 1);
+    } else {
+      q = q.limit(limit);
+    }
 
     const { data, error } = await q;
     if (error) return err(fromSupabaseError(error));
