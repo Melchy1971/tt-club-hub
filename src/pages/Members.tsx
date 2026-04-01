@@ -240,9 +240,9 @@ export default function Members() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Mitgliederverwaltung</h1>
-          <p className="text-muted-foreground">
+        <div className="page-header">
+          <h1 className="page-title">Mitgliederverwaltung</h1>
+          <p className="page-description">
             {members.length} Mitglied{members.length !== 1 ? 'er' : ''} insgesamt
           </p>
         </div>

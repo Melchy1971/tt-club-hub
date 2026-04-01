@@ -63,7 +63,7 @@ export const profileInfoService = {
 
   async getPublicClubInfo(): Promise<PublicClubInfoViewModel | null> {
     const { data, error } = await supabase
-      .from('club_public_info')
+      .from('club_settings')
       .select('*')
       .limit(1)
       .maybeSingle();
@@ -74,14 +74,14 @@ export const profileInfoService = {
 
     return {
       clubName: data.club_name,
-      clubNumber: data.club_number,
-      association: data.association,
-      website: data.website,
-      contactEmail: data.contact_email,
-      contactPhone: data.contact_phone,
-      street: data.street,
-      zipCode: data.zip_code,
-      city: data.city,
+      clubNumber: data.club_number ?? null,
+      association: data.association ?? null,
+      website: data.website ?? null,
+      contactEmail: data.contact_email ?? null,
+      contactPhone: data.contact_phone ?? null,
+      street: data.street ?? null,
+      zipCode: data.zip_code ?? null,
+      city: data.city ?? null,
     };
   },
 };
