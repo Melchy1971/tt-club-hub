@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { format } from 'date-fns';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { profileInfoService } from '@/services/profileInfoService';
@@ -16,8 +17,11 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from 'sonner';
-import { Save, Pencil, X, KeyRound, Shield, Users, User, Trophy, Star } from 'lucide-react';
+import { Save, Pencil, X, KeyRound, Shield, Users, User, Trophy, Star, CalendarIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import type { MemberProfileViewModel } from '@/types/viewModels';
 
 const profileSchema = z.object({
@@ -25,9 +29,19 @@ const profileSchema = z.object({
   last_name: z.string().min(1, 'Nachname erforderlich').max(100),
   email: z.string().email('Ungültige E-Mail').max(255),
   phone: z.string().max(30).optional().or(z.literal('')),
+  mobile: z.string().max(30).optional().or(z.literal('')),
   street: z.string().max(200).optional().or(z.literal('')),
   zip_code: z.string().max(10).optional().or(z.literal('')),
   city: z.string().max(100).optional().or(z.literal('')),
+  date_of_birth: z.string().nullable().optional(),
+  ttr_rating: z.preprocess(
+    (v) => (v === '' || v === null || v === undefined ? null : Number(v)),
+    z.number().int().min(0, 'Muss ≥ 0 sein').max(3500).nullable(),
+  ),
+  qttr_rating: z.preprocess(
+    (v) => (v === '' || v === null || v === undefined ? null : Number(v)),
+    z.number().int().min(0, 'Muss ≥ 0 sein').max(3500).nullable(),
+  ),
 });
 
 const passwordSchema = z.object({
@@ -131,24 +145,92 @@ function TabPersonalData({ member, form, editing, setEditing, updateMut, changin
               <form onSubmit={form.handleSubmit((v: ProfileForm) => updateMut.mutate(v))} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {([
-                    ['first_name', 'Vorname'],
-                    ['last_name', 'Nachname'],
-                    ['email', 'E-Mail'],
-                    ['phone', 'Telefon'],
-                    ['street', 'Straße'],
-                    ['zip_code', 'PLZ'],
-                    ['city', 'Ort'],
-                  ] as const).map(([name, label]) => (
+                    ['first_name', 'Vorname', 'text'],
+                    ['last_name', 'Nachname', 'text'],
+                    ['email', 'E-Mail', 'email'],
+                    ['phone', 'Telefon', 'text'],
+                    ['mobile', 'Mobil', 'text'],
+                    ['street', 'Straße', 'text'],
+                    ['zip_code', 'PLZ', 'text'],
+                    ['city', 'Ort', 'text'],
+                  ] as const).map(([name, label, type]) => (
                     <FormField key={name} control={form.control} name={name} render={({ field }) => (
                       <FormItem>
                         <FormLabel>{label}</FormLabel>
                         <FormControl>
-                          <Input {...field} type={name === 'email' ? 'email' : 'text'} />
+                          <Input {...field} type={type} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
                   ))}
+
+                  {/* Birthdate */}
+                  <FormField control={form.control} name="date_of_birth" render={({ field }) => {
+                    const dateValue = field.value ? new Date(field.value) : undefined;
+                    return (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Geburtstag</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  'w-full pl-3 text-left font-normal',
+                                  !field.value && 'text-muted-foreground',
+                                )}
+                              >
+                                {dateValue ? format(dateValue, 'dd.MM.yyyy') : <span>Datum wählen</span>}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={dateValue}
+                              onSelect={(d) => field.onChange(d ? format(d, 'yyyy-MM-dd') : null)}
+                              disabled={(d) => d > new Date()}
+                              initialFocus
+                              className={cn('p-3 pointer-events-auto')}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }} />
+
+                  {/* TTR */}
+                  <FormField control={form.control} name="ttr_rating" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>TTR</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number" min={0} max={3500} placeholder="0–3500"
+                          value={field.value ?? ''}
+                          onChange={(e) => field.onChange(e.target.value === '' ? null : e.target.value)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+
+                  {/* QTTR */}
+                  <FormField control={form.control} name="qttr_rating" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>QTTR</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number" min={0} max={3500} placeholder="0–3500"
+                          value={field.value ?? ''}
+                          onChange={(e) => field.onChange(e.target.value === '' ? null : e.target.value)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="ghost" onClick={() => { setEditing(false); form.reset(); }}>
@@ -166,9 +248,16 @@ function TabPersonalData({ member, form, editing, setEditing, updateMut, changin
               <DisplayField label="Nachname" value={member?.last_name} />
               <DisplayField label="E-Mail" value={member?.email} />
               <DisplayField label="Telefon" value={member?.phone} />
+              <DisplayField label="Mobil" value={(member as any)?.mobile} />
+              <DisplayField
+                label="Geburtstag"
+                value={member?.date_of_birth ? format(new Date(member.date_of_birth), 'dd.MM.yyyy') : null}
+              />
               <DisplayField label="Straße" value={member?.street} />
               <DisplayField label="PLZ" value={member?.zip_code} />
               <DisplayField label="Ort" value={member?.city} />
+              <DisplayField label="TTR" value={member?.ttr_rating?.toString()} />
+              <DisplayField label="QTTR" value={member?.qttr_rating?.toString()} />
               <DisplayField label="Status" value={member?.is_active ? 'Aktiv' : 'Inaktiv'} />
             </div>
           )}
@@ -346,7 +435,11 @@ export default function SettingsProfile() {
 
   const form = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
-    defaultValues: { first_name: '', last_name: '', email: '', phone: '', street: '', zip_code: '', city: '' },
+    defaultValues: {
+      first_name: '', last_name: '', email: '', phone: '', mobile: '',
+      street: '', zip_code: '', city: '', date_of_birth: null,
+      ttr_rating: null, qttr_rating: null,
+    },
   });
 
   const pwForm = useForm<PasswordForm>({
@@ -361,9 +454,13 @@ export default function SettingsProfile() {
         last_name: member.last_name ?? '',
         email: member.email ?? '',
         phone: member.phone ?? '',
+        mobile: (member as any).mobile ?? '',
         street: member.street ?? '',
         zip_code: member.zip_code ?? '',
         city: member.city ?? '',
+        date_of_birth: member.date_of_birth ?? null,
+        ttr_rating: member.ttr_rating ?? null,
+        qttr_rating: member.qttr_rating ?? null,
       });
     }
   }, [member]);
@@ -371,7 +468,12 @@ export default function SettingsProfile() {
   const updateMut = useMutation({
     mutationFn: async (values: ProfileForm) => {
       if (!member) throw new Error('Kein Mitgliedsprofil');
-      const { error } = await supabase.from('members').update(values).eq('id', member.id);
+      const payload: Record<string, any> = { ...values };
+      // Convert empty strings to null for nullable fields
+      for (const key of ['phone', 'mobile', 'street', 'zip_code', 'city'] as const) {
+        if (payload[key] === '') payload[key] = null;
+      }
+      const { error } = await supabase.from('members').update(payload).eq('id', member.id);
       if (error) throw error;
     },
     onSuccess: () => { toast.success('Profil aktualisiert'); setEditing(false); refresh(); },
