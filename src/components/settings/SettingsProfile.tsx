@@ -361,7 +361,11 @@ export default function SettingsProfile() {
 
   const form = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
-    defaultValues: { first_name: '', last_name: '', email: '', phone: '', street: '', zip_code: '', city: '' },
+    defaultValues: {
+      first_name: '', last_name: '', email: '', phone: '', mobile: '',
+      street: '', zip_code: '', city: '', date_of_birth: null,
+      ttr_rating: null, qttr_rating: null,
+    },
   });
 
   const pwForm = useForm<PasswordForm>({
