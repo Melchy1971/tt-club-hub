@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Shield, Users, UserCircle, Building2, Calendar, MapPin,
-  Palette, Bell, Lock, ShieldAlert, Database, AlertTriangle,
+  Palette, Bell, Lock, ShieldAlert, Database, AlertTriangle, Info,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { hasPermission } from '@/lib/permissions';
@@ -21,6 +21,7 @@ import SettingsPrivacy from '@/components/settings/SettingsPrivacy';
 import SettingsSecurity from '@/components/settings/SettingsSecurity';
 import SettingsBackup from '@/components/settings/SettingsBackup';
 import SettingsDangerZone from '@/components/settings/SettingsDangerZone';
+import SettingsInfo from '@/components/settings/SettingsInfo';
 
 interface SettingsTab {
   id:                  string;
@@ -55,6 +56,8 @@ const TABS: SettingsTab[] = [
   { id: 'rechte',      label: 'Rollen & Rechte', icon: Shield,    requiredPermission: 'admin:all', component: SettingsPermissions },
   { id: 'backup',      label: 'Backup',          icon: Database,  requiredPermission: 'admin:all', component: SettingsBackup },
   { id: 'gefahrenzone',label: 'Gefahrenzone',    icon: AlertTriangle, requiredPermission: 'admin:all', component: SettingsDangerZone },
+  // ── Info ────────────────────────────────────────────────────
+  { id: 'info',        label: 'Info',              icon: Info,          component: SettingsInfo },
 ];
 
 export default function SettingsPage() {
