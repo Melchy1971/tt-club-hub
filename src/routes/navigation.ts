@@ -14,41 +14,28 @@ import {
   Calendar,
   Users,
 } from 'lucide-react';
-import type { AppRole, Permission } from '@/types/auth';
-
-export type NavGroup = 'sport' | 'club' | 'system';
-
-export interface RouteConfig {
-  path: string;
-  name: string;
-  module: string;
-  icon?: React.ElementType;
-  group: NavGroup;
-  exact?: boolean;
-  hideInSidebar?: boolean;
-  requiredPermission?: Permission;
-  minRoles?: AppRole[]; // shortcut when Permission nicht reicht
-}
+import { MODULE_LABELS_DE } from '@/constants/uiLabels';
+import type { RouteConfig } from '@/types/navigation';
 
 export const ROUTES: RouteConfig[] = [
-  { path: '/', name: 'Dashboard', module: 'dashboard', icon: LayoutDashboard, group: 'sport', exact: true },
-  { path: '/mitglieder', name: 'Mitglieder', module: 'members', icon: Users, group: 'sport', requiredPermission: 'member:read' },
-  { path: '/mannschaften', name: 'Mannschaften', module: 'teams', icon: Shield, group: 'sport', requiredPermission: 'team:read' },
-  { path: '/spielbetrieb', name: 'Spielbetrieb', module: 'matches', icon: CalendarDays, group: 'sport', requiredPermission: 'match:read' },
-  { path: '/spielplan', name: 'Spielplan', module: 'schedule', icon: CalendarDays, group: 'sport', requiredPermission: 'match:read' },
-  { path: '/ersatzstellung', name: 'Ersatzstellung', module: 'substitutes', icon: UserCheck, group: 'sport', requiredPermission: 'substitute:read' },
-  { path: '/training', name: 'Training', module: 'training', icon: Dumbbell, group: 'sport', requiredPermission: 'training:read' },
+  { path: '/', label: MODULE_LABELS_DE.dashboard, module: 'dashboard', icon: LayoutDashboard, group: 'sport', exact: true, guard: { type: 'authenticated' } },
+  { path: '/mitglieder', label: MODULE_LABELS_DE.members, module: 'members', icon: Users, group: 'sport', guard: { type: 'permission', permission: 'member:read' } },
+  { path: '/mannschaften', label: MODULE_LABELS_DE.teams, module: 'teams', icon: Shield, group: 'sport', guard: { type: 'permission', permission: 'team:read' } },
+  { path: '/spielbetrieb', label: MODULE_LABELS_DE.matches, module: 'matches', icon: CalendarDays, group: 'sport', guard: { type: 'permission', permission: 'match:read' } },
+  { path: '/spielplan', label: MODULE_LABELS_DE.schedule, module: 'schedule', icon: CalendarDays, group: 'sport', guard: { type: 'permission', permission: 'match:read' } },
+  { path: '/ersatzstellung', label: MODULE_LABELS_DE.substitutes, module: 'substitutes', icon: UserCheck, group: 'sport', guard: { type: 'permission', permission: 'substitute:read' } },
+  { path: '/training', label: MODULE_LABELS_DE.training, module: 'training', icon: Dumbbell, group: 'sport', guard: { type: 'permission', permission: 'training:read' } },
 
-  { path: '/kommunikation', name: 'Kommunikation', module: 'communication', icon: MessageSquare, group: 'club', minRoles: ['trainer', 'vorstand', 'admin', 'developer'] },
-  { path: '/vorstand', name: 'Vorstand', module: 'board', icon: Landmark, group: 'club', minRoles: ['vorstand', 'admin', 'developer'] },
+  { path: '/kommunikation', label: MODULE_LABELS_DE.communication, module: 'communication', icon: MessageSquare, group: 'club', guard: { type: 'roles', roles: ['trainer', 'vorstand', 'admin', 'developer'] } },
+  { path: '/vorstand', label: MODULE_LABELS_DE.board, module: 'board', icon: Landmark, group: 'club', guard: { type: 'roles', roles: ['vorstand', 'admin', 'developer'] } },
 
-  { path: '/admin', name: 'Admin', module: 'admin', icon: ShieldAlert, group: 'system', minRoles: ['admin', 'developer'] },
-  { path: '/rollen', name: 'Rollen & Rechte', module: 'roles', icon: Shield, group: 'system', minRoles: ['admin', 'developer'] },
-  { path: '/saisons', name: 'Saisons', module: 'seasons', icon: Calendar, group: 'system', requiredPermission: 'season:read' },
-  { path: '/einstellungen', name: 'Einstellungen', module: 'settings', icon: Settings, group: 'system', requiredPermission: 'settings:read' },
-  { path: '/import', name: 'Import', module: 'import', icon: Upload, group: 'system', minRoles: ['admin', 'developer'] },
-  { path: '/info', name: 'Info', module: 'info', icon: Info, group: 'system' },
+  { path: '/admin', label: MODULE_LABELS_DE.admin, module: 'admin', icon: ShieldAlert, group: 'system', guard: { type: 'roles', roles: ['admin', 'developer'] } },
+  { path: '/rollen', label: MODULE_LABELS_DE.roles, module: 'roles', icon: Shield, group: 'system', guard: { type: 'roles', roles: ['admin', 'developer'] } },
+  { path: '/saisons', label: MODULE_LABELS_DE.seasons, module: 'seasons', icon: Calendar, group: 'system', guard: { type: 'permission', permission: 'season:read' } },
+  { path: '/einstellungen', label: MODULE_LABELS_DE.settings, module: 'settings', icon: Settings, group: 'system', guard: { type: 'permission', permission: 'settings:read' } },
+  { path: '/import', label: MODULE_LABELS_DE.import, module: 'import', icon: Upload, group: 'system', guard: { type: 'roles', roles: ['admin', 'developer'] } },
+  { path: '/info', label: MODULE_LABELS_DE.info, module: 'info', icon: Info, group: 'system', guard: { type: 'authenticated' } },
 
-  { path: '/profil', name: 'Profil', module: 'profile', icon: UserCircle, group: 'system', hideInSidebar: true },
-  { path: '/auth', name: 'Login', module: 'auth', group: 'system', hideInSidebar: true },
+  { path: '/profil', label: MODULE_LABELS_DE.profile, module: 'profile', icon: UserCircle, group: 'system', hideInSidebar: true, guard: { type: 'authenticated' } },
+  { path: '/auth', label: MODULE_LABELS_DE.auth, module: 'auth', group: 'system', hideInSidebar: true, guard: { type: 'public' } },
 ];

@@ -3,7 +3,8 @@ import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
 import { useNavigationPermissions } from '@/hooks/useNavigationPermissions';
-import type { RouteConfig } from '@/routes/navigation';
+import { NAV_GROUP_LABELS_DE, NAV_UI_LABELS_DE } from '@/constants/uiLabels';
+import type { RouteConfig } from '@/types/navigation';
 import {
   Sidebar,
   SidebarContent,
@@ -50,7 +51,7 @@ export function AppSidebar() {
                     activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                   >
                     {item.icon && <item.icon className="mr-2 h-4 w-4 shrink-0" />}
-                    {!collapsed && <span>{item.name}</span>}
+                    {!collapsed && <span>{item.label}</span>}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -71,10 +72,10 @@ export function AppSidebar() {
           {!collapsed && (
             <div className="flex flex-col">
               <span className="font-display font-bold text-sidebar-accent-foreground text-base tracking-tight leading-tight">
-                TT-Manager Pro
+                {NAV_UI_LABELS_DE.appName}
               </span>
               <span className="text-[10px] text-sidebar-foreground/50 leading-tight">
-                Tischtennisverwaltung
+                {NAV_UI_LABELS_DE.appTagline}
               </span>
             </div>
           )}
@@ -82,9 +83,9 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="gap-0">
-        {renderGroup('Sportbetrieb', navGroups.sport)}
-        {renderGroup('Vereinsführung', navGroups.club)}
-        {renderGroup('System', navGroups.system)}
+        {renderGroup(NAV_GROUP_LABELS_DE.sport, navGroups.sport)}
+        {renderGroup(NAV_GROUP_LABELS_DE.club, navGroups.club)}
+        {renderGroup(NAV_GROUP_LABELS_DE.system, navGroups.system)}
       </SidebarContent>
 
       <SidebarFooter className="p-3 border-t border-sidebar-border">
@@ -101,7 +102,7 @@ export function AppSidebar() {
           {!collapsed && (
             <div className="flex flex-col min-w-0">
               <span className="text-sm font-medium text-sidebar-accent-foreground truncate">
-                {user?.name ?? 'Benutzer'}
+                {user?.name ?? NAV_UI_LABELS_DE.userFallback}
               </span>
               <span className="text-[11px] text-sidebar-foreground/50 truncate">
                 {user?.email ?? ''}
@@ -114,7 +115,7 @@ export function AppSidebar() {
           className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground/70 hover:bg-destructive/20 hover:text-destructive transition-colors"
         >
           <LogOut className="h-4 w-4 shrink-0" />
-          {!collapsed && <span>Abmelden</span>}
+          {!collapsed && <span>{NAV_UI_LABELS_DE.logout}</span>}
         </button>
       </SidebarFooter>
     </Sidebar>

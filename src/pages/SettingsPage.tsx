@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { getSettingsSubpageLabel, NAV_UI_LABELS_DE } from '@/constants/uiLabels';
 import { canAccessSettingsPage } from '@/settings/access';
 import { SETTINGS_SUBPAGES } from '@/settings/subpages';
 import type { SettingsSubpageId } from '@/settings/types';
@@ -24,8 +25,8 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="page-header">
-        <h1 className="page-title">Einstellungen</h1>
-        <p className="page-description">Vereins- und Systemeinstellungen verwalten</p>
+        <h1 className="page-title">{NAV_UI_LABELS_DE.settingsTitle}</h1>
+        <p className="page-description">{NAV_UI_LABELS_DE.settingsDescription}</p>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
@@ -47,7 +48,7 @@ export default function SettingsPage() {
                   )}
                 >
                   <Icon className="h-4 w-4 shrink-0" />
-                  <span className="truncate">{page.label}</span>
+                  <span className="truncate">{getSettingsSubpageLabel(page.id) ?? page.label}</span>
                 </button>
               );
             })}
