@@ -1,39 +1,3 @@
-/**
- * SettingsSection
- *
- * Standardisiertes Card-Layout für einen Abschnitt innerhalb einer Settings-Seite.
- * Ersetzt das direkte `<Card>` + `<CardHeader>` + `<CardContent>`-Muster
- * in allen Settings-Komponenten.
- *
- * Varianten:
- *   'default' → normaler Card-Rahmen
- *   'danger'  → destructive-farbener Rahmen + roter Titel (für Gefahrenzone-Sections)
- *
- * Verwendung:
- *
- * ```tsx
- * // Einfacher Informationsbereich
- * <SettingsSection title="Aktive Sitzung" description="Sitzungs-Details">
- *   <div>...</div>
- * </SettingsSection>
- *
- * // Formular-Bereich mit Save-Bar
- * <SettingsSection title="Vereinsdaten" description="Stammdaten des Vereins">
- *   <Form {...form}>
- *     <form onSubmit={save}>
- *       {/* Felder */}
- *       <SettingsSaveBar isDirty={isDirty} isSaving={isSaving} onSave={save} onCancel={cancel} />
- *     </form>
- *   </Form>
- * </SettingsSection>
- *
- * // Gefahrenzone
- * <SettingsSection title="Gefahrenzone" variant="danger" description="Irreversible Aktionen">
- *   ...
- * </SettingsSection>
- * ```
- */
-
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle,
 } from '@/components/ui/card';
