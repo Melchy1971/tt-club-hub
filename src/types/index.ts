@@ -17,6 +17,14 @@ export type Season = Tables<'seasons'>;
 export type SeasonInsert = TablesInsert<'seasons'>;
 export type SeasonUpdate = TablesUpdate<'seasons'>;
 
+export type SeasonCycle = Tables<'season_cycles'>;
+export type SeasonCycleInsert = TablesInsert<'season_cycles'>;
+export type SeasonCycleUpdate = TablesUpdate<'season_cycles'>;
+
+export type SeasonPhase = Tables<'season_phases'>;
+export type SeasonPhaseInsert = TablesInsert<'season_phases'>;
+export type SeasonPhaseUpdate = TablesUpdate<'season_phases'>;
+
 export type ScheduleMatch = Tables<'schedule_matches'>;
 export type ScheduleMatchInsert = TablesInsert<'schedule_matches'>;
 export type ScheduleMatchUpdate = TablesUpdate<'schedule_matches'>;
