@@ -4,50 +4,44 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import type { Database } from '@/integrations/supabase/types';
 import {
+  APP_ROLE_LABELS,
   MODULE_KEYS,
   getModuleLabel,
   permissionLabels,
-  isPermissionLevel,
-  type ModuleKey,
   type PermissionLevel,
 } from '@/constants/permissionsMatrix';
-
-const ROLES: Database['public']['Enums']['app_role'][] = [
-  'admin', 'vorstand', 'trainer', 'spieler', 'mitglied',
-];
-
-const ROLE_LABELS: Record<string, string> = {
-  admin: 'Admin', vorstand: 'Vorstand', trainer: 'Trainer',
-  spieler: 'Spieler', mitglied: 'Mitglied',
-};
+import {
+  assertRoleMutable,
+  resolveRolePermissions,
+  validateRolePermissionsPayload,
+  type RolePermissionsMap,
+} from '@/lib/auth/permissionsResolver';
 
 export default function SettingsPermissions() {
   const queryClient = useQueryClient();
 
-  const { data: permissions = [] } = useQuery({
+  const { data: roles = [] } = useQuery({
     queryKey: ['role-module-permissions'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('role_module_permissions').select('*');
+      const { data, error } = await supabase.from('roles').select('id, name, permissions, is_system').order('name');
       if (error) throw error;
       return data;
     },
   });
 
   const updateMut = useMutation({
-    mutationFn: async ({ role, module, level }: { role: string; module: ModuleKey; level: PermissionLevel }) => {
-      const existing = permissions.find((p) => p.role === role && p.module === module);
-      if (existing) {
-        const { error } = await supabase.from('role_module_permissions')
-          .update({ level })
-          .eq('id', existing.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('role_module_permissions')
-          .insert({ role: role as any, module, level });
-        if (error) throw error;
+    mutationFn: async ({ roleId, nextPermissions }: { roleId: string; nextPermissions: RolePermissionsMap }) => {
+      const validation = validateRolePermissionsPayload(nextPermissions);
+      if (!validation.valid) {
+        throw new Error(validation.errors.join(', '));
       }
+
+      const { error } = await supabase
+        .from('roles')
+        .update({ permissions: nextPermissions } as never)
+        .eq('id', roleId);
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['role-module-permissions'] });
@@ -55,11 +49,6 @@ export default function SettingsPermissions() {
     },
     onError: () => toast.error('Fehler beim Aktualisieren'),
   });
-
-  const getLevel = (role: string, module: ModuleKey): PermissionLevel => {
-    const found = permissions.find((p) => p.role === role && p.module === module);
-    return found?.level ?? 'none';
-  };
 
   return (
     <Card>
@@ -73,9 +62,9 @@ export default function SettingsPermissions() {
             <TableHeader>
               <TableRow>
                 <TableHead className="sticky left-0 bg-card z-10">Modul</TableHead>
-                {ROLES.map((r) => (
-                  <TableHead key={r} className="text-center min-w-[120px]">
-                    {ROLE_LABELS[r]}
+                {roles.map((role) => (
+                  <TableHead key={role.id} className="text-center min-w-[120px]">
+                    {APP_ROLE_LABELS[role.name]}
                   </TableHead>
                 ))}
               </TableRow>
@@ -84,16 +73,22 @@ export default function SettingsPermissions() {
               {MODULE_KEYS.map((mod) => (
                 <TableRow key={mod}>
                   <TableCell className="sticky left-0 bg-card z-10 font-medium">{getModuleLabel(mod)}</TableCell>
-                  {ROLES.map((role) => {
-                    const level = getLevel(role, mod);
+                  {roles.map((role) => {
+                    const matrix = resolveRolePermissions(role);
+                    const level = matrix[mod];
+                    const mutability = assertRoleMutable(role);
+
                     return (
-                      <TableCell key={role} className="text-center">
+                      <TableCell key={role.id} className="text-center">
                         <Select
                           value={level}
                           onValueChange={(value) => {
-                            if (!isPermissionLevel(value)) return;
-                            updateMut.mutate({ role, module: mod, level: value });
+                            const nextPermissions: RolePermissionsMap = { ...matrix, [mod]: value as PermissionLevel };
+                            const validation = validateRolePermissionsPayload(nextPermissions);
+                            if (!validation.valid || !mutability.mutable) return;
+                            updateMut.mutate({ roleId: role.id, nextPermissions });
                           }}
+                          disabled={!mutability.mutable}
                         >
                           <SelectTrigger className="h-8 w-24 mx-auto text-xs">
                             <SelectValue />

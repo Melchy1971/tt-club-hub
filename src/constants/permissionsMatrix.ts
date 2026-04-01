@@ -1,4 +1,5 @@
 import type { Database } from '@/integrations/supabase/types';
+import type { AppRole } from '@/types/auth';
 
 export const PERMISSION_LEVELS = ['none', 'read', 'write'] as const;
 
@@ -19,6 +20,15 @@ export const MODULE_KEYS = [
 ] as const;
 
 export type ModuleKey = (typeof MODULE_KEYS)[number];
+
+export const APP_ROLE_LABELS: Record<AppRole, string> = {
+  developer: 'Entwickler',
+  admin: 'Administrator',
+  vorstand: 'Vorstand',
+  trainer: 'Trainer',
+  spieler: 'Spieler',
+  mitglied: 'Mitglied',
+};
 
 export const moduleLabels: Record<ModuleKey, string> = {
   members: 'Mitglieder',

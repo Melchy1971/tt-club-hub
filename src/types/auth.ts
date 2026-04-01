@@ -128,6 +128,13 @@ export interface SessionRoleAssignment {
   readonly role: AppRole;
 }
 
+export interface UserCustomRoleAssignment {
+  readonly userId: string;
+  readonly roleId: string;
+  readonly assignedAt: string;
+  readonly assignedBy: string | null;
+}
+
 export interface AuthSessionState {
   readonly userId: string;
   readonly email: string | null;

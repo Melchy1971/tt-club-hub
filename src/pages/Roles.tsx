@@ -20,43 +20,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Constants } from '@/integrations/supabase/types';
 import type { AppRole } from '@/types/auth';
+import {
+  APP_ROLE_LABELS,
+  MODULE_KEYS,
+  moduleLabels,
+  permissionLabels,
+  type ModuleKey,
+  type PermissionLevel,
+} from '@/constants/permissionsMatrix';
 
 // --- Constants ---
 
 const SYSTEM_ROLES = Constants.public.Enums.app_role;
 
-const ROLE_LABELS: Record<string, string> = {
-  developer: 'Entwickler',
-  admin: 'Administrator',
-  vorstand: 'Vorstand',
-  trainer: 'Trainer',
-  spieler: 'Spieler',
-  mitglied: 'Mitglied',
-};
-
-const MODULES = [
-  'dashboard', 'teams', 'schedule', 'members',
-  'communication', 'board', 'settings', 'import',
-] as const;
-
-const MODULE_LABELS: Record<string, string> = {
-  dashboard: 'Dashboard',
-  teams: 'Mannschaften',
-  schedule: 'Spielplan',
-  members: 'Mitglieder',
-  communication: 'Kommunikation',
-  board: 'Vorstand',
-  settings: 'Einstellungen',
-  import: 'Import',
-};
-
-type PermLevel = 'none' | 'read' | 'write';
-
-const LEVEL_LABELS: Record<PermLevel, string> = {
-  none: 'Kein Zugriff',
-  read: 'Lesen',
-  write: 'Schreiben',
-};
+type PermLevel = PermissionLevel;
 
 const LEVEL_COLORS: Record<PermLevel, string> = {
   none: 'bg-muted text-muted-foreground',
@@ -69,7 +46,7 @@ const LEVEL_COLORS: Record<PermLevel, string> = {
 interface RoleModulePerm {
   id: string;
   role: AppRole;
-  module: string;
+  module: ModuleKey;
   level: PermLevel;
 }
 
@@ -133,7 +110,7 @@ export default function Roles() {
   const [assignRole, setAssignRole] = useState<AppRole | ''>('');
 
   // Build permission lookup: role:module → level
-  const permLookup = (role: string, module: string): PermLevel => {
+  const permLookup = (role: string, module: ModuleKey): PermLevel => {
     const key = `${role}:${module}`;
     if (editedPerms[key] !== undefined) return editedPerms[key];
     const found = perms.find((p) => p.role === role && p.module === module);
@@ -198,7 +175,7 @@ export default function Roles() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  function setPermLevel(role: string, module: string, level: PermLevel) {
+  function setPermLevel(role: string, module: ModuleKey, level: PermLevel) {
     setEditedPerms((prev) => ({ ...prev, [`${role}:${module}`]: level }));
   }
 
@@ -245,18 +222,18 @@ export default function Roles() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="sticky left-0 bg-background z-10 min-w-[140px]">Modul</TableHead>
-                  {SYSTEM_ROLES.map((r) => (
+                {SYSTEM_ROLES.map((r) => (
                     <TableHead key={r} className="text-center min-w-[120px]">
-                      {ROLE_LABELS[r] ?? r}
+                      {APP_ROLE_LABELS[r] ?? r}
                     </TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {MODULES.map((mod) => (
+                {MODULE_KEYS.map((mod) => (
                   <TableRow key={mod}>
                     <TableCell className="sticky left-0 bg-background z-10 font-medium">
-                      {MODULE_LABELS[mod]}
+                      {moduleLabels[mod]}
                     </TableCell>
                     {SYSTEM_ROLES.map((role) => {
                       const level = permLookup(role, mod);
@@ -267,18 +244,18 @@ export default function Roles() {
                               value={level}
                               onValueChange={(v) => setPermLevel(role, mod, v as PermLevel)}
                             >
-                              <SelectTrigger className="h-8 text-xs w-full">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none">Kein Zugriff</SelectItem>
-                                <SelectItem value="read">Lesen</SelectItem>
-                                <SelectItem value="write">Schreiben</SelectItem>
-                              </SelectContent>
-                            </Select>
+                                <SelectTrigger className="h-8 text-xs w-full">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                {(Object.entries(permissionLabels) as [PermLevel, string][]).map(([value, label]) => (
+                                  <SelectItem key={value} value={value}>{label}</SelectItem>
+                                ))}
+                                </SelectContent>
+                              </Select>
                           ) : (
                             <Badge className={`text-xs ${LEVEL_COLORS[level]}`}>
-                              {LEVEL_LABELS[level]}
+                              {permissionLabels[level]}
                             </Badge>
                           )}
                         </TableCell>
@@ -310,7 +287,7 @@ export default function Roles() {
                     <TableRow key={ur.id}>
                       <TableCell className="font-medium">{getMemberName(ur.user_id)}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">{ROLE_LABELS[ur.role] ?? ur.role}</Badge>
+                        <Badge variant="outline">{APP_ROLE_LABELS[ur.role] ?? ur.role}</Badge>
                       </TableCell>
                       {admin && (
                         <TableCell className="text-right">
@@ -351,7 +328,7 @@ export default function Roles() {
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
                           <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-                          {ROLE_LABELS[r] ?? r}
+                          {APP_ROLE_LABELS[r] ?? r}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -393,7 +370,7 @@ export default function Roles() {
                 <SelectTrigger><SelectValue placeholder="Rolle auswählen" /></SelectTrigger>
                 <SelectContent>
                   {SYSTEM_ROLES.map((r) => (
-                    <SelectItem key={r} value={r}>{ROLE_LABELS[r] ?? r}</SelectItem>
+                    <SelectItem key={r} value={r}>{APP_ROLE_LABELS[r] ?? r}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
