@@ -14,13 +14,42 @@ export interface MemberTeamBadge {
   division: string | null;
   position: number;
   isCaptain: boolean;
+  seasonPhaseId: string | null;
   seasonPhaseName: string | null;
+  trainingTimes: TeamTrainingTimeBadge[];
+}
+
+export interface TeamTrainingTimeBadge {
+  id: string;
+  bookingDate: string;
+  startTime: string;
+  endTime: string | null;
+  location: string | null;
+  status: 'pending' | 'confirmed' | 'cancelled';
+}
+
+export interface MemberTeamGroupViewModel {
+  ageGroup: string | null;
+  seasonPhaseId: string | null;
+  seasonPhaseName: string | null;
+  teams: MemberTeamBadge[];
+}
+
+export interface MemberProfilePermissionViewModel {
+  mode: 'self-service' | 'admin-board';
+  canEditPersonalData: boolean;
+  canManageRoles: boolean;
+  canManageTeamAssignments: boolean;
+  canChangeOwnPassword: boolean;
+  canManageSecurityForOthers: boolean;
 }
 
 export interface MemberProfileViewModel {
   member: Tables<'members'>;
   roles: MemberRoleBadge[];
   teams: MemberTeamBadge[];
+  teamGroups: MemberTeamGroupViewModel[];
+  permissions: MemberProfilePermissionViewModel;
 }
 
 export interface PublicClubInfoViewModel {

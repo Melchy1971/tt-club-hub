@@ -412,6 +412,30 @@ function TabRoles({ profileVM }: { profileVM: MemberProfileViewModel | null | un
   );
 }
 
+function TabSecurity({ profileVM }: { profileVM: MemberProfileViewModel | null | undefined }) {
+  const permissions = profileVM?.permissions;
+  if (!permissions) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Passwort & Sicherheit</CardTitle>
+        <CardDescription>Self-Service und Admin/Vorstand-Berechtigungen im Profilkontext</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        <div><strong>Modus:</strong> {permissions.mode === 'self-service' ? 'Self-Service' : 'Admin/Vorstand'}</div>
+        <div className="grid sm:grid-cols-2 gap-2">
+          <Badge variant={permissions.canEditPersonalData ? 'default' : 'secondary'}>Persönliche Daten bearbeiten</Badge>
+          <Badge variant={permissions.canChangeOwnPassword ? 'default' : 'secondary'}>Eigenes Passwort ändern</Badge>
+          <Badge variant={permissions.canManageRoles ? 'default' : 'secondary'}>Rollen verwalten</Badge>
+          <Badge variant={permissions.canManageTeamAssignments ? 'default' : 'secondary'}>Mannschaften verwalten</Badge>
+          <Badge variant={permissions.canManageSecurityForOthers ? 'default' : 'secondary'}>Sicherheit für andere verwalten</Badge>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function TabTeams({ profileVM }: { profileVM: MemberProfileViewModel | null | undefined }) {
   if (!profileVM?.teams?.length) {
     return (
@@ -442,31 +466,59 @@ function TabTeams({ profileVM }: { profileVM: MemberProfileViewModel | null | un
             </TableRow>
           </TableHeader>
           <TableBody>
-            {profileVM.teams.map((t) => (
-              <TableRow key={t.teamId}>
-                <TableCell className="font-medium">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-muted-foreground shrink-0" />
-                    {t.name}
-                  </div>
-                </TableCell>
-                <TableCell className="hidden sm:table-cell">
-                  {t.ageGroup ? (AGE_GROUP_LABELS[t.ageGroup] ?? t.ageGroup) : '–'}
-                </TableCell>
-                <TableCell className="hidden md:table-cell">{t.seasonPhaseName ?? '–'}</TableCell>
-                <TableCell className="hidden sm:table-cell">{t.league ?? '–'}</TableCell>
-                <TableCell>{t.position || '–'}</TableCell>
-                <TableCell className="hidden md:table-cell">
-                  {t.isCaptain ? (
-                    <Badge variant="default" className="gap-1">
-                      <Star className="h-3 w-3" /> Ja
-                    </Badge>
-                  ) : '–'}
-                </TableCell>
-              </TableRow>
+            {profileVM.teamGroups.flatMap((group) => (
+              group.teams.map((t, index) => (
+                <TableRow key={t.teamId}>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <div>
+                        <div>{t.name}</div>
+                        {index === 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            Gruppe: {group.ageGroup ? (AGE_GROUP_LABELS[group.ageGroup] ?? group.ageGroup) : '–'} · {group.seasonPhaseName ?? 'ohne Phase'}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell">
+                    {t.ageGroup ? (AGE_GROUP_LABELS[t.ageGroup] ?? t.ageGroup) : '–'}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">{t.seasonPhaseName ?? '–'}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{t.league ?? '–'}</TableCell>
+                  <TableCell>{t.position || '–'}</TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {t.isCaptain ? (
+                      <Badge variant="default" className="gap-1">
+                        <Star className="h-3 w-3" /> Ja
+                      </Badge>
+                    ) : '–'}
+                  </TableCell>
+                </TableRow>
+              ))
             ))}
           </TableBody>
         </Table>
+        <div className="mt-5 space-y-4">
+          {profileVM.teams.map((team) => (
+            <div key={`${team.teamId}-training`} className="space-y-1">
+              <h4 className="text-sm font-medium">{team.name} – Trainingszeiten</h4>
+              {team.trainingTimes.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Keine geplanten Trainingszeiten.</p>
+              ) : (
+                <ul className="text-sm text-muted-foreground list-disc pl-5">
+                  {team.trainingTimes.map((slot) => (
+                    <li key={slot.id}>
+                      {slot.bookingDate} · {slot.startTime.slice(0, 5)}
+                      {slot.endTime ? `-${slot.endTime.slice(0, 5)}` : ''} · {slot.location ?? 'Ort offen'} ({slot.status})
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );
@@ -576,7 +628,10 @@ export default function SettingsProfile() {
         </TabsContent>
 
         <TabsContent value="roles">
-          <TabRoles profileVM={profileVM} />
+          <div className="space-y-4">
+            <TabRoles profileVM={profileVM} />
+            <TabSecurity profileVM={profileVM} />
+          </div>
         </TabsContent>
 
         <TabsContent value="teams">
