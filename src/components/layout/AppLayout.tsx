@@ -30,7 +30,7 @@ export function AppLayout() {
               <Button variant="ghost" size="icon" className="text-muted-foreground">
                 <Bell className="h-4 w-4" />
               </Button>
-              <NavLink to="/profil" className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-muted transition-colors">
+              <NavLink to="/einstellungen?tab=profil" className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-muted transition-colors">
                 <span className="text-sm font-medium hidden md:inline">
                   {user?.name ?? user?.email ?? 'Benutzer'}
                 </span>

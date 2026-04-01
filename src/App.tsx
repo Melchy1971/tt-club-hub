@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -18,7 +18,7 @@ import SettingsPage from "./pages/SettingsPage";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
-import PlaceholderPage from "./pages/PlaceholderPage";
+
 import Admin from "./pages/Admin";
 import Communication from "./pages/Communication";
 import Board from "./pages/Board";
@@ -57,8 +57,8 @@ const App = () => (
                   <Route path="/rollen" element={<Roles />} />
                   <Route path="/einstellungen" element={<SettingsPage />} />
                   <Route path="/saisons" element={<Seasons />} />
-                  <Route path="/profil" element={<PlaceholderPage title="Profil" />} />
-                  <Route path="/info" element={<PlaceholderPage title="Info" />} />
+                  <Route path="/profil" element={<Navigate to="/einstellungen?tab=profil" replace />} />
+                  <Route path="/info" element={<Navigate to="/einstellungen?tab=info" replace />} />
                 </Route>
               </Route>
               <Route path="*" element={<NotFound />} />
