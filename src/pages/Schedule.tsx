@@ -28,7 +28,7 @@ export default function Schedule() {
       const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
         .select('id, name, league, division')
-        .eq('season_id', currentSeason.id)
+        .eq('season_phase_id', currentSeason.id)
         .eq('is_active', true)
         .order('name');
 
