@@ -24,8 +24,12 @@ export const teamCreateSchema = z.object({
   name: z.string().trim().min(1, 'Mannschaftsname ist erforderlich').max(100),
   // league ist in der DB nullable; im UI aber Pflichtfeld → min(1) erzwingen.
   league: z.string().trim().min(1, 'Liga ist erforderlich').max(100),
-  season_id: z.string().uuid('Ungültige Saison-ID'),
   season_phase_id: z.string().uuid('Ungültige Saisonphasen-ID'),
+  /**
+   * Deprecated Fallback: wenn nicht angegeben, wird season_id aus season_phase_id aufgelöst.
+   * Dadurch ist Team-CRUD primär phase-basiert.
+   */
+  season_id: z.string().uuid('Ungültige Saison-ID').optional(),
   age_group: ageGroupSchema.default('herren'),
   division: z.string().trim().max(50).nullable().optional(),
   captain_id: z.string().uuid('Ungültige Spielführer-ID').nullable().optional(),

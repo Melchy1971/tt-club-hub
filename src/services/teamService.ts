@@ -1,7 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Team } from '@/types';
 import type { ApiResult, AppError } from '@/types/api';
-import type { TeamWithRoster } from '@/types/domain/team';
+import type { TeamOverview, TeamWithRoster } from '@/types/domain/team';
 import { ok, err, tryCatch } from '@/lib/api';
 import { errors, fromSupabaseError, getErrorMessage } from '@/lib/error';
 import {
@@ -24,6 +24,19 @@ const toAppError = (e: unknown): AppError => {
     return e as AppError;
   }
   return errors.internal(getErrorMessage(e));
+};
+
+const resolveSeasonIdByPhaseId = async (seasonPhaseId: string): Promise<string> => {
+  const { data, error } = await supabase
+    .from('season_phases')
+    .select('season_cycle_id')
+    .eq('id', seasonPhaseId)
+    .maybeSingle();
+  if (error) throw fromSupabaseError(error);
+  if (!data?.season_cycle_id) {
+    throw errors.notFound('Die angegebene Saisonphase wurde nicht gefunden');
+  }
+  return data.season_cycle_id;
 };
 
 // ─── teamService ─────────────────────────────────────────────────────────────
@@ -128,9 +141,13 @@ export const teamService = {
       return err(errors.validation(parsed.error.message, parsed.error.flatten()));
     }
     return tryCatch(async () => {
+      const seasonId = parsed.data.season_id ?? await resolveSeasonIdByPhaseId(parsed.data.season_phase_id);
       const { data, error } = await supabase
         .from('teams')
-        .insert(parsed.data)
+        .insert({
+          ...parsed.data,
+          season_id: seasonId,
+        })
         .select()
         .single();
       if (error) throw fromSupabaseError(error);
@@ -147,14 +164,73 @@ export const teamService = {
       return err(errors.validation('Keine Felder zum Aktualisieren angegeben'));
     }
     return tryCatch(async () => {
+      const patch: TeamUpdateInput = { ...parsed.data };
+      if (patch.season_phase_id && !patch.season_id) {
+        patch.season_id = await resolveSeasonIdByPhaseId(patch.season_phase_id);
+      }
+
       const { data, error } = await supabase
         .from('teams')
-        .update(parsed.data)
+        .update(patch)
         .eq('id', id)
         .select()
         .single();
       if (error) throw fromSupabaseError(error);
       return data;
+    }, toAppError);
+  },
+
+  /**
+   * Performante Team-Übersicht:
+   * - Team-Stammdaten
+   * - Kapitän (Name)
+   * - Kadergröße (team_members count)
+   *
+   * Query-Design:
+   * 1) Teamliste inkl. captain Join laden
+   * 2) Kadergrößen aggregiert in einer zweiten Query laden
+   * 3) In-Memory mergen (O(n))
+   *
+   * Diese Aufteilung vermeidet N+1-Queries pro Team.
+   */
+  async listOverview(filters: TeamFilterInput = {}): Promise<ApiResult<TeamOverview[]>> {
+    const teamsResult = await this.list(filters);
+    if (!teamsResult.ok) return teamsResult as ApiResult<TeamOverview[]>;
+
+    return tryCatch(async () => {
+      const teams = teamsResult.data;
+      if (teams.length === 0) return [];
+      const teamIds = teams.map((team) => team.id);
+
+      const [{ data: rosterRows, error: rosterError }, { data: captainRows, error: captainError }] = await Promise.all([
+        supabase
+          .from('team_members')
+          .select('team_id')
+          .in('team_id', teamIds),
+        supabase
+          .from('teams')
+          .select('id, members:captain_id(id, first_name, last_name)')
+          .in('id', teamIds),
+      ]);
+
+      if (rosterError) throw fromSupabaseError(rosterError);
+      if (captainError) throw fromSupabaseError(captainError);
+
+      const rosterCountByTeam = new Map<string, number>();
+      for (const row of rosterRows ?? []) {
+        rosterCountByTeam.set(row.team_id, (rosterCountByTeam.get(row.team_id) ?? 0) + 1);
+      }
+
+      const captainByTeam = new Map<string, TeamOverview['captain']>();
+      for (const row of captainRows ?? []) {
+        captainByTeam.set(row.id, (row.members?.[0] ?? null) as TeamOverview['captain']);
+      }
+
+      return teams.map((team) => ({
+        ...team,
+        captain: captainByTeam.get(team.id) ?? null,
+        roster_size: rosterCountByTeam.get(team.id) ?? 0,
+      }));
     }, toAppError);
   },
 

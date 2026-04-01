@@ -22,7 +22,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { TeamMember } from '@/types';
 import type { ApiResult, AppError } from '@/types/api';
-import type { AssignmentWithMember } from '@/types/domain/team';
+import type { AssignmentWithMember, MemberTeamAssignment, TeamTrainingTime } from '@/types/domain/team';
 import { ok, err, tryCatch } from '@/lib/api';
 import { errors, fromSupabaseError, getErrorMessage } from '@/lib/error';
 import {
@@ -79,28 +79,49 @@ export const teamAssignmentService = {
     return tryCatch(async () => {
       let query = supabase
         .from('team_members')
-        .select('*')
+        .select('*, teams!inner(id, season_id, season_phase_id, season_phases(id, is_active))')
         .eq('member_id', memberId);
 
-      if (seasonId || seasonPhaseId || activePhase) {
-        let teamsQuery = supabase.from('teams').select('id');
-        if (seasonId) teamsQuery = teamsQuery.eq('season_id', seasonId);
-        if (seasonPhaseId) teamsQuery = teamsQuery.eq('season_phase_id', seasonPhaseId);
-        if (activePhase) {
-          teamsQuery = teamsQuery
-            .select('id, season_phases!inner(id, is_active)')
-            .eq('season_phases.is_active', true);
-        }
-
-        const { data: teamIds } = await teamsQuery;
-        const ids = (teamIds ?? []).map((t) => t.id);
-        if (ids.length === 0) return [];
-        query = query.in('team_id', ids);
-      }
+      if (seasonId) query = query.eq('teams.season_id', seasonId);
+      if (seasonPhaseId) query = query.eq('teams.season_phase_id', seasonPhaseId);
+      if (activePhase) query = query.eq('teams.season_phases.is_active', true);
 
       const { data, error } = await query;
       if (error) throw fromSupabaseError(error);
-      return (data ?? []) as TeamMember[];
+      return (data ?? []).map(({ teams: _teams, ...assignment }) => assignment) as TeamMember[];
+    }, toAppError);
+  },
+
+  /**
+   * Fachliche Zuordnungen eines Mitglieds zu Teams je Saisonphase.
+   * Abgrenzung:
+   * - team_members: technische Kaderzeilen inkl. Position
+   * - member_team_assignments (Service-View): fachlich angereicherte Zuordnung
+   */
+  async getMemberTeamAssignments(
+    memberId: string,
+    options: { seasonPhaseId?: string; activePhase?: boolean } = {},
+  ): Promise<ApiResult<MemberTeamAssignment[]>> {
+    return tryCatch(async () => {
+      let query = supabase
+        .from('team_members')
+        .select('member_id, team_id, position, teams!inner(season_id, season_phase_id, captain_id, season_phases(id, is_active))')
+        .eq('member_id', memberId);
+
+      if (options.seasonPhaseId) query = query.eq('teams.season_phase_id', options.seasonPhaseId);
+      if (options.activePhase) query = query.eq('teams.season_phases.is_active', true);
+
+      const { data, error } = await query;
+      if (error) throw fromSupabaseError(error);
+
+      return (data ?? []).map((row: any) => ({
+        team_id: row.team_id,
+        member_id: row.member_id,
+        season_phase_id: row.teams.season_phase_id,
+        season_id: row.teams.season_id,
+        position: row.position,
+        is_captain: row.teams.captain_id === row.member_id,
+      })) as MemberTeamAssignment[];
     }, toAppError);
   },
 
@@ -300,6 +321,42 @@ export const teamAssignmentService = {
       const { data, error } = await query;
       if (error) throw fromSupabaseError(error);
       return data ?? [];
+    }, toAppError);
+  },
+
+  /**
+   * Trainingszeiten eines Teams über alle zugeordneten Mitglieder.
+   * Hinweis: training_bookings hat keinen team_id-FK; Zuordnung erfolgt über requester/partner ∈ Teamkader.
+   */
+  async getTeamTrainingTimes(
+    teamId: string,
+    fromDate?: string,
+    toDate?: string,
+  ): Promise<ApiResult<TeamTrainingTime[]>> {
+    return tryCatch(async () => {
+      const { data: rosterRows, error: rosterError } = await supabase
+        .from('team_members')
+        .select('member_id')
+        .eq('team_id', teamId);
+      if (rosterError) throw fromSupabaseError(rosterError);
+
+      const memberIds = [...new Set((rosterRows ?? []).map((r) => r.member_id))];
+      if (memberIds.length === 0) return [];
+
+      let query = supabase
+        .from('training_bookings')
+        .select('id, booking_date, start_time, end_time, location, status, requester_id, partner_id')
+        .in('requester_id', memberIds)
+        .in('partner_id', memberIds)
+        .order('booking_date', { ascending: true })
+        .order('start_time', { ascending: true });
+
+      if (fromDate) query = query.gte('booking_date', fromDate);
+      if (toDate) query = query.lte('booking_date', toDate);
+
+      const { data, error } = await query;
+      if (error) throw fromSupabaseError(error);
+      return (data ?? []) as TeamTrainingTime[];
     }, toAppError);
   },
 };
