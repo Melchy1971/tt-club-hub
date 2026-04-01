@@ -156,3 +156,11 @@ export const canWriteSeasons = (role: AppRole | null | undefined) =>
   hasPermission(role, 'season:write');
 export const canDeleteSeasons = (role: AppRole | null | undefined) =>
   hasPermission(role, 'season:delete');
+
+// Vorstandsbereich
+export const canReadBoard = (role: AppRole | null | undefined) =>
+  hasPermission(role, 'board:read');
+export const canWriteBoard = (role: AppRole | null | undefined) =>
+  hasPermission(role, 'board:write');
+export const canDeleteBoard = (role: AppRole | null | undefined) =>
+  hasPermission(role, 'board:delete');

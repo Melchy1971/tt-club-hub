@@ -35,6 +35,9 @@ export type Permission =
   | 'substitute:approve'
   | 'settings:read'
   | 'settings:write'
+  | 'board:read'
+  | 'board:write'
+  | 'board:delete'
   | 'admin:all';
 
 const ALL_PERMISSIONS: Permission[] = [
@@ -57,6 +60,9 @@ const ALL_PERMISSIONS: Permission[] = [
   'substitute:approve',
   'settings:read',
   'settings:write',
+  'board:read',
+  'board:write',
+  'board:delete',
   'admin:all',
 ];
 
@@ -79,6 +85,8 @@ export const ROLE_PERMISSIONS: Record<AppRole, Permission[]> = {
     'substitute:approve',
     'settings:read',
     'settings:write',
+    'board:read',
+    'board:write',
   ],
   trainer: [
     'member:read',
