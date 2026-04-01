@@ -1,4 +1,5 @@
 import type { AppRole, AuthContextValue, GuardResult } from '@/types/auth';
+import { hasPermission, type PermissionDomain } from '@/lib/permissions';
 
 export const hasRole = (
   currentRole: AppRole | null | undefined,
@@ -9,6 +10,12 @@ export const hasRole = (
   const list = Array.isArray(required) ? required : [required];
   return list.includes(currentRole);
 };
+
+export const canRead = (role: AppRole | null | undefined, domain: PermissionDomain): boolean =>
+  hasPermission(role, `${domain}:read`);
+
+export const canWrite = (role: AppRole | null | undefined, domain: PermissionDomain): boolean =>
+  hasPermission(role, `${domain}:write`);
 
 export const evaluateGuard = (
   auth: Pick<AuthContextValue, 'isAuthenticated' | 'role' | 'problem'>,

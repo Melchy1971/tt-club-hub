@@ -22,7 +22,7 @@ export function ProtectedRoute({ allowedRoles, fallbackPath = '/' }: ProtectedRo
 
   const guard = evaluateGuard({ isAuthenticated, role, problem }, allowedRoles);
   if (!guard.allowed) {
-    const authReasons = ['NO_SESSION', 'MISSING_MEMBER', 'NO_USER_ROLES', 'INVALID_ROLE'] as const;
+    const authReasons = ['NO_SESSION', 'MISSING_MEMBER', 'NO_USER_ROLES', 'INVALID_ROLE', 'INCONSISTENT_DATA'] as const;
     const target = (authReasons as readonly string[]).includes(guard.reason) ? '/auth' : fallbackPath;
     return <Navigate to={target} replace />;
   }
