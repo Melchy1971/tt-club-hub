@@ -134,6 +134,9 @@ export type Database = {
       consent_audit_log: {
         Row: {
           action: string
+          action_at: string
+          actor_ip: string | null
+          actor_user_agent: string | null
           consent_type: string
           created_at: string
           id: string
@@ -142,6 +145,9 @@ export type Database = {
         }
         Insert: {
           action: string
+          action_at?: string
+          actor_ip?: string | null
+          actor_user_agent?: string | null
           consent_type: string
           created_at?: string
           id?: string
@@ -150,6 +156,9 @@ export type Database = {
         }
         Update: {
           action?: string
+          action_at?: string
+          actor_ip?: string | null
+          actor_user_agent?: string | null
           consent_type?: string
           created_at?: string
           id?: string
@@ -168,10 +177,17 @@ export type Database = {
       }
       deletion_requests: {
         Row: {
+          actor_ip: string | null
+          actor_user_agent: string | null
+          completed_at: string | null
           created_at: string
+          decision_note: string | null
+          execution_started_at: string | null
           id: string
+          legal_hold: boolean
           member_id: string
           reason: string | null
+          requested_at: string
           requested_by: string
           reviewed_at: string | null
           reviewed_by: string | null
@@ -179,10 +195,17 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          actor_ip?: string | null
+          actor_user_agent?: string | null
+          completed_at?: string | null
           created_at?: string
+          decision_note?: string | null
+          execution_started_at?: string | null
           id?: string
+          legal_hold?: boolean
           member_id: string
           reason?: string | null
+          requested_at?: string
           requested_by: string
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -190,10 +213,17 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          actor_ip?: string | null
+          actor_user_agent?: string | null
+          completed_at?: string | null
           created_at?: string
+          decision_note?: string | null
+          execution_started_at?: string | null
           id?: string
+          legal_hold?: boolean
           member_id?: string
           reason?: string | null
+          requested_at?: string
           requested_by?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -1102,7 +1132,34 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      member_privacy_admin_view: {
+        Row: {
+          city: string | null
+          email: string | null
+          first_name: string
+          is_active: boolean
+          last_name: string
+          member_id: string
+          phone: string | null
+        }
+        Relationships: []
+      }
+      member_privacy_self_view: {
+        Row: {
+          city: string | null
+          date_of_birth: string | null
+          email: string | null
+          first_name: string
+          last_name: string
+          member_id: string
+          mobile: string | null
+          phone: string | null
+          street: string | null
+          user_id: string | null
+          zip_code: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
@@ -1113,6 +1170,36 @@ export type Database = {
         Returns: boolean
       }
       is_admin_or_board: { Args: { _user_id: string }; Returns: boolean }
+      rpc_create_deletion_request: {
+        Args: {
+          p_actor_ip?: string | null
+          p_actor_user_agent?: string | null
+          p_member_id: string
+          p_reason?: string | null
+        }
+        Returns: string
+      }
+      rpc_set_member_consent: {
+        Args: {
+          p_actor_ip?: string | null
+          p_actor_user_agent?: string | null
+          p_consent_type: string
+          p_granted: boolean
+          p_member_id: string
+          p_source?: string
+        }
+        Returns: undefined
+      }
+      rpc_transition_deletion_request: {
+        Args: {
+          p_actor_ip?: string | null
+          p_actor_user_agent?: string | null
+          p_decision_note?: string | null
+          p_next_status: string
+          p_request_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       age_group:

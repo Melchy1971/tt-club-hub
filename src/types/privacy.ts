@@ -49,6 +49,7 @@ export type ConsentAuditRow = Tables<'consent_audit_log'>;
  * Format: `${action}:${source}` → z. B. "granted:self", "revoked:admin"
  */
 export type ConsentAuditSource = 'self' | 'admin' | 'import' | 'system';
+export type ConsentAuditAction = `granted:${ConsentAuditSource}` | `revoked:${ConsentAuditSource}`;
 
 // ── Löschanfragen ─────────────────────────────────────────────
 
@@ -73,6 +74,11 @@ export type DeletionStatus =
 
 export function isDeletionStatus(value: string): value is DeletionStatus {
   return ['pending', 'approved', 'rejected', 'cancelled', 'executing', 'completed'].includes(value);
+}
+
+export interface AuditContext {
+  ip?: string | null;
+  userAgent?: string | null;
 }
 
 /**
