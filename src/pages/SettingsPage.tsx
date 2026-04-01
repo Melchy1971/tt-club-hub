@@ -56,6 +56,8 @@ const TABS: SettingsTab[] = [
   { id: 'rechte',      label: 'Rollen & Rechte', icon: Shield,    requiredPermission: 'admin:all', component: SettingsPermissions },
   { id: 'backup',      label: 'Backup',          icon: Database,  requiredPermission: 'admin:all', component: SettingsBackup },
   { id: 'gefahrenzone',label: 'Gefahrenzone',    icon: AlertTriangle, requiredPermission: 'admin:all', component: SettingsDangerZone },
+  // ── Info ────────────────────────────────────────────────────
+  { id: 'info',        label: 'Info',              icon: Info,          component: SettingsInfo },
 ];
 
 export default function SettingsPage() {
