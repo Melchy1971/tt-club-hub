@@ -9,8 +9,8 @@ import {
 } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Session, User } from '@supabase/supabase-js';
-import type { AppRole, AuthContextValue, AuthProblem } from '@/types/auth';
-import { APP_ROLES } from '@/types/auth';
+import type { AuthContextValue } from '@/types/auth';
+import { resolveSessionState } from '@/lib/auth/resolver';
 
 const initialContext: AuthContextValue = {
   user: null,
@@ -22,20 +22,6 @@ const initialContext: AuthContextValue = {
   problem: null,
   refresh: async () => {},
   signOut: async () => {},
-};
-
-const ROLE_PRIORITY: AppRole[] = ['developer', 'admin', 'vorstand', 'trainer', 'spieler', 'mitglied'];
-
-const resolvePrimaryRole = (roles: Array<{ role: AppRole | null }> | null | undefined): AppRole | null => {
-  const validRoles = (roles ?? [])
-    .map((entry) => entry.role)
-    .filter((role): role is AppRole => !!role && APP_ROLES.includes(role));
-
-  for (const candidate of ROLE_PRIORITY) {
-    if (validRoles.includes(candidate)) return candidate;
-  }
-
-  return null;
 };
 
 const AuthContext = createContext<AuthContextValue>(initialContext);
@@ -67,29 +53,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const supaUser: User = session.user;
-    let problem: AuthProblem | null = null;
 
     const [{ data: roles, error: roleError }, { data: member, error: memberError }] = await Promise.all([
       supabase.from('user_roles').select('role').eq('user_id', supaUser.id),
       supabase.from('members').select('*').eq('user_id', supaUser.id).maybeSingle(),
     ]);
 
-    if (roleError || memberError) {
-      problem = 'UNKNOWN';
-    }
-
-    const primaryRole = resolvePrimaryRole((roles as Array<{ role: AppRole | null }>) ?? []);
-    const roleIsValid = !!primaryRole;
-
-    if (!roles?.length) {
-      problem = 'NO_USER_ROLES';
-    } else if (!roleIsValid) {
-      problem = 'INVALID_ROLE';
-    }
-
-    if (!member) {
-      problem = problem ?? 'MISSING_MEMBER';
-    }
+    const resolved = resolveSessionState({
+      session,
+      userRoles: (roles ?? []).map((entry) => ({ user_id: supaUser.id, role: entry.role })),
+      member: member ?? null,
+      roleError: !!roleError,
+      memberError: !!memberError,
+    });
 
     if (requestVersion !== requestVersionRef.current) return;
 
@@ -97,19 +73,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ...prev,
       user: {
         id: supaUser.id,
-        email: supaUser.email ?? null,
-        name:
-          supaUser.user_metadata?.full_name ??
-          ([supaUser.user_metadata?.first_name, supaUser.user_metadata?.last_name]
-            .filter(Boolean)
-            .join(' ') || null),
-        role: roleIsValid ? primaryRole : null,
+        email: resolved.email,
+        name: resolved.name,
+        role: resolved.primaryRole,
       },
       session,
-      role: roleIsValid ? primaryRole : null,
-      member: member ?? null,
-      isAuthenticated: !!(session && !problem && member && roleIsValid),
-      problem,
+      role: resolved.primaryRole,
+      member: resolved.member,
+      isAuthenticated: resolved.isAuthenticated,
+      problem: resolved.problems[0] ?? null,
       isLoading: false,
     }));
   }, []);

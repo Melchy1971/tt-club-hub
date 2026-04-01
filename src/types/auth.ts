@@ -120,7 +120,24 @@ export type AuthProblem =
   | 'NO_USER_ROLES'
   | 'INVALID_ROLE'
   | 'MISSING_MEMBER'
+  | 'INCONSISTENT_DATA'
   | 'UNKNOWN';
+
+export interface SessionRoleAssignment {
+  readonly userId: string;
+  readonly role: AppRole;
+}
+
+export interface AuthSessionState {
+  readonly userId: string;
+  readonly email: string | null;
+  readonly name: string | null;
+  readonly roles: readonly AppRole[];
+  readonly primaryRole: AppRole | null;
+  readonly member: Tables<'members'> | null;
+  readonly problems: readonly AuthProblem[];
+  readonly isAuthenticated: boolean;
+}
 
 // === Auth-Modelle ===
 export interface AuthUser {
