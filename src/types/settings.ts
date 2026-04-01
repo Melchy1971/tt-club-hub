@@ -102,7 +102,7 @@ export interface UseSettingsFormOptions<TForm extends FieldValues, TData = unkno
 }
 
 export interface UseSettingsFormReturn<TForm extends FieldValues> {
-  form:       UseFormReturn<TForm>;
+  form:       UseFormReturn<TForm, any, any>;
   /** True solange die initiale Query lädt. */
   isLoading:  boolean;
   /** True wenn `form.handleSubmit(saveFn)` läuft. */
