@@ -488,7 +488,7 @@ export default function SettingsProfile() {
     defaultValues: {
       first_name: '', last_name: '', email: '', phone: '', mobile: '',
       street: '', zip_code: '', city: '', date_of_birth: null,
-      ttr_rating: null, qttr_rating: null,
+      entry_date: null, ttr_rating: null, qttr_rating: null,
     },
   });
 
