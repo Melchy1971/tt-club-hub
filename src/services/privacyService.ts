@@ -1,20 +1,21 @@
 /**
  * privacyService
  *
- * Typsichere Datenschutz-Operationen ohne `as any`.
- * Alle drei Tabellen (member_consents, consent_audit_log, deletion_requests)
- * sind in den generierten Supabase-Typen vorhanden.
- *
- * Bekannte Einschränkung: toggleConsent() führt zwei separate DB-Calls durch
- * (upsert consent + insert audit). Für atomare Ausführung muss eine
- * Postgres-RPC-Funktion `rpc_toggle_consent` angelegt werden:
- *   create or replace function rpc_toggle_consent(
- *     p_member_id uuid, p_consent_type text, p_granted boolean, p_performed_by uuid
- *   ) returns void ...
+ * Typsichere Datenschutz-Operationen über DB-RPC:
+ * - atomare Consent-Änderung inkl. Audit
+ * - Deletion-Workflow mit serverseitiger Zustandsmaschine
+ * - Self-Service/Admin-Datenschutzsichten
  */
 
 import { supabase } from '@/integrations/supabase/client';
-import type { ConsentRow, ConsentAuditRow, DeletionRequestRow, ConsentType, DeletionStatus } from '@/types/privacy';
+import type {
+  AuditContext,
+  ConsentAuditRow,
+  ConsentRow,
+  ConsentType,
+  DeletionRequestRow,
+  DeletionStatus,
+} from '@/types/privacy';
 
 // ── Consents ──────────────────────────────────────────────────
 
@@ -31,44 +32,24 @@ export async function getConsents(memberId: string): Promise<ConsentRow[]> {
 /**
  * Einwilligung setzen oder aktualisieren + Audit-Eintrag schreiben.
  *
- * Nicht atomar – bei Audit-Fehler bleibt der Consent-Eintrag bestehen.
- * Für produktionskritische Atomarität: DB-RPC verwenden.
+ * Atomar via `rpc_set_member_consent` (Upsert + Audit in einer DB-Funktion).
  */
 export async function toggleConsent(
   memberId: string,
-  userId: string,
   consentType: ConsentType,
   granted: boolean,
+  source: 'self' | 'admin' | 'import' | 'system' = 'self',
+  context?: AuditContext,
 ): Promise<void> {
-  const now = new Date().toISOString();
-
-  // Upsert: conflict on (member_id, consent_type)
-  const { error: consentError } = await supabase
-    .from('member_consents')
-    .upsert(
-      {
-        member_id: memberId,
-        consent_type: consentType,
-        granted,
-        granted_at: granted ? now : null,
-        revoked_at: granted ? null : now,
-      },
-      { onConflict: 'member_id,consent_type' },
-    );
-  if (consentError) throw consentError;
-
-  // Audit – non-fatal: failure logged to console, does not roll back consent
-  const { error: auditError } = await supabase
-    .from('consent_audit_log')
-    .insert({
-      member_id: memberId,
-      consent_type: consentType,
-      action: granted ? 'granted' : 'revoked',
-      performed_by: userId,
-    });
-  if (auditError) {
-    console.error('[privacyService] consent_audit_log insert failed:', auditError);
-  }
+  const { error } = await supabase.rpc('rpc_set_member_consent', {
+    p_member_id: memberId,
+    p_consent_type: consentType,
+    p_granted: granted,
+    p_source: source,
+    p_actor_ip: context?.ip ?? null,
+    p_actor_user_agent: context?.userAgent ?? null,
+  });
+  if (error) throw error;
 }
 
 // ── Audit-Log ─────────────────────────────────────────────────
@@ -101,34 +82,36 @@ export async function getDeletionRequests(memberId: string): Promise<DeletionReq
 /** Neue Löschanfrage erstellen. */
 export async function createDeletionRequest(
   memberId: string,
-  requestedBy: string,
   reason?: string,
-): Promise<void> {
-  const { error } = await supabase
-    .from('deletion_requests')
-    .insert({
-      member_id: memberId,
-      requested_by: requestedBy,
-      reason: reason ?? null,
-      status: 'pending' satisfies DeletionStatus,
-    });
+  context?: AuditContext,
+): Promise<string> {
+  const { data, error } = await supabase.rpc('rpc_create_deletion_request', {
+    p_member_id: memberId,
+    p_reason: reason ?? null,
+    p_actor_ip: context?.ip ?? null,
+    p_actor_user_agent: context?.userAgent ?? null,
+  });
   if (error) throw error;
+  return data;
 }
 
 /**
  * Löschanfrage-Status aktualisieren (Admin-Aktion).
- * Prüft erlaubte Übergänge nicht auf DB-Ebene – Aufrufer muss
- * `canTransitionDeletion()` aus types/privacy vorab prüfen.
+ * Erlaubte Übergänge werden zusätzlich auf DB-Ebene per Trigger validiert.
  */
 export async function updateDeletionStatus(
   requestId: string,
   status: DeletionStatus,
-  reviewedBy: string,
+  decisionNote?: string,
+  context?: AuditContext,
 ): Promise<void> {
-  const { error } = await supabase
-    .from('deletion_requests')
-    .update({ status, reviewed_by: reviewedBy, reviewed_at: new Date().toISOString() })
-    .eq('id', requestId);
+  const { error } = await supabase.rpc('rpc_transition_deletion_request', {
+    p_request_id: requestId,
+    p_next_status: status,
+    p_decision_note: decisionNote ?? null,
+    p_actor_ip: context?.ip ?? null,
+    p_actor_user_agent: context?.userAgent ?? null,
+  });
   if (error) throw error;
 }
 
@@ -166,4 +149,24 @@ export function isFieldVisible(
 
   // email_hidden / phone_hidden: true → verborgen, false/unset → sichtbar
   return !(consent?.granted ?? false);
+}
+
+/**
+ * Datenschutzsicht für Self-Service:
+ * liefert ausschließlich das eigene Mitgliedsprofil inkl. persönlicher Felder.
+ */
+export async function getSelfPrivacyView() {
+  const { data, error } = await supabase.from('member_privacy_self_view').select('*').limit(1).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Datenschutzsicht für Admin/Vorstand:
+ * liefert minimierte personenbezogene Daten und respektiert Consent-Flags.
+ */
+export async function getAdminPrivacyView() {
+  const { data, error } = await supabase.from('member_privacy_admin_view').select('*');
+  if (error) throw error;
+  return data ?? [];
 }
