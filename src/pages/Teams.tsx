@@ -1,6 +1,5 @@
-import { Shield, Plus } from 'lucide-react';
+import { Shield } from 'lucide-react';
 import { EmptyState } from '@/components/common/EmptyState';
-import { Button } from '@/components/ui/button';
 
 export default function Teams() {
   return (
