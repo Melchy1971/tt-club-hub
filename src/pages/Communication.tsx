@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +10,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/common/EmptyState';
 import { Newspaper, FileText, ListChecks, Trophy, Search, Download, Filter } from 'lucide-react';
 import type { Member } from '@/types';
+import { communicationKeys, communicationCacheConfig } from '@/lib/queryKeys';
+import { newsService } from '@/services/newsService';
+import { documentService } from '@/services/documentService';
+import { communicationListService } from '@/services/communicationListService';
+import { communicationExportService } from '@/services/communicationExportService';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -54,18 +58,16 @@ interface CommList {
 function NewsTab() {
   const [showPublishedOnly, setShowPublishedOnly] = useState(true);
 
+  const audience = showPublishedOnly ? 'public' : 'all';
   const { data: news, isLoading } = useQuery({
-    queryKey: ['news', showPublishedOnly],
+    queryKey: communicationKeys.news.list({ audience, status: showPublishedOnly ? 'published' : 'all' }),
     queryFn: async () => {
-      let q = supabase
-        .from('news')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (showPublishedOnly) q = q.eq('is_published', true);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data as NewsItem[];
+      const result = await newsService.list({ audience, status: showPublishedOnly ? 'published' : 'all' });
+      if (!result.success) throw new Error(result.error.message);
+      return result.data as NewsItem[];
     },
+    staleTime: showPublishedOnly ? communicationCacheConfig.public.staleTime : communicationCacheConfig.internal.staleTime,
+    gcTime: showPublishedOnly ? communicationCacheConfig.public.gcTime : communicationCacheConfig.internal.gcTime,
   });
 
   if (isLoading) return <LoadingSkeleton />;
@@ -119,15 +121,22 @@ function DocumentsTab() {
   const [search, setSearch] = useState('');
 
   const { data: docs, isLoading } = useQuery({
-    queryKey: ['documents'],
+    queryKey: communicationKeys.documents.list({ audience: 'public' }),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('documents')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data as DocumentItem[];
+      const result = await documentService.list({ audience: 'public' });
+      if (!result.success) throw new Error(result.error.message);
+      return result.data.map((doc) => ({
+        id: doc.id,
+        title: doc.title,
+        description: doc.description,
+        file_url: doc.fileUrl,
+        category: doc.category,
+        uploaded_by: doc.uploadedBy,
+        created_at: doc.createdAt,
+      })) as DocumentItem[];
     },
+    staleTime: communicationCacheConfig.public.staleTime,
+    gcTime: communicationCacheConfig.public.gcTime,
   });
 
   if (isLoading) return <LoadingSkeleton />;
@@ -208,15 +217,20 @@ function DocumentsTab() {
 
 function ListsTab() {
   const { data: lists, isLoading } = useQuery({
-    queryKey: ['communication-lists'],
+    queryKey: communicationKeys.lists.list({ audience: 'public' }),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('communication_lists')
-        .select('*')
-        .order('name');
-      if (error) throw error;
-      return data as CommList[];
+      const result = await communicationListService.list({ audience: 'public' });
+      if (!result.success) throw new Error(result.error.message);
+      return result.data.map((list) => ({
+        id: list.id,
+        name: list.name,
+        description: list.description,
+        list_type: list.listType,
+        created_at: list.createdAt,
+      })) as CommList[];
     },
+    staleTime: communicationCacheConfig.public.staleTime,
+    gcTime: communicationCacheConfig.public.gcTime,
   });
 
   if (isLoading) return <LoadingSkeleton />;
@@ -267,16 +281,24 @@ function RatingTab() {
   const [search, setSearch] = useState('');
 
   const { data: members, isLoading } = useQuery({
-    queryKey: ['members-ratings'],
+    queryKey: communicationKeys.exports.ratings({ audience: 'public' }),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('members')
-        .select('id, first_name, last_name, ttr_rating, qttr_rating, is_active')
-        .eq('is_active', true)
-        .order('qttr_rating', { ascending: false, nullsFirst: false });
-      if (error) throw error;
-      return data as Pick<Member, 'id' | 'first_name' | 'last_name' | 'ttr_rating' | 'qttr_rating' | 'is_active'>[];
+      const result = await communicationExportService.buildRatingExport({
+        audience: 'public',
+        generatedAt: new Date().toISOString(),
+      });
+      if (!result.success) throw new Error(result.error.message);
+      return result.data.rows.map((row) => ({
+        id: row.memberId,
+        first_name: row.firstName,
+        last_name: row.lastName,
+        qttr_rating: row.qttr,
+        ttr_rating: row.ttr,
+        is_active: true,
+      })) as Pick<Member, 'id' | 'first_name' | 'last_name' | 'ttr_rating' | 'qttr_rating' | 'is_active'>[];
     },
+    staleTime: communicationCacheConfig.public.staleTime,
+    gcTime: communicationCacheConfig.public.gcTime,
   });
 
   if (isLoading) return <LoadingSkeleton />;
@@ -285,16 +307,24 @@ function RatingTab() {
     `${m.first_name} ${m.last_name}`.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleExportPDF = () => {
-    // Build a simple printable HTML and open print dialog
-    const rows = filtered.map((m, i) =>
-      `<tr>
-        <td style="padding:6px 12px;border-bottom:1px solid #ddd;text-align:center">${i + 1}</td>
-        <td style="padding:6px 12px;border-bottom:1px solid #ddd">${m.first_name} ${m.last_name}</td>
-        <td style="padding:6px 12px;border-bottom:1px solid #ddd;text-align:right">${m.qttr_rating ?? '–'}</td>
-        <td style="padding:6px 12px;border-bottom:1px solid #ddd;text-align:right">${m.ttr_rating ?? '–'}</td>
-      </tr>`
-    ).join('');
+  const handleExportPDF = async () => {
+    const exportResult = await communicationExportService.buildRatingExport({
+      audience: 'public',
+      generatedAt: new Date().toISOString(),
+    });
+
+    if (!exportResult.success) throw new Error(exportResult.error.message);
+
+    const byId = new Map(filtered.map((m) => [m.id, m]));
+    const rows = exportResult.data.rows
+      .filter((row) => byId.has(row.memberId))
+      .map((row) => `<tr>
+        <td style="padding:6px 12px;border-bottom:1px solid #ddd;text-align:center">${row.rank}</td>
+        <td style="padding:6px 12px;border-bottom:1px solid #ddd">${row.fullName}</td>
+        <td style="padding:6px 12px;border-bottom:1px solid #ddd;text-align:right">${row.qttr ?? '–'}</td>
+        <td style="padding:6px 12px;border-bottom:1px solid #ddd;text-align:right">${row.ttr ?? '–'}</td>
+      </tr>`)
+      .join('');
 
     const html = `
       <!DOCTYPE html><html><head><title>QTTR/TTR-Rangliste</title>

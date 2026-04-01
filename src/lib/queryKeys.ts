@@ -21,6 +21,8 @@ import type { NewsFilter } from '@/types';
 import type { MemberFilter } from '@/types/member';
 import type { DocumentFilter } from '@/services/documentService';
 
+import type { CommunicationAudience, PublicationStatus } from '@/types/domain/communication';
+
 // ── Members ───────────────────────────────────────────────────
 
 export const memberKeys = {
@@ -76,6 +78,44 @@ export const trainingKeys = {
     [...trainingKeys.all, 'waitlist', sessionId, memberId]                   as const,
   spots:     (sessionId: string) =>
     [...trainingKeys.all, 'spots', sessionId]                                as const,
+};
+
+
+// ── Communication (domain-level Standardisierung) ───────────
+
+export const communicationCacheConfig = {
+  public: {
+    staleTime: 60_000,
+    gcTime: 10 * 60_000,
+  },
+  internal: {
+    staleTime: 15_000,
+    gcTime: 5 * 60_000,
+  },
+} as const;
+
+export const communicationKeys = {
+  all: ['communication'] as const,
+  news: {
+    all: ['communication', 'news'] as const,
+    list: (f?: { status?: PublicationStatus; audience?: CommunicationAudience; search?: string }) =>
+      ['communication', 'news', 'list', f ?? {}] as const,
+    detail: (id: string) => ['communication', 'news', 'detail', id] as const,
+  },
+  documents: {
+    all: ['communication', 'documents'] as const,
+    list: (f?: DocumentFilter) => ['communication', 'documents', 'list', f ?? {}] as const,
+    detail: (id: string) => ['communication', 'documents', 'detail', id] as const,
+  },
+  lists: {
+    all: ['communication', 'lists'] as const,
+    list: (f?: { audience?: CommunicationAudience }) => ['communication', 'lists', 'list', f ?? {}] as const,
+    detail: (id: string) => ['communication', 'lists', 'detail', id] as const,
+    members: (id: string) => ['communication', 'lists', 'members', id] as const,
+  },
+  exports: {
+    ratings: (f?: { audience: 'public' | 'internal'; generatedAt?: string }) => ['communication', 'exports', 'ratings', f] as const,
+  },
 };
 
 // ── News ──────────────────────────────────────────────────────

@@ -18,6 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { ok, err } from '@/lib/api';
 import { fromSupabaseError, errors } from '@/lib/error';
 import type { ApiResult } from '@/types/api';
+import type { CommunicationAudience } from '@/types/domain/communication';
 
 // ── Typen ─────────────────────────────────────────────────────
 
@@ -36,6 +37,7 @@ export interface CommunicationListUI {
   name:        string;
   description: string | null;
   listType:    string;
+  audience:    Exclude<CommunicationAudience, 'all'>;
   createdBy:   string;
   createdAt:   string;
   updatedAt:   string;
@@ -64,6 +66,10 @@ export interface CommunicationListUpdateDTO {
   list_type?:   string;
 }
 
+export interface CommunicationListFilter {
+  audience?: CommunicationAudience;
+}
+
 // ── Mapping ───────────────────────────────────────────────────
 
 function mapToUI(row: CommunicationListRow, memberCount?: number): CommunicationListUI {
@@ -72,6 +78,7 @@ function mapToUI(row: CommunicationListRow, memberCount?: number): Communication
     name:        row.name,
     description: row.description,
     listType:    row.list_type,
+    audience:    row.list_type === 'internal' ? 'internal' : 'public',
     createdBy:   row.created_by,
     createdAt:   row.created_at,
     updatedAt:   row.updated_at,
@@ -82,11 +89,16 @@ function mapToUI(row: CommunicationListRow, memberCount?: number): Communication
 // ── Service ───────────────────────────────────────────────────
 
 export const communicationListService = {
-  async list(): Promise<ApiResult<CommunicationListUI[]>> {
-    const { data, error } = await supabase
+  async list(filter: CommunicationListFilter = {}): Promise<ApiResult<CommunicationListUI[]>> {
+    let q = supabase
       .from('communication_lists')
       .select('*')
       .order('name', { ascending: true });
+
+    if (filter.audience === 'internal') q = q.eq('list_type', 'internal');
+    if (filter.audience === 'public') q = q.neq('list_type', 'internal');
+
+    const { data, error } = await q;
     if (error) return err(fromSupabaseError(error));
     return ok(((data ?? []) as CommunicationListRow[]).map((r) => mapToUI(r)));
   },
