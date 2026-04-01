@@ -24,6 +24,7 @@ import SettingsSecurity from '@/components/settings/SettingsSecurity';
 import SettingsBackup from '@/components/settings/SettingsBackup';
 import SettingsDangerZone from '@/components/settings/SettingsDangerZone';
 import SettingsInfo from '@/components/settings/SettingsInfo';
+import { getSettingsPermissionRule } from './permissions';
 import type { SettingsSubpageDef } from './types';
 
 export const SETTINGS_SUBPAGES: SettingsSubpageDef[] = [
@@ -40,8 +41,8 @@ export const SETTINGS_SUBPAGES: SettingsSubpageDef[] = [
     icon: Building2,
     component: SettingsClub,
     group: 'club',
-    requiredPermission: 'settings:read',
-    writePermission: 'settings:write',
+    requiredPermission: getSettingsPermissionRule('club').read,
+    writePermission: getSettingsPermissionRule('club').write,
   },
   {
     id: 'season',
@@ -49,8 +50,8 @@ export const SETTINGS_SUBPAGES: SettingsSubpageDef[] = [
     icon: Calendar,
     component: SettingsSeasons,
     group: 'club',
-    requiredPermission: 'settings:read',
-    writePermission: 'settings:write',
+    requiredPermission: getSettingsPermissionRule('season').read,
+    writePermission: getSettingsPermissionRule('season').write,
   },
   {
     id: 'venues',
@@ -58,8 +59,8 @@ export const SETTINGS_SUBPAGES: SettingsSubpageDef[] = [
     icon: MapPin,
     component: SettingsVenues,
     group: 'club',
-    requiredPermission: 'settings:read',
-    writePermission: 'settings:write',
+    requiredPermission: getSettingsPermissionRule('venues').read,
+    writePermission: getSettingsPermissionRule('venues').write,
   },
 
   {
@@ -68,8 +69,8 @@ export const SETTINGS_SUBPAGES: SettingsSubpageDef[] = [
     icon: Users,
     component: SettingsRoles,
     group: 'admin',
-    requiredPermission: 'admin:all',
-    writePermission: 'admin:all',
+    requiredPermission: getSettingsPermissionRule('roles').read,
+    writePermission: getSettingsPermissionRule('roles').write,
   },
   {
     id: 'backup',
@@ -77,8 +78,8 @@ export const SETTINGS_SUBPAGES: SettingsSubpageDef[] = [
     icon: Database,
     component: SettingsBackup,
     group: 'admin',
-    requiredPermission: 'admin:all',
-    writePermission: 'admin:all',
+    requiredPermission: getSettingsPermissionRule('backup').read,
+    writePermission: getSettingsPermissionRule('backup').write,
   },
   {
     id: 'danger',
@@ -86,7 +87,7 @@ export const SETTINGS_SUBPAGES: SettingsSubpageDef[] = [
     icon: AlertTriangle,
     component: SettingsDangerZone,
     group: 'admin',
-    requiredPermission: 'admin:all',
-    writePermission: 'admin:all',
+    requiredPermission: getSettingsPermissionRule('danger').read,
+    writePermission: getSettingsPermissionRule('danger').write,
   },
 ];
