@@ -6,7 +6,9 @@
 import { supabase } from '@/integrations/supabase/client';
 import { ok, err, tryCatch } from '@/lib/api';
 import { fromSupabaseError, errors } from '@/lib/error';
+import { boardAccessPolicy } from '@/services/boardAccessPolicy';
 import type { ApiResult } from '@/types/api';
+import type { BoardActorRole, BoardMeetingFilter } from '@/types/domain/board';
 
 // ── Typen ─────────────────────────────────────────────────────
 
@@ -20,6 +22,7 @@ export interface BoardMeetingUI {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+  visibility: 'internal';
 }
 
 export interface BoardMeetingCreateDTO {
@@ -64,21 +67,52 @@ function mapToUI(row: MeetingRow): BoardMeetingUI {
     createdBy: row.created_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    visibility: 'internal',
   };
+}
+
+function guard(role: BoardActorRole, action: 'read' | 'write' | 'delete'): ApiResult<void> {
+  return boardAccessPolicy.authorize(role, { channel: 'meetings', visibility: 'internal' }, action);
 }
 
 // ── Service ───────────────────────────────────────────────────
 
 export const boardMeetingService = {
-  async listAll(): Promise<ApiResult<BoardMeetingUI[]>> {
+  async list(filter: BoardMeetingFilter = {}): Promise<ApiResult<BoardMeetingUI[]>> {
+    if (filter.visibility && filter.visibility !== 'internal') {
+      return err(errors.validation('Board-Sitzungen sind ausschließlich intern.'));
+    }
+
     return tryCatch(async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('meetings')
         .select('*')
         .order('meeting_date', { ascending: false });
+
+      if (filter.from) query = query.gte('meeting_date', filter.from);
+      if (filter.to) query = query.lte('meeting_date', filter.to);
+
+      const limit = filter.limit ?? 100;
+      if (filter.offset != null) {
+        query = query.range(filter.offset, filter.offset + limit - 1);
+      } else {
+        query = query.limit(limit);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return ((data ?? []) as MeetingRow[]).map(mapToUI);
     }, fromSupabaseError);
+  },
+
+  async listAll(): Promise<ApiResult<BoardMeetingUI[]>> {
+    return boardMeetingService.list({ visibility: 'internal' });
+  },
+
+  async listForActor(role: BoardActorRole, filter: BoardMeetingFilter = {}): Promise<ApiResult<BoardMeetingUI[]>> {
+    const auth = guard(role, 'read');
+    if (!auth.ok) return auth;
+    return boardMeetingService.list({ ...filter, visibility: 'internal' });
   },
 
   async getById(id: string): Promise<ApiResult<BoardMeetingUI>> {
@@ -111,6 +145,12 @@ export const boardMeetingService = {
     }, fromSupabaseError);
   },
 
+  async createForActor(role: BoardActorRole, payload: BoardMeetingCreateDTO): Promise<ApiResult<BoardMeetingUI>> {
+    const auth = guard(role, 'write');
+    if (!auth.ok) return auth;
+    return boardMeetingService.create(payload);
+  },
+
   async update(id: string, payload: BoardMeetingUpdateDTO): Promise<ApiResult<BoardMeetingUI>> {
     return tryCatch(async () => {
       const { data, error } = await supabase
@@ -124,9 +164,21 @@ export const boardMeetingService = {
     }, fromSupabaseError);
   },
 
+  async updateForActor(role: BoardActorRole, id: string, payload: BoardMeetingUpdateDTO): Promise<ApiResult<BoardMeetingUI>> {
+    const auth = guard(role, 'write');
+    if (!auth.ok) return auth;
+    return boardMeetingService.update(id, payload);
+  },
+
   async remove(id: string): Promise<ApiResult<void>> {
     const { error } = await supabase.from('meetings').delete().eq('id', id);
     if (error) return err(fromSupabaseError(error));
     return ok(undefined);
+  },
+
+  async removeForActor(role: BoardActorRole, id: string): Promise<ApiResult<void>> {
+    const auth = guard(role, 'delete');
+    if (!auth.ok) return auth;
+    return boardMeetingService.remove(id);
   },
 };

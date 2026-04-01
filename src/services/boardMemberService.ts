@@ -9,8 +9,9 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { ok, err, tryCatch } from '@/lib/api';
-import { fromSupabaseError } from '@/lib/error';
+import { fromSupabaseError, errors } from '@/lib/error';
 import type { ApiResult } from '@/types/api';
+import type { BoardActorRole } from '@/types/domain/board';
 
 // ── Konstanten ────────────────────────────────────────────────
 
@@ -39,6 +40,12 @@ export interface BoardMemberUI {
 }
 
 // ── Service ───────────────────────────────────────────────────
+
+
+
+function canReadBoardMembers(role: BoardActorRole): boolean {
+  return role === 'admin' || role === 'developer' || role === 'vorstand';
+}
 
 export const boardMemberService = {
   /**
@@ -76,5 +83,13 @@ export const boardMemberService = {
         role: roleMap.get(m.user_id ?? '') ?? 'vorstand',
       }));
     }, fromSupabaseError);
+  },
+
+
+  async listActiveForActor(role: BoardActorRole): Promise<ApiResult<BoardMemberUI[]>> {
+    if (!canReadBoardMembers(role)) {
+      return err(errors.forbidden('board-members:read'));
+    }
+    return boardMemberService.listActive();
   },
 };
