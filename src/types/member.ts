@@ -8,6 +8,8 @@ export interface MemberUI {
   fullName: string;
   email: string | null;
   phone: string | null;
+  mobile: string | null;
+  birthdate: string | null;
   city: string | null;
   zipCode: string | null;
   street: string | null;
@@ -27,6 +29,7 @@ export type MemberCreateDTO = {
   last_name: string;
   email?: string | null;
   phone?: string | null;
+  mobile?: string | null;
   date_of_birth?: string | null;
   gender?: Member['gender'] | null;
   street?: string | null;
