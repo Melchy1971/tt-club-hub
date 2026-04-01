@@ -56,6 +56,7 @@ export type AppRole = Enums<'app_role'>;
 export type AgeGroup = Enums<'age_group'>;
 export type MatchStatus = Enums<'match_status'>;
 export type Gender = Enums<'gender'>;
+export type PhaseType = Enums<'phase_type'>;
 
 export * from './member';
 
