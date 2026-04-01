@@ -146,24 +146,92 @@ function TabPersonalData({ member, form, editing, setEditing, updateMut, changin
               <form onSubmit={form.handleSubmit((v: ProfileForm) => updateMut.mutate(v))} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {([
-                    ['first_name', 'Vorname'],
-                    ['last_name', 'Nachname'],
-                    ['email', 'E-Mail'],
-                    ['phone', 'Telefon'],
-                    ['street', 'Straße'],
-                    ['zip_code', 'PLZ'],
-                    ['city', 'Ort'],
-                  ] as const).map(([name, label]) => (
+                    ['first_name', 'Vorname', 'text'],
+                    ['last_name', 'Nachname', 'text'],
+                    ['email', 'E-Mail', 'email'],
+                    ['phone', 'Telefon', 'text'],
+                    ['mobile', 'Mobil', 'text'],
+                    ['street', 'Straße', 'text'],
+                    ['zip_code', 'PLZ', 'text'],
+                    ['city', 'Ort', 'text'],
+                  ] as const).map(([name, label, type]) => (
                     <FormField key={name} control={form.control} name={name} render={({ field }) => (
                       <FormItem>
                         <FormLabel>{label}</FormLabel>
                         <FormControl>
-                          <Input {...field} type={name === 'email' ? 'email' : 'text'} />
+                          <Input {...field} type={type} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
                   ))}
+
+                  {/* Birthdate */}
+                  <FormField control={form.control} name="date_of_birth" render={({ field }) => {
+                    const dateValue = field.value ? new Date(field.value) : undefined;
+                    return (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Geburtstag</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  'w-full pl-3 text-left font-normal',
+                                  !field.value && 'text-muted-foreground',
+                                )}
+                              >
+                                {dateValue ? format(dateValue, 'dd.MM.yyyy') : <span>Datum wählen</span>}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={dateValue}
+                              onSelect={(d) => field.onChange(d ? format(d, 'yyyy-MM-dd') : null)}
+                              disabled={(d) => d > new Date()}
+                              initialFocus
+                              className={cn('p-3 pointer-events-auto')}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }} />
+
+                  {/* TTR */}
+                  <FormField control={form.control} name="ttr_rating" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>TTR</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number" min={0} max={3500} placeholder="0–3500"
+                          value={field.value ?? ''}
+                          onChange={(e) => field.onChange(e.target.value === '' ? null : e.target.value)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+
+                  {/* QTTR */}
+                  <FormField control={form.control} name="qttr_rating" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>QTTR</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number" min={0} max={3500} placeholder="0–3500"
+                          value={field.value ?? ''}
+                          onChange={(e) => field.onChange(e.target.value === '' ? null : e.target.value)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="ghost" onClick={() => { setEditing(false); form.reset(); }}>
@@ -181,9 +249,16 @@ function TabPersonalData({ member, form, editing, setEditing, updateMut, changin
               <DisplayField label="Nachname" value={member?.last_name} />
               <DisplayField label="E-Mail" value={member?.email} />
               <DisplayField label="Telefon" value={member?.phone} />
+              <DisplayField label="Mobil" value={(member as any)?.mobile} />
+              <DisplayField
+                label="Geburtstag"
+                value={member?.date_of_birth ? format(new Date(member.date_of_birth), 'dd.MM.yyyy') : null}
+              />
               <DisplayField label="Straße" value={member?.street} />
               <DisplayField label="PLZ" value={member?.zip_code} />
               <DisplayField label="Ort" value={member?.city} />
+              <DisplayField label="TTR" value={member?.ttr_rating?.toString()} />
+              <DisplayField label="QTTR" value={member?.qttr_rating?.toString()} />
               <DisplayField label="Status" value={member?.is_active ? 'Aktiv' : 'Inaktiv'} />
             </div>
           )}
