@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import type { FieldValues } from 'react-hook-form';
 import type { UseSettingsFormOptions, UseSettingsFormReturn } from '@/types/settings';
 
-export function useSettingsForm<TForm extends FieldValues, TData = unknown>({
+export function useSettingsForm<TForm extends FieldValues = FieldValues, TData = unknown>({
   queryKey,
   queryFn,
   schema,
