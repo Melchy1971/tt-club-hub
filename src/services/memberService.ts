@@ -11,28 +11,40 @@ import {
   memberUpdateSchema,
   memberFilterSchema,
 } from '@/schemas/member.schema';
+import { normalizeISODateValue } from '@/lib/date';
 
-const mapToUI = (row: Member): MemberUI => ({
+const emptyToNull = (value: string | null | undefined): string | null =>
+  typeof value === 'string' ? value.trim() || null : null;
+
+export const mapMemberDbToUI = (row: Member): MemberUI => ({
   id: row.id,
   userId: row.user_id,
   firstName: row.first_name,
   lastName: row.last_name,
   fullName: `${row.first_name} ${row.last_name}`.trim(),
-  email: row.email,
-  phone: row.phone,
-  city: row.city,
-  zipCode: row.zip_code,
-  street: row.street,
-  memberNumber: row.member_number,
+  email: emptyToNull(row.email),
+  phone: emptyToNull(row.phone),
+  mobile: emptyToNull(row.mobile),
+  birthdate: normalizeISODateValue(row.date_of_birth) ?? null,
+  city: emptyToNull(row.city),
+  zipCode: emptyToNull(row.zip_code),
+  street: emptyToNull(row.street),
+  memberNumber: emptyToNull(row.member_number),
   ageGroup: row.age_group,
-  entryDate: row.entry_date,
-  exitDate: row.exit_date,
+  entryDate: normalizeISODateValue(row.entry_date) ?? null,
+  exitDate: normalizeISODateValue(row.exit_date) ?? null,
   isActive: row.is_active,
-  ttr: row.ttr_rating,
-  qttr: row.qttr_rating,
+  ttr: row.ttr_rating ?? null,
+  qttr: row.qttr_rating ?? null,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
+
+export const mapMemberCreateDtoToDb = (payload: MemberCreateDTO): MemberCreateDTO =>
+  memberCreateSchema.parse(payload);
+
+export const mapMemberUpdateDtoToDb = (payload: MemberUpdateDTO): MemberUpdateDTO =>
+  memberUpdateSchema.parse(payload);
 
 const handleError = (error: any, context: string) => {
   const message = error?.message ?? 'Unbekannter Fehler';
@@ -63,7 +75,7 @@ export const memberService = {
               )
             : true,
         );
-      return rows.map(mapToUI);
+      return rows.map(mapMemberDbToUI);
     }
 
     let query = supabase.from('members').select('*');
@@ -76,13 +88,13 @@ export const memberService = {
     }
     const { data, error } = await query.order('last_name', { ascending: true });
     if (error) handleError(error, 'list');
-    return (data ?? []).map(mapToUI);
+    return (data ?? []).map(mapMemberDbToUI);
   },
 
   async getById(id: string): Promise<MemberUI | null> {
     const { data, error } = await supabase.from('members').select('*').eq('id', id).maybeSingle();
     if (error) handleError(error, 'getById');
-    return data ? mapToUI(data) : null;
+    return data ? mapMemberDbToUI(data) : null;
   },
 
   async getByUserId(userId: string): Promise<MemberUI | null> {
@@ -92,22 +104,22 @@ export const memberService = {
       .eq('user_id', userId)
       .maybeSingle();
     if (error) handleError(error, 'getByUserId');
-    return data ? mapToUI(data) : null;
+    return data ? mapMemberDbToUI(data) : null;
   },
 
   async create(payload: MemberCreateDTO): Promise<MemberUI> {
-    const parsed = memberCreateSchema.parse(payload);
+    const parsed = mapMemberCreateDtoToDb(payload);
     const { data, error } = await supabase
       .from('members')
       .insert(parsed as any)
       .select()
       .single();
     if (error) handleError(error, 'create');
-    return mapToUI(data as Member);
+    return mapMemberDbToUI(data as Member);
   },
 
   async update(id: string, payload: MemberUpdateDTO): Promise<MemberUI> {
-    const parsed = memberUpdateSchema.parse(payload);
+    const parsed = mapMemberUpdateDtoToDb(payload);
     const { data, error } = await supabase
       .from('members')
       .update(parsed as any)
@@ -115,7 +127,7 @@ export const memberService = {
       .select()
       .single();
     if (error) handleError(error, 'update');
-    return mapToUI(data as Member);
+    return mapMemberDbToUI(data as Member);
   },
 
   async remove(id: string): Promise<void> {
