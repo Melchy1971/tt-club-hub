@@ -40,7 +40,7 @@ export const profileInfoService = {
       supabase.from('user_roles').select('role').eq('user_id', userId),
       supabase
         .from('team_members')
-        .select('team_id, teams(name, league)')
+        .select('team_id, position, teams(name, league, age_group, division, captain_id, season_phase_id, season_phases(name))')
         .eq('member_id', member.id),
     ]);
 
@@ -53,11 +53,19 @@ export const profileInfoService = {
         .map((row) => row.role)
         .filter((role): role is AppRole => !!role)
         .map((role) => ({ role, label: ROLE_LABELS[role] ?? role })),
-      teams: (teamRows ?? []).map((row) => ({
-        teamId: row.team_id,
-        name: row.teams?.name ?? 'Unbenanntes Team',
-        league: row.teams?.league ?? null,
-      })),
+      teams: (teamRows ?? []).map((row) => {
+        const team = row.teams as any;
+        return {
+          teamId: row.team_id,
+          name: team?.name ?? 'Unbenanntes Team',
+          league: team?.league ?? null,
+          ageGroup: team?.age_group ?? null,
+          division: team?.division ?? null,
+          position: row.position ?? 0,
+          isCaptain: team?.captain_id === member.id,
+          seasonPhaseName: team?.season_phases?.name ?? null,
+        };
+      }),
     };
   },
 

@@ -10,6 +10,11 @@ export interface MemberTeamBadge {
   teamId: string;
   name: string;
   league: string | null;
+  ageGroup: string | null;
+  division: string | null;
+  position: number;
+  isCaptain: boolean;
+  seasonPhaseName: string | null;
 }
 
 export interface MemberProfileViewModel {
