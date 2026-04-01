@@ -380,9 +380,13 @@ export default function SettingsProfile() {
         last_name: member.last_name ?? '',
         email: member.email ?? '',
         phone: member.phone ?? '',
+        mobile: (member as any).mobile ?? '',
         street: member.street ?? '',
         zip_code: member.zip_code ?? '',
         city: member.city ?? '',
+        date_of_birth: member.date_of_birth ?? null,
+        ttr_rating: member.ttr_rating ?? null,
+        qttr_rating: member.qttr_rating ?? null,
       });
     }
   }, [member]);
