@@ -583,27 +583,21 @@ export type Database = {
           description: string | null
           display_name: string
           id: string
-          is_system: boolean
           name: Database["public"]["Enums"]["app_role"]
-          permissions: Json
         }
         Insert: {
           created_at?: string
           description?: string | null
           display_name: string
           id?: string
-          is_system?: boolean
           name: Database["public"]["Enums"]["app_role"]
-          permissions?: Json
         }
         Update: {
           created_at?: string
           description?: string | null
           display_name?: string
           id?: string
-          is_system?: boolean
           name?: Database["public"]["Enums"]["app_role"]
-          permissions?: Json
         }
         Relationships: []
       }
