@@ -47,5 +47,35 @@ export interface TeamWithRoster extends Team {
   team_members: AssignmentWithMember[];
 }
 
+export interface TeamTrainingTime {
+  readonly id: string;
+  booking_date: string;
+  start_time: string;
+  end_time: string | null;
+  location: string | null;
+  status: 'pending' | 'confirmed' | 'cancelled';
+  requester_id: MemberId;
+  partner_id: MemberId;
+}
+
+/**
+ * Persistente Teamzuordnung eines Mitglieds innerhalb einer Saisonphase.
+ * Wichtig: Diese Struktur ist eine API-View auf Basis von team_members + teams.
+ * Die DB-Tabelle bleibt team_members (positionsbezogene Kaderzuordnung).
+ */
+export interface MemberTeamAssignment {
+  team_id: TeamId;
+  member_id: MemberId;
+  season_phase_id: string;
+  season_id: SeasonId;
+  position: number;
+  is_captain: boolean;
+}
+
+export interface TeamOverview extends Team {
+  captain: Pick<Member, 'id' | 'first_name' | 'last_name'> | null;
+  roster_size: number;
+}
+
 export type TeamCreate = Omit<Team, 'id' | 'created_at' | 'updated_at'>;
 export type TeamUpdate = Partial<TeamCreate>;
