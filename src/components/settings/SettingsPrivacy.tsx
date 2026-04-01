@@ -203,7 +203,7 @@ export default function SettingsPrivacy() {
   const statusBadge = (status: string) => {
     switch (status) {
       case 'pending': return <Badge variant="secondary">Ausstehend</Badge>;
-      case 'approved': return <Badge className="bg-green-600 text-white">Genehmigt</Badge>;
+      case 'approved': return <Badge className="bg-primary text-primary-foreground">Genehmigt</Badge>;
       case 'rejected': return <Badge variant="destructive">Abgelehnt</Badge>;
       default: return <Badge variant="outline">{status}</Badge>;
     }
