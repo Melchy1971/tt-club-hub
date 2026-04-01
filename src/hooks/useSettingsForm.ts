@@ -25,7 +25,7 @@ export function useSettingsForm<TForm extends FieldValues = FieldValues, TData =
 
   const form = useForm<TForm>({
     resolver: zodResolver(schema),
-    defaultValues,
+    defaultValues: defaultValues as any,
     mode: 'onChange',
   });
 
