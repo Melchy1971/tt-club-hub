@@ -13,8 +13,12 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { Save, Pencil, X, KeyRound, Users, Trophy, Shield } from 'lucide-react';
+import { Save, Pencil, X, KeyRound, Shield, Users, User, Trophy, Star } from 'lucide-react';
+import type { MemberProfileViewModel } from '@/types/viewModels';
 
 const profileSchema = z.object({
   first_name: z.string().min(1, 'Vorname erforderlich').max(100),
@@ -37,216 +41,114 @@ const passwordSchema = z.object({
 type ProfileForm = z.infer<typeof profileSchema>;
 type PasswordForm = z.infer<typeof passwordSchema>;
 
-export default function SettingsProfile() {
-  const { user, member, refresh } = useAuth();
-  const [editing, setEditing] = useState(false);
-  const [changingPassword, setChangingPassword] = useState(false);
+const SYSTEM_ROLES = new Set(['admin', 'vorstand', 'trainer', 'spieler', 'mitglied', 'developer']);
 
-  const { data: profileVM } = useQuery({
-    queryKey: profileInfoKeys.memberViewModel(user?.id ?? 'anonymous'),
-    queryFn: async () => {
-      if (!user?.id) return null;
-      return profileInfoService.getMemberProfileViewModel(user.id);
-    },
-    enabled: !!user?.id,
-  });
+const AGE_GROUP_LABELS: Record<string, string> = {
+  herren: 'Herren', damen: 'Damen', senioren: 'Senioren', seniorinnen: 'Seniorinnen',
+  jungen_18: 'Jungen U18', maedchen_18: 'Mädchen U18', jungen_15: 'Jungen U15',
+  maedchen_15: 'Mädchen U15', jungen_13: 'Jungen U13', maedchen_13: 'Mädchen U13',
+  jungen_11: 'Jungen U11', maedchen_11: 'Mädchen U11',
+};
 
-  const form = useForm<ProfileForm>({
-    resolver: zodResolver(profileSchema),
-    defaultValues: {
-      first_name: '', last_name: '', email: '',
-      phone: '', street: '', zip_code: '', city: '',
-    },
-  });
+function DisplayField({ label, value }: { label: string; value: string | null | undefined }) {
+  return (
+    <div className="space-y-1">
+      <p className="text-sm font-medium text-muted-foreground">{label}</p>
+      <p className="text-sm">{value || '–'}</p>
+    </div>
+  );
+}
 
-  const pwForm = useForm<PasswordForm>({
-    resolver: zodResolver(passwordSchema),
-    defaultValues: { password: '', confirm: '' },
-  });
-
-  useEffect(() => {
-    if (member) {
-      form.reset({
-        first_name: member.first_name ?? '',
-        last_name: member.last_name ?? '',
-        email: member.email ?? '',
-        phone: member.phone ?? '',
-        street: member.street ?? '',
-        zip_code: member.zip_code ?? '',
-        city: member.city ?? '',
-      });
-    }
-  }, [member]);
-
-  const updateMut = useMutation({
-    mutationFn: async (values: ProfileForm) => {
-      if (!member) throw new Error('Kein Mitgliedsprofil');
-      const { error } = await supabase
-        .from('members')
-        .update(values)
-        .eq('id', member.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success('Profil aktualisiert');
-      setEditing(false);
-      refresh();
-    },
-    onError: () => toast.error('Fehler beim Speichern'),
-  });
-
-  const pwMut = useMutation({
-    mutationFn: async (values: PasswordForm) => {
-      const { error } = await supabase.auth.updateUser({ password: values.password });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success('Passwort geändert');
-      setChangingPassword(false);
-      pwForm.reset();
-    },
-    onError: () => toast.error('Fehler beim Ändern des Passworts'),
-  });
-
+function ProfileHeader({ member, profileVM, user }: {
+  member: any;
+  profileVM: MemberProfileViewModel | null | undefined;
+  user: any;
+}) {
   const initials = member
     ? `${(member.first_name?.[0] ?? '').toUpperCase()}${(member.last_name?.[0] ?? '').toUpperCase()}`
     : '?';
-
-  const fullName = member ? `${member.first_name} ${member.last_name}` : 'Unbekannt';
+  const fullName = member ? `${member.first_name} ${member.last_name}`.trim() : 'Unbekannt';
 
   return (
-    <div className="space-y-6">
-      {/* Profile Header Card */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-            <Avatar className="h-20 w-20 text-2xl">
-              <AvatarFallback className="bg-primary/10 text-primary text-xl font-semibold">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
+    <Card>
+      <CardContent className="pt-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+          <Avatar className="h-20 w-20 text-2xl shrink-0">
+            <AvatarFallback className="bg-primary/10 text-primary text-xl font-semibold">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
 
-            <div className="flex-1 space-y-2">
-              <div className="flex items-center gap-3 flex-wrap">
-                <h2 className="text-2xl font-bold">{fullName}</h2>
-                <Badge variant={member?.is_active ? 'default' : 'secondary'}>
-                  {member?.is_active ? 'Aktiv' : 'Inaktiv'}
-                </Badge>
+          <div className="flex-1 min-w-0 space-y-1.5">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h2 className="text-2xl font-bold truncate">{fullName}</h2>
+              <Badge variant={member?.is_active ? 'default' : 'secondary'}>
+                {member?.is_active ? 'Aktiv' : 'Inaktiv'}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground">{member?.email ?? user?.email ?? '–'}</p>
+
+            {(member?.qttr_rating != null || member?.ttr_rating != null) && (
+              <div className="flex items-center gap-4 text-sm">
+                <Trophy className="h-4 w-4 text-amber-500 shrink-0" />
+                {member?.qttr_rating != null && <span>QTTR: <strong>{member.qttr_rating}</strong></span>}
+                {member?.ttr_rating != null && <span className="text-muted-foreground">TTR: {member.ttr_rating}</span>}
               </div>
+            )}
 
-              <p className="text-sm text-muted-foreground">{member?.email ?? user?.email ?? '–'}</p>
-
-              {/* QTTR Rating */}
-              {(member?.qttr_rating || member?.ttr_rating) && (
-                <div className="flex items-center gap-4 text-sm">
-                  <div className="flex items-center gap-1.5">
-                    <Trophy className="h-4 w-4 text-amber-500" />
-                    {member?.qttr_rating != null && (
-                      <span>QTTR: <strong>{member.qttr_rating}</strong></span>
-                    )}
-                    {member?.ttr_rating != null && (
-                      <span className="text-muted-foreground ml-2">TTR: {member.ttr_rating}</span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Roles */}
-              {profileVM?.roles && profileVM.roles.length > 0 && (
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Shield className="h-4 w-4 text-muted-foreground" />
-                  {profileVM.roles.map((role) => (
-                    <Badge key={role.role} variant="outline" className="capitalize">
-                      {role.label}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-
-              {/* Teams */}
-              {profileVM?.teams && profileVM.teams.length > 0 && (
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  {profileVM.teams.map((team) => (
-                    <Badge key={team.teamId} variant="secondary">
-                      {team.name}{team.league ? ` (${team.league})` : ''}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-2">
-              {!editing && (
-                <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
-                  <Pencil className="mr-2 h-4 w-4" /> Bearbeiten
-                </Button>
-              )}
-            </div>
+            {profileVM?.roles && profileVM.roles.length > 0 && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <Shield className="h-4 w-4 text-muted-foreground shrink-0" />
+                {profileVM.roles.map((r) => (
+                  <Badge key={r.role} variant="outline" className="capitalize">{r.label}</Badge>
+                ))}
+              </div>
+            )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
-      {/* Edit Profile Form */}
-      {editing && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Profil bearbeiten</CardTitle>
-            <CardDescription>Persönliche Daten und Kontaktinformationen</CardDescription>
-          </CardHeader>
-          <CardContent>
+function TabPersonalData({ member, form, editing, setEditing, updateMut, changingPassword, setChangingPassword, pwForm, pwMut }: any) {
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Kontaktdaten</CardTitle>
+            {!editing && (
+              <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+                <Pencil className="mr-2 h-4 w-4" /> Bearbeiten
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {editing ? (
             <Form {...form}>
-              <form onSubmit={form.handleSubmit((v) => updateMut.mutate(v))} className="space-y-4">
+              <form onSubmit={form.handleSubmit((v: ProfileForm) => updateMut.mutate(v))} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField control={form.control} name="first_name" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Vorname</FormLabel>
-                      <FormControl><Input {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="last_name" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nachname</FormLabel>
-                      <FormControl><Input {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="email" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>E-Mail</FormLabel>
-                      <FormControl><Input type="email" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="phone" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Telefon</FormLabel>
-                      <FormControl><Input {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="street" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Straße</FormLabel>
-                      <FormControl><Input {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="zip_code" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>PLZ</FormLabel>
-                      <FormControl><Input {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="city" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Ort</FormLabel>
-                      <FormControl><Input {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
+                  {([
+                    ['first_name', 'Vorname'],
+                    ['last_name', 'Nachname'],
+                    ['email', 'E-Mail'],
+                    ['phone', 'Telefon'],
+                    ['street', 'Straße'],
+                    ['zip_code', 'PLZ'],
+                    ['city', 'Ort'],
+                  ] as const).map(([name, label]) => (
+                    <FormField key={name} control={form.control} name={name} render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{label}</FormLabel>
+                        <FormControl>
+                          <Input {...field} type={name === 'email' ? 'email' : 'text'} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  ))}
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="ghost" onClick={() => { setEditing(false); form.reset(); }}>
@@ -258,11 +160,22 @@ export default function SettingsProfile() {
                 </div>
               </form>
             </Form>
-          </CardContent>
-        </Card>
-      )}
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <DisplayField label="Vorname" value={member?.first_name} />
+              <DisplayField label="Nachname" value={member?.last_name} />
+              <DisplayField label="E-Mail" value={member?.email} />
+              <DisplayField label="Telefon" value={member?.phone} />
+              <DisplayField label="Straße" value={member?.street} />
+              <DisplayField label="PLZ" value={member?.zip_code} />
+              <DisplayField label="Ort" value={member?.city} />
+              <DisplayField label="Status" value={member?.is_active ? 'Aktiv' : 'Inaktiv'} />
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Password Change */}
+      {/* Password */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -272,7 +185,7 @@ export default function SettingsProfile() {
             </div>
             {!changingPassword && (
               <Button variant="outline" size="sm" onClick={() => setChangingPassword(true)}>
-                <KeyRound className="mr-2 h-4 w-4" /> Passwort ändern
+                <KeyRound className="mr-2 h-4 w-4" /> Ändern
               </Button>
             )}
           </div>
@@ -280,7 +193,7 @@ export default function SettingsProfile() {
         {changingPassword && (
           <CardContent>
             <Form {...pwForm}>
-              <form onSubmit={pwForm.handleSubmit((v) => pwMut.mutate(v))} className="space-y-4 max-w-md">
+              <form onSubmit={pwForm.handleSubmit((v: PasswordForm) => pwMut.mutate(v))} className="space-y-4 max-w-md">
                 <FormField control={pwForm.control} name="password" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Neues Passwort</FormLabel>
@@ -308,6 +221,215 @@ export default function SettingsProfile() {
           </CardContent>
         )}
       </Card>
+    </div>
+  );
+}
+
+function TabRoles({ profileVM }: { profileVM: MemberProfileViewModel | null | undefined }) {
+  if (!profileVM?.roles?.length) {
+    return (
+      <Card>
+        <CardContent className="py-10 text-center text-muted-foreground">
+          Keine Rollen zugewiesen.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Zugewiesene Rollen</CardTitle>
+        <CardDescription>Systemrollen bestimmen deine Berechtigungen in der Anwendung</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Rolle</TableHead>
+              <TableHead>Typ</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {profileVM.roles.map((r) => (
+              <TableRow key={r.role}>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">{r.label}</span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={SYSTEM_ROLES.has(r.role) ? 'default' : 'secondary'}>
+                    {SYSTEM_ROLES.has(r.role) ? 'Systemrolle' : 'Benutzerdefiniert'}
+                  </Badge>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}
+
+function TabTeams({ profileVM }: { profileVM: MemberProfileViewModel | null | undefined }) {
+  if (!profileVM?.teams?.length) {
+    return (
+      <Card>
+        <CardContent className="py-10 text-center text-muted-foreground">
+          Keiner Mannschaft zugeordnet.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Mannschaften</CardTitle>
+        <CardDescription>Deine aktuellen Teamzuordnungen</CardDescription>
+      </CardHeader>
+      <CardContent className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Mannschaft</TableHead>
+              <TableHead className="hidden sm:table-cell">Altersgruppe</TableHead>
+              <TableHead className="hidden md:table-cell">Saisonphase</TableHead>
+              <TableHead className="hidden sm:table-cell">Liga</TableHead>
+              <TableHead>Position</TableHead>
+              <TableHead className="hidden md:table-cell">Kapitän</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {profileVM.teams.map((t) => (
+              <TableRow key={t.teamId}>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+                    {t.name}
+                  </div>
+                </TableCell>
+                <TableCell className="hidden sm:table-cell">
+                  {t.ageGroup ? (AGE_GROUP_LABELS[t.ageGroup] ?? t.ageGroup) : '–'}
+                </TableCell>
+                <TableCell className="hidden md:table-cell">{t.seasonPhaseName ?? '–'}</TableCell>
+                <TableCell className="hidden sm:table-cell">{t.league ?? '–'}</TableCell>
+                <TableCell>{t.position || '–'}</TableCell>
+                <TableCell className="hidden md:table-cell">
+                  {t.isCaptain ? (
+                    <Badge variant="default" className="gap-1">
+                      <Star className="h-3 w-3" /> Ja
+                    </Badge>
+                  ) : '–'}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function SettingsProfile() {
+  const { user, member, refresh } = useAuth();
+  const [editing, setEditing] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  const { data: profileVM, isLoading } = useQuery({
+    queryKey: profileInfoKeys.memberViewModel(user?.id ?? 'anonymous'),
+    queryFn: () => profileInfoService.getMemberProfileViewModel(user!.id),
+    enabled: !!user?.id,
+  });
+
+  const form = useForm<ProfileForm>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: { first_name: '', last_name: '', email: '', phone: '', street: '', zip_code: '', city: '' },
+  });
+
+  const pwForm = useForm<PasswordForm>({
+    resolver: zodResolver(passwordSchema),
+    defaultValues: { password: '', confirm: '' },
+  });
+
+  useEffect(() => {
+    if (member) {
+      form.reset({
+        first_name: member.first_name ?? '',
+        last_name: member.last_name ?? '',
+        email: member.email ?? '',
+        phone: member.phone ?? '',
+        street: member.street ?? '',
+        zip_code: member.zip_code ?? '',
+        city: member.city ?? '',
+      });
+    }
+  }, [member]);
+
+  const updateMut = useMutation({
+    mutationFn: async (values: ProfileForm) => {
+      if (!member) throw new Error('Kein Mitgliedsprofil');
+      const { error } = await supabase.from('members').update(values).eq('id', member.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success('Profil aktualisiert'); setEditing(false); refresh(); },
+    onError: () => toast.error('Fehler beim Speichern'),
+  });
+
+  const pwMut = useMutation({
+    mutationFn: async (values: PasswordForm) => {
+      const { error } = await supabase.auth.updateUser({ password: values.password });
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success('Passwort geändert'); setChangingPassword(false); pwForm.reset(); },
+    onError: () => toast.error('Fehler beim Ändern des Passworts'),
+  });
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-10 w-64" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <ProfileHeader member={member} profileVM={profileVM} user={user} />
+
+      <Tabs defaultValue="personal" className="w-full">
+        <TabsList className="w-full sm:w-auto">
+          <TabsTrigger value="personal" className="gap-1.5">
+            <User className="h-4 w-4" /> Persönliche Daten
+          </TabsTrigger>
+          <TabsTrigger value="roles" className="gap-1.5">
+            <Shield className="h-4 w-4" /> Rollen
+          </TabsTrigger>
+          <TabsTrigger value="teams" className="gap-1.5">
+            <Users className="h-4 w-4" /> Mannschaften
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="personal">
+          <TabPersonalData
+            member={member} form={form} editing={editing} setEditing={setEditing}
+            updateMut={updateMut} changingPassword={changingPassword}
+            setChangingPassword={setChangingPassword} pwForm={pwForm} pwMut={pwMut}
+          />
+        </TabsContent>
+
+        <TabsContent value="roles">
+          <TabRoles profileVM={profileVM} />
+        </TabsContent>
+
+        <TabsContent value="teams">
+          <TabTeams profileVM={profileVM} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
