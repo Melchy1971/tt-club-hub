@@ -24,20 +24,21 @@ import SettingsSecurity from '@/components/settings/SettingsSecurity';
 import SettingsBackup from '@/components/settings/SettingsBackup';
 import SettingsDangerZone from '@/components/settings/SettingsDangerZone';
 import SettingsInfo from '@/components/settings/SettingsInfo';
+import { SETTINGS_SUBPAGE_LABELS_DE } from '@/constants/uiLabels';
 import { getSettingsPermissionRule } from './permissions';
 import type { SettingsSubpageDef } from './types';
 
 export const SETTINGS_SUBPAGES: SettingsSubpageDef[] = [
-  { id: 'general', label: 'Allgemein', icon: SlidersHorizontal, component: SettingsInfo, group: 'account' },
-  { id: 'profile', label: 'Mein Profil', icon: UserCircle, component: SettingsProfile, group: 'account' },
-  { id: 'security', label: 'Sicherheit', icon: ShieldAlert, component: SettingsSecurity, group: 'account' },
-  { id: 'notifications', label: 'Benachrichtigungen', icon: Bell, component: SettingsNotifications, group: 'account' },
-  { id: 'privacy', label: 'Datenschutz', icon: Lock, component: SettingsPrivacy, group: 'account' },
-  { id: 'appearance', label: 'Darstellung', icon: Palette, component: SettingsAppearance, group: 'account' },
+  { id: 'general', label: SETTINGS_SUBPAGE_LABELS_DE.general, icon: SlidersHorizontal, component: SettingsInfo, group: 'account' },
+  { id: 'profile', label: SETTINGS_SUBPAGE_LABELS_DE.profile, icon: UserCircle, component: SettingsProfile, group: 'account' },
+  { id: 'security', label: SETTINGS_SUBPAGE_LABELS_DE.security, icon: ShieldAlert, component: SettingsSecurity, group: 'account' },
+  { id: 'notifications', label: SETTINGS_SUBPAGE_LABELS_DE.notifications, icon: Bell, component: SettingsNotifications, group: 'account' },
+  { id: 'privacy', label: SETTINGS_SUBPAGE_LABELS_DE.privacy, icon: Lock, component: SettingsPrivacy, group: 'account' },
+  { id: 'appearance', label: SETTINGS_SUBPAGE_LABELS_DE.appearance, icon: Palette, component: SettingsAppearance, group: 'account' },
 
   {
     id: 'club',
-    label: 'Vereinsdaten',
+    label: SETTINGS_SUBPAGE_LABELS_DE.club,
     icon: Building2,
     component: SettingsClub,
     group: 'club',
@@ -46,7 +47,7 @@ export const SETTINGS_SUBPAGES: SettingsSubpageDef[] = [
   },
   {
     id: 'season',
-    label: 'Saisonverwaltung',
+    label: SETTINGS_SUBPAGE_LABELS_DE.season,
     icon: Calendar,
     component: SettingsSeasons,
     group: 'club',
@@ -55,7 +56,7 @@ export const SETTINGS_SUBPAGES: SettingsSubpageDef[] = [
   },
   {
     id: 'venues',
-    label: 'Spiellokale',
+    label: SETTINGS_SUBPAGE_LABELS_DE.venues,
     icon: MapPin,
     component: SettingsVenues,
     group: 'club',
@@ -65,7 +66,7 @@ export const SETTINGS_SUBPAGES: SettingsSubpageDef[] = [
 
   {
     id: 'roles',
-    label: 'Rollen',
+    label: SETTINGS_SUBPAGE_LABELS_DE.roles,
     icon: Users,
     component: SettingsRoles,
     group: 'admin',
@@ -74,7 +75,7 @@ export const SETTINGS_SUBPAGES: SettingsSubpageDef[] = [
   },
   {
     id: 'backup',
-    label: 'Backup',
+    label: SETTINGS_SUBPAGE_LABELS_DE.backup,
     icon: Database,
     component: SettingsBackup,
     group: 'admin',
@@ -83,7 +84,7 @@ export const SETTINGS_SUBPAGES: SettingsSubpageDef[] = [
   },
   {
     id: 'danger',
-    label: 'Gefahrenzone',
+    label: SETTINGS_SUBPAGE_LABELS_DE.danger,
     icon: AlertTriangle,
     component: SettingsDangerZone,
     group: 'admin',

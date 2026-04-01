@@ -1,17 +1,26 @@
 import { useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { hasPermission } from '@/lib/permissions';
-import { ROUTES, type NavGroup, type RouteConfig } from '@/routes/navigation';
+import { ROUTES } from '@/routes/navigation';
 import type { AppRole } from '@/types/auth';
+import type { NavGroup, RouteConfig } from '@/types/navigation';
 
-const roleMatch = (role: AppRole | null | undefined, minRoles?: AppRole[]) =>
-  !minRoles || (role ? minRoles.includes(role) : false);
+const roleMatch = (role: AppRole | null | undefined, roles?: AppRole[]) =>
+  !roles || (role ? roles.includes(role) : false);
 
 const isAllowed = (role: AppRole | null | undefined, route: RouteConfig) => {
-  if (route.requiredPermission && hasPermission(role, route.requiredPermission)) return true;
-  if (route.minRoles && roleMatch(role, route.minRoles)) return true;
-  if (!route.requiredPermission && !route.minRoles) return true;
-  return false;
+  switch (route.guard.type) {
+    case 'public':
+      return true;
+    case 'authenticated':
+      return !!role;
+    case 'permission':
+      return hasPermission(role, route.guard.permission);
+    case 'roles':
+      return roleMatch(role, route.guard.roles);
+    default:
+      return false;
+  }
 };
 
 export const useNavigationPermissions = () => {
