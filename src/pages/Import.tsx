@@ -523,14 +523,16 @@ function ScheduleImportTab() {
     queryFn: async () => {
       const { data } = await supabase
         .from('season_phases')
-        .select('id, name, phase_type, is_active, season_cycles(id, name, age_group)')
+        .select('id, name, phase_type, is_active, start_date, season_cycles!inner(id, name, age_group, is_active)')
+        .eq('season_cycles.is_active', true)
         .order('start_date', { ascending: false });
       return (data ?? []) as Array<{
         id: string;
         name: string;
         phase_type: string;
         is_active: boolean;
-        season_cycles: { id: string; name: string; age_group: string } | null;
+        start_date: string;
+        season_cycles: { id: string; name: string; age_group: string; is_active: boolean } | null;
       }>;
     },
   });
@@ -571,7 +573,12 @@ function ScheduleImportTab() {
   useEffect(() => {
     if (!seasonPhaseId && seasonPhases?.length) {
       const active = seasonPhases.find((p) => p.is_active);
-      if (active) setSeasonPhaseId(active.id);
+      if (active) {
+        setSeasonPhaseId(active.id);
+        return;
+      }
+
+      setSeasonPhaseId(seasonPhases[0].id);
     }
   }, [seasonPhases, seasonPhaseId]);
 
