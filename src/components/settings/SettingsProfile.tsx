@@ -299,6 +299,10 @@ function TabPersonalData({ member, form, editing, setEditing, updateMut, changin
                 label="Geburtstag"
                 value={member?.date_of_birth ? format(new Date(member.date_of_birth), 'dd.MM.yyyy') : null}
               />
+              <DisplayField
+                label="Mitglied seit"
+                value={member?.entry_date ? format(new Date(member.entry_date), 'dd.MM.yyyy') : null}
+              />
               <DisplayField label="Straße" value={member?.street} />
               <DisplayField label="PLZ" value={member?.zip_code} />
               <DisplayField label="Ort" value={member?.city} />
