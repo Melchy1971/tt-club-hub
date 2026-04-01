@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { profileInfoService } from '@/services/profileInfoService';
+import { profileInfoKeys } from '@/lib/queryKeys';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Building2, Code2, Calendar, Mail, Globe, Cpu } from 'lucide-react';
+import { Building2, Code2, Mail, Globe, Cpu } from 'lucide-react';
 
 const APP_VERSION = '1.0.0';
 const BUILD_DATE = '2026-04-01';
@@ -18,15 +19,8 @@ const TECH_STACK = [
 
 export default function SettingsInfo() {
   const { data: club } = useQuery({
-    queryKey: ['club-settings'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('club_settings')
-        .select('*')
-        .limit(1)
-        .maybeSingle();
-      return data;
-    },
+    queryKey: profileInfoKeys.publicClubInfo(),
+    queryFn: () => profileInfoService.getPublicClubInfo(),
   });
 
   return (
@@ -45,12 +39,12 @@ export default function SettingsInfo() {
         <CardContent>
           {club ? (
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
-              <InfoRow label="Vereinsname" value={club.club_name} />
-              <InfoRow label="Vereinsnummer" value={club.club_number} />
+              <InfoRow label="Vereinsname" value={club.clubName} />
+              <InfoRow label="Vereinsnummer" value={club.clubNumber} />
               <InfoRow label="Verband" value={club.association} />
-              <InfoRow label="Anschrift" value={[club.street, [club.zip_code, club.city].filter(Boolean).join(' ')].filter(Boolean).join(', ')} />
-              <InfoRow label="E-Mail" value={club.contact_email} />
-              <InfoRow label="Telefon" value={club.contact_phone} />
+              <InfoRow label="Anschrift" value={[club.street, [club.zipCode, club.city].filter(Boolean).join(' ')].filter(Boolean).join(', ')} />
+              <InfoRow label="E-Mail" value={club.contactEmail} />
+              <InfoRow label="Telefon" value={club.contactPhone} />
               {club.website && (
                 <div className="sm:col-span-2">
                   <dt className="text-muted-foreground">Website</dt>

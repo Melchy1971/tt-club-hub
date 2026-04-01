@@ -4,6 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { profileInfoService } from '@/services/profileInfoService';
+import { profileInfoKeys } from '@/lib/queryKeys';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -11,7 +13,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { Save, Pencil, X, KeyRound, Users, Trophy, Shield } from 'lucide-react';
 
@@ -37,36 +38,17 @@ type ProfileForm = z.infer<typeof profileSchema>;
 type PasswordForm = z.infer<typeof passwordSchema>;
 
 export default function SettingsProfile() {
-  const { user, member, role, refresh } = useAuth();
+  const { user, member, refresh } = useAuth();
   const [editing, setEditing] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
 
-  // Fetch user roles
-  const { data: userRoles } = useQuery({
-    queryKey: ['user-roles', user?.id],
+  const { data: profileVM } = useQuery({
+    queryKey: profileInfoKeys.memberViewModel(user?.id ?? 'anonymous'),
     queryFn: async () => {
-      if (!user?.id) return [];
-      const { data } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id);
-      return data?.map((r) => r.role) ?? [];
+      if (!user?.id) return null;
+      return profileInfoService.getMemberProfileViewModel(user.id);
     },
     enabled: !!user?.id,
-  });
-
-  // Fetch teams for this member
-  const { data: teams } = useQuery({
-    queryKey: ['member-teams', member?.id],
-    queryFn: async () => {
-      if (!member?.id) return [];
-      const { data } = await supabase
-        .from('team_members')
-        .select('team_id, teams(name, league)')
-        .eq('member_id', member.id);
-      return data ?? [];
-    },
-    enabled: !!member?.id,
   });
 
   const form = useForm<ProfileForm>({
@@ -132,11 +114,6 @@ export default function SettingsProfile() {
 
   const fullName = member ? `${member.first_name} ${member.last_name}` : 'Unbekannt';
 
-  const ROLE_LABELS: Record<string, string> = {
-    admin: 'Admin', vorstand: 'Vorstand', trainer: 'Trainer',
-    spieler: 'Spieler', mitglied: 'Mitglied', developer: 'Developer',
-  };
-
   return (
     <div className="space-y-6">
       {/* Profile Header Card */}
@@ -175,24 +152,24 @@ export default function SettingsProfile() {
               )}
 
               {/* Roles */}
-              {userRoles && userRoles.length > 0 && (
+              {profileVM?.roles && profileVM.roles.length > 0 && (
                 <div className="flex items-center gap-2 flex-wrap">
                   <Shield className="h-4 w-4 text-muted-foreground" />
-                  {userRoles.map((r) => (
-                    <Badge key={r} variant="outline" className="capitalize">
-                      {ROLE_LABELS[r] ?? r}
+                  {profileVM.roles.map((role) => (
+                    <Badge key={role.role} variant="outline" className="capitalize">
+                      {role.label}
                     </Badge>
                   ))}
                 </div>
               )}
 
               {/* Teams */}
-              {teams && teams.length > 0 && (
+              {profileVM?.teams && profileVM.teams.length > 0 && (
                 <div className="flex items-center gap-2 flex-wrap">
                   <Users className="h-4 w-4 text-muted-foreground" />
-                  {teams.map((t: any) => (
-                    <Badge key={t.team_id} variant="secondary">
-                      {t.teams?.name}{t.teams?.league ? ` (${t.teams.league})` : ''}
+                  {profileVM.teams.map((team) => (
+                    <Badge key={team.teamId} variant="secondary">
+                      {team.name}{team.league ? ` (${team.league})` : ''}
                     </Badge>
                   ))}
                 </div>

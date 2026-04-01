@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Save } from 'lucide-react';
+import { profileInfoKeys } from '@/lib/queryKeys';
 
 const clubSchema = z.object({
   club_name: z.string().min(1, 'Vereinsname erforderlich').max(200),
@@ -70,6 +71,7 @@ export default function SettingsClub() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['club-settings'] });
+      queryClient.invalidateQueries({ queryKey: profileInfoKeys.publicClubInfo() });
       toast.success('Vereinsdaten gespeichert');
     },
     onError: () => toast.error('Fehler beim Speichern'),
