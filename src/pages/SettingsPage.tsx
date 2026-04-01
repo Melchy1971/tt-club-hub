@@ -21,6 +21,7 @@ import SettingsPrivacy from '@/components/settings/SettingsPrivacy';
 import SettingsSecurity from '@/components/settings/SettingsSecurity';
 import SettingsBackup from '@/components/settings/SettingsBackup';
 import SettingsDangerZone from '@/components/settings/SettingsDangerZone';
+import SettingsInfo from '@/components/settings/SettingsInfo';
 
 interface SettingsTab {
   id:                  string;
