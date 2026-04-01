@@ -6,20 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { Search, UserPlus, Trash2 } from 'lucide-react';
-import type { AppRole } from '@/types/auth';
-
-const ROLE_LABELS: Record<string, string> = {
-  developer: 'Developer',
-  admin: 'Administrator',
-  vorstand: 'Vorstand',
-  trainer: 'Trainer',
-  spieler: 'Spieler',
-  mitglied: 'Mitglied',
-};
+import { Search, Trash2 } from 'lucide-react';
+import { APP_ROLE_LABELS } from '@/constants/permissionsMatrix';
 
 export default function SettingsRoles() {
   const { user } = useAuth();
@@ -108,7 +98,7 @@ export default function SettingsRoles() {
                     <TableCell className="font-medium">{r.name}</TableCell>
                     <TableCell className="text-muted-foreground">{r.email}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{ROLE_LABELS[r.role] ?? r.role}</Badge>
+                      <Badge variant="outline">{APP_ROLE_LABELS[r.role] ?? r.role}</Badge>
                     </TableCell>
                     <TableCell>
                       <Button
@@ -116,7 +106,7 @@ export default function SettingsRoles() {
                         variant="ghost"
                         className="h-8 w-8 text-destructive hover:text-destructive"
                         onClick={() => deleteMut.mutate(r.id)}
-                        disabled={r.user_id === user?.id}
+                        disabled={r.user_id === user?.id || r.role === 'developer'}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
