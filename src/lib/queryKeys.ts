@@ -19,6 +19,7 @@
 
 import type { NewsFilter } from '@/types';
 import type { MemberFilter } from '@/types/member';
+import type { DocumentFilter } from '@/services/documentService';
 
 // ── Members ───────────────────────────────────────────────────
 
@@ -96,6 +97,26 @@ export const substituteKeys = {
   lists:  ()           => [...substituteKeys.all, 'list']          as const,
   list:   (f?: object) => [...substituteKeys.lists(), f ?? {}]     as const,
   detail: (id: string) => [...substituteKeys.all, 'detail', id]   as const,
+};
+
+// ── Documents ─────────────────────────────────────────────────
+
+export const documentKeys = {
+  all:        ['documents'] as const,
+  lists:      ()                 => [...documentKeys.all, 'list']             as const,
+  list:       (f?: DocumentFilter) => [...documentKeys.lists(), f ?? {}]      as const,
+  detail:     (id: string)       => [...documentKeys.all, 'detail', id]      as const,
+  categories: ()                 => [...documentKeys.all, 'categories']       as const,
+};
+
+// ── Communication Lists ───────────────────────────────────────
+
+export const communicationListKeys = {
+  all:     ['communicationLists'] as const,
+  lists:   ()            => [...communicationListKeys.all, 'list']            as const,
+  detail:  (id: string)  => [...communicationListKeys.all, 'detail', id]     as const,
+  members: (id: string)  => [...communicationListKeys.all, 'members', id]    as const,
+  withCounts: ()         => [...communicationListKeys.all, 'withCounts']      as const,
 };
 
 // ── Club Settings ─────────────────────────────────────────────
