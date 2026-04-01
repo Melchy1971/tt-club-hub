@@ -34,6 +34,7 @@ const profileSchema = z.object({
   zip_code: z.string().max(10).optional().or(z.literal('')),
   city: z.string().max(100).optional().or(z.literal('')),
   date_of_birth: z.string().nullable().optional(),
+  entry_date: z.string().nullable().optional(),
   ttr_rating: z.preprocess(
     (v) => (v === '' || v === null || v === undefined ? null : Number(v)),
     z.number().int().min(0, 'Muss ≥ 0 sein').max(3500).nullable(),
@@ -42,6 +43,14 @@ const profileSchema = z.object({
     (v) => (v === '' || v === null || v === undefined ? null : Number(v)),
     z.number().int().min(0, 'Muss ≥ 0 sein').max(3500).nullable(),
   ),
+}).refine((data) => {
+  if (data.entry_date && data.date_of_birth) {
+    return data.entry_date >= data.date_of_birth;
+  }
+  return true;
+}, {
+  message: 'Mitglied seit darf nicht vor dem Geburtstag liegen',
+  path: ['entry_date'],
 });
 
 const passwordSchema = z.object({
@@ -202,6 +211,43 @@ function TabPersonalData({ member, form, editing, setEditing, updateMut, changin
                     );
                   }} />
 
+                  {/* Mitglied seit */}
+                  <FormField control={form.control} name="entry_date" render={({ field }) => {
+                    const dateValue = field.value ? new Date(field.value) : undefined;
+                    return (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Mitglied seit</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  'w-full pl-3 text-left font-normal',
+                                  !field.value && 'text-muted-foreground',
+                                )}
+                              >
+                                {dateValue ? format(dateValue, 'dd.MM.yyyy') : <span>Datum wählen</span>}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={dateValue}
+                              onSelect={(d) => field.onChange(d ? format(d, 'yyyy-MM-dd') : null)}
+                              disabled={(d) => d > new Date()}
+                              initialFocus
+                              className={cn('p-3 pointer-events-auto')}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }} />
+
                   {/* TTR */}
                   <FormField control={form.control} name="ttr_rating" render={({ field }) => (
                     <FormItem>
@@ -252,6 +298,10 @@ function TabPersonalData({ member, form, editing, setEditing, updateMut, changin
               <DisplayField
                 label="Geburtstag"
                 value={member?.date_of_birth ? format(new Date(member.date_of_birth), 'dd.MM.yyyy') : null}
+              />
+              <DisplayField
+                label="Mitglied seit"
+                value={member?.entry_date ? format(new Date(member.entry_date), 'dd.MM.yyyy') : null}
               />
               <DisplayField label="Straße" value={member?.street} />
               <DisplayField label="PLZ" value={member?.zip_code} />
@@ -438,7 +488,7 @@ export default function SettingsProfile() {
     defaultValues: {
       first_name: '', last_name: '', email: '', phone: '', mobile: '',
       street: '', zip_code: '', city: '', date_of_birth: null,
-      ttr_rating: null, qttr_rating: null,
+      entry_date: null, ttr_rating: null, qttr_rating: null,
     },
   });
 
@@ -459,6 +509,7 @@ export default function SettingsProfile() {
         zip_code: member.zip_code ?? '',
         city: member.city ?? '',
         date_of_birth: member.date_of_birth ?? null,
+        entry_date: member.entry_date ?? null,
         ttr_rating: member.ttr_rating ?? null,
         qttr_rating: member.qttr_rating ?? null,
       });
