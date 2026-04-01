@@ -32,31 +32,26 @@ export interface ExportDocument {
 }
 
 export type ExportSection =
-  | ExportTableSection<Record<string, unknown>>
+  | ExportTableSection
   | ExportTextSection
   | ExportHeadingSection
   | ExportSeparatorSection;
 
-export interface ExportTableSection<T extends Record<string, unknown>> {
+export interface ExportTableSection<T extends Record<string, unknown> = Record<string, unknown>> {
   type: 'table';
   title?: string;
-  columns: ExportColumn<T>[];
+  columns: ExportColumn[];
   rows: T[];
   /** Gesamtzeile am Ende (z.B. Anzahl) */
-  totals?: Partial<Record<keyof T, string>>;
+  totals?: Record<string, string>;
 }
 
-export interface ExportColumn<T extends Record<string, unknown>> {
-  /** Schlüssel im Datenobjekt */
-  key: keyof T;
-  /** Spaltenüberschrift */
+export interface ExportColumn {
+  key: string;
   label: string;
-  /** Ausrichtung (Default: 'left') */
   align?: 'left' | 'right' | 'center';
-  /** Relative Spaltenbreite (0–1, Summe muss 1 ergeben) */
   width?: number;
-  /** Formatierungsfunktion */
-  format?: (value: T[keyof T], row: T) => string;
+  format?: (value: unknown, row: Record<string, unknown>) => string;
 }
 
 export interface ExportTextSection {

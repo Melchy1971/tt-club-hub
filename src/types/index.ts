@@ -34,15 +34,11 @@ export type UserRole = Tables<'user_roles'>;
 export type ClubSettings = Tables<'club_settings'>;
 
 // === Training ===
-export type TrainingSession = Tables<'training_sessions'>;
-export type TrainingSessionInsert = TablesInsert<'training_sessions'>;
-export type TrainingSessionUpdate = TablesUpdate<'training_sessions'>;
-
 export type TrainingBooking = Tables<'training_bookings'>;
 export type TrainingBookingInsert = TablesInsert<'training_bookings'>;
 export type TrainingBookingUpdate = TablesUpdate<'training_bookings'>;
 
-export type BookingStatus = 'pending' | 'confirmed' | 'waitlisted' | 'cancelled';
+export type BookingStatus = 'pending' | 'confirmed' | 'cancelled';
 
 // === News ===
 export type { NewsArticle, NewsArticleUI, NewsCreateDTO, NewsUpdateDTO, NewsFilter, NewsStatus, NewsVisibility } from './domain/news';

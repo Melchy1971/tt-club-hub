@@ -1,17 +1,5 @@
 /**
  * QTTR / TTR Rating-Export
- *
- * Erstellt ein ExportDocument aus Mitgliedsdaten mit Bewertungen.
- * Kann als PDF (Rangliste), CSV (Datenexport) oder XLSX (Tabelle) ausgegeben werden.
- *
- * QTTR = Qualitätstraining-Tischtennis-Rating (Jugendwertung)
- * TTR  = Tischtennis-Rating (Erwachsene, myTischtennis.de)
- *
- * Datenfluss:
- *   memberService.list({ is_active: true })
- *     → buildRatingExport(members, options)
- *       → ExportDocument
- *         → Adapter (z.B. pdfAdapter) → Blob → triggerDownload
  */
 
 import type { MemberUI } from '@/types/member';
@@ -21,6 +9,7 @@ import { formatDate } from '@/lib/date';
 // ── Zeilen-Shape ──────────────────────────────────────────────
 
 export interface RatingRow {
+  [key: string]: unknown;
   rank:      string;
   fullName:  string;
   ttr:       string;
@@ -34,22 +23,14 @@ export interface RatingRow {
 export interface RatingExportOptions {
   title?:    string;
   subtitle?: string;
-  /** Vereinsname für die Kopfzeile */
   clubName?: string;
-  /** Nur Mitglieder mit TTR-Wert einbeziehen */
   ttrOnly?:  boolean;
-  /** Nur Mitglieder mit QTTR-Wert einbeziehen */
   qttrOnly?: boolean;
-  /** Auf eine bestimmte Altersklasse filtern */
   ageGroup?: string;
 }
 
 // ── Builder ───────────────────────────────────────────────────
 
-/**
- * Baut ein vollständiges ExportDocument aus einer Mitgliedsliste.
- * Sortiert absteigend nach TTR, dann QTTR.
- */
 export function buildRatingExport(
   members: MemberUI[],
   options: RatingExportOptions = {},
@@ -63,13 +44,11 @@ export function buildRatingExport(
     ageGroup,
   } = options;
 
-  // Filter anwenden
   let filtered = members.filter((m) => m.isActive);
   if (ttrOnly)  filtered = filtered.filter((m) => m.ttr != null);
   if (qttrOnly) filtered = filtered.filter((m) => m.qttr != null);
   if (ageGroup) filtered = filtered.filter((m) => m.ageGroup === ageGroup);
 
-  // Sortierung: TTR desc, QTTR desc, Name asc
   filtered.sort((a, b) => {
     const ttrDiff = (b.ttr ?? 0) - (a.ttr ?? 0);
     if (ttrDiff !== 0) return ttrDiff;
@@ -78,18 +57,16 @@ export function buildRatingExport(
     return a.fullName.localeCompare(b.fullName, 'de');
   });
 
-  // Zeilen bauen
   const rows: RatingRow[] = filtered.map((m, i) => ({
     rank:     String(i + 1),
     fullName: m.fullName,
     ttr:      m.ttr != null ? String(m.ttr) : '–',
     qttr:     m.qttr != null ? String(m.qttr) : '–',
     ageGroup: m.ageGroup ?? '–',
-    team:     '–',  // TODO: nach team_members Join befüllen
+    team:     '–',
   }));
 
-  // Tabellen-Sektion
-  const tableSection: ExportTableSection<RatingRow> = {
+  const tableSection: ExportTableSection = {
     type:  'table',
     title: `${filtered.length} Mitglieder`,
     columns: [
@@ -125,12 +102,6 @@ export function buildRatingExport(
   };
 }
 
-// ── QTTR-Spezialliste (Jugend) ────────────────────────────────
-
-/**
- * Erstellt eine separate QTTR-Rangliste für Jugendliche.
- * Filtert automatisch auf Mitglieder mit QTTR-Wert.
- */
 export function buildQttrExport(
   members: MemberUI[],
   clubName?: string,
