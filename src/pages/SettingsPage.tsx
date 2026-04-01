@@ -5,9 +5,9 @@ import {
   Palette, Bell, Lock, ShieldAlert, Database, AlertTriangle,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { isAdmin, isStaff } from '@/lib/permissions';
+import { hasPermission } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
-import type { AppRole } from '@/types/auth';
+import type { Permission } from '@/types/auth';
 
 import SettingsRoles from '@/components/settings/SettingsRoles';
 import SettingsPermissions from '@/components/settings/SettingsPermissions';
@@ -23,26 +23,38 @@ import SettingsBackup from '@/components/settings/SettingsBackup';
 import SettingsDangerZone from '@/components/settings/SettingsDangerZone';
 
 interface SettingsTab {
-  id: string;
-  label: string;
-  icon: React.ElementType;
-  minRoles?: AppRole[];
-  component: React.ComponentType;
+  id:                  string;
+  label:               string;
+  icon:                React.ElementType;
+  /**
+   * Minimale Permission für Sichtbarkeit dieses Tabs.
+   * Wird via hasPermission(role, requiredPermission) geprüft.
+   * Kein Wert → für alle angemeldeten Nutzer sichtbar.
+   *
+   *   'admin:all'     → nur admin + developer
+   *   'settings:read' → vorstand + admin + developer
+   *   (kein Wert)     → alle angemeldeten Nutzer
+   */
+  requiredPermission?: Permission;
+  component:           React.ComponentType;
 }
 
 const TABS: SettingsTab[] = [
-  { id: 'rollen', label: 'Rollen', icon: Users, minRoles: ['admin', 'developer'], component: SettingsRoles },
-  { id: 'rechte', label: 'Rollen & Rechte', icon: Shield, minRoles: ['admin', 'developer'], component: SettingsPermissions },
-  { id: 'profil', label: 'Mein Profil', icon: UserCircle, component: SettingsProfile },
-  { id: 'verein', label: 'Vereinsdaten', icon: Building2, minRoles: ['admin', 'vorstand', 'developer'], component: SettingsClub },
-  { id: 'saisons', label: 'Saisonverwaltung', icon: Calendar, minRoles: ['admin', 'vorstand', 'developer'], component: SettingsSeasons },
-  { id: 'spiellokale', label: 'Spiellokale', icon: MapPin, minRoles: ['admin', 'vorstand', 'developer'], component: SettingsVenues },
-  { id: 'darstellung', label: 'Darstellung', icon: Palette, component: SettingsAppearance },
-  { id: 'benachrichtigungen', label: 'Benachrichtigungen', icon: Bell, component: SettingsNotifications },
-  { id: 'datenschutz', label: 'Datenschutz', icon: Lock, component: SettingsPrivacy },
-  { id: 'sicherheit', label: 'Sicherheit', icon: ShieldAlert, minRoles: ['admin', 'vorstand', 'developer'], component: SettingsSecurity },
-  { id: 'backup', label: 'Backup', icon: Database, minRoles: ['admin', 'developer'], component: SettingsBackup },
-  { id: 'gefahrenzone', label: 'Gefahrenzone', icon: AlertTriangle, minRoles: ['admin', 'developer'], component: SettingsDangerZone },
+  // ── Account ──────────────────────────────────────────────
+  { id: 'profil',            label: 'Mein Profil',          icon: UserCircle,   component: SettingsProfile },
+  { id: 'sicherheit',        label: 'Sicherheit',            icon: ShieldAlert,  component: SettingsSecurity },
+  { id: 'benachrichtigungen',label: 'Benachrichtigungen',    icon: Bell,         component: SettingsNotifications },
+  { id: 'datenschutz',       label: 'Datenschutz',           icon: Lock,         component: SettingsPrivacy },
+  { id: 'darstellung',       label: 'Darstellung',           icon: Palette,      component: SettingsAppearance },
+  // ── Vereinsdaten (vorstand+) ──────────────────────────────
+  { id: 'verein',      label: 'Vereinsdaten',    icon: Building2, requiredPermission: 'settings:read', component: SettingsClub },
+  { id: 'saisons',     label: 'Saisonverwaltung',icon: Calendar,  requiredPermission: 'settings:read', component: SettingsSeasons },
+  { id: 'spiellokale', label: 'Spiellokale',     icon: MapPin,    requiredPermission: 'settings:read', component: SettingsVenues },
+  // ── System (admin+) ───────────────────────────────────────
+  { id: 'rollen',      label: 'Rollen',          icon: Users,     requiredPermission: 'admin:all', component: SettingsRoles },
+  { id: 'rechte',      label: 'Rollen & Rechte', icon: Shield,    requiredPermission: 'admin:all', component: SettingsPermissions },
+  { id: 'backup',      label: 'Backup',          icon: Database,  requiredPermission: 'admin:all', component: SettingsBackup },
+  { id: 'gefahrenzone',label: 'Gefahrenzone',    icon: AlertTriangle, requiredPermission: 'admin:all', component: SettingsDangerZone },
 ];
 
 export default function SettingsPage() {
@@ -50,7 +62,7 @@ export default function SettingsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const visibleTabs = useMemo(
-    () => TABS.filter((t) => !t.minRoles || (role && t.minRoles.includes(role))),
+    () => TABS.filter((t) => !t.requiredPermission || hasPermission(role, t.requiredPermission)),
     [role],
   );
 
@@ -77,6 +89,7 @@ export default function SettingsPage() {
               const active = tab.id === activeTab?.id;
               return (
                 <button
+                  type="button"
                   key={tab.id}
                   onClick={() => setTab(tab.id)}
                   className={cn(
