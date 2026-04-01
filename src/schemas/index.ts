@@ -3,3 +3,5 @@ export * from './team.schema';
 export * from './match.schema';
 export * from './season.schema';
 export * from './news.schema';
+
+export * from './training.schema';
