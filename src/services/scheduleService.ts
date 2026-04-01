@@ -10,11 +10,15 @@ import {
   scheduleMatchFilterSchema,
   bulkPinCodeSchema,
   clickTTRowSchema,
+  vereinsspielplanRowSchema,
+  matchResultUpdateSchema,
   type ScheduleMatchCreateInput,
   type ScheduleMatchUpdateInput,
   type ScheduleMatchFilterInput,
   type BulkPinCodeInput,
   type ClickTTRow,
+  type VereinsspielplanRow,
+  type MatchResultUpdateInput,
 } from '@/schemas/schedule.schema';
 
 // ─── UI-Typ ────────────────────────────────────────────────────────────────────
