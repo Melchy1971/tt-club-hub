@@ -46,17 +46,12 @@ export interface ExportTableSection<T extends Record<string, unknown> = Record<s
   totals?: Record<string, string>;
 }
 
-export interface ExportColumn<T extends Record<string, unknown>> {
-  /** Schlüssel im Datenobjekt */
-  key: string & keyof T;
-  /** Spaltenüberschrift */
+export interface ExportColumn {
+  key: string;
   label: string;
-  /** Ausrichtung (Default: 'left') */
   align?: 'left' | 'right' | 'center';
-  /** Relative Spaltenbreite (0–1, Summe muss 1 ergeben) */
   width?: number;
-  /** Formatierungsfunktion */
-  format?: (value: unknown, row: T) => string;
+  format?: (value: unknown, row: Record<string, unknown>) => string;
 }
 
 export interface ExportTextSection {
