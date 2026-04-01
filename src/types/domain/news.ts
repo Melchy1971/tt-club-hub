@@ -1,99 +1,38 @@
-// ============================================================
-// News-Domain-Typen
-//
-// Rohdaten-Typen (DB-Zeilen) sind manuell definiert, bis
-// `supabase gen types typescript` die Enums news_status /
-// news_visibility kennt. Danach durch Tables<'news_articles'>
-// ersetzen und diese Datei vereinfachen.
-// ============================================================
+/**
+ * News-Domain-Typen – passend zur DB-Tabelle `news`
+ * Spalten: id, title, content, is_published, published_at, author_id, image_url, created_at, updated_at
+ */
 
-// ── Rohdaten (1:1 DB-Schema) ─────────────────────────────────
-
-export type NewsStatus = 'draft' | 'published' | 'archived';
-export type NewsVisibility = 'public' | 'internal';
-
-export interface NewsArticle {
+export interface NewsRow {
   id: string;
   title: string;
-  slug: string;
-  content: string | null;
-  excerpt: string | null;
-  status: NewsStatus;
-  visibility: NewsVisibility;
+  content: string;
+  is_published: boolean;
   published_at: string | null;
-  author_id: string | null;
-  category: string | null;
-  tags: string[];
-  pinned: boolean;
+  author_id: string;
   image_url: string | null;
   created_at: string;
   updated_at: string;
 }
 
-// ── UI-Projektion (camelCase, angereichert) ───────────────────
-
-export interface NewsArticleUI {
-  id: string;
-  title: string;
-  slug: string;
-  content: string | null;
-  excerpt: string | null;
-  status: NewsStatus;
-  visibility: NewsVisibility;
-  publishedAt: string | null;
-  authorId: string | null;
-  category: string | null;
-  tags: string[];
-  pinned: boolean;
-  imageUrl: string | null;
-  createdAt: string;
-  updatedAt: string;
-
-  // Berechnete Felder
-  isDraft: boolean;
-  isPublished: boolean;
-  isArchived: boolean;
-  isInternal: boolean;
-}
-
-// ── DTOs ─────────────────────────────────────────────────────
-
 export interface NewsCreateDTO {
   title: string;
-  slug?: string;           // optional – wird aus title generiert wenn leer
-  content?: string;
-  excerpt?: string;
-  status?: NewsStatus;
-  visibility?: NewsVisibility;
-  author_id?: string;
-  category?: string;
-  tags?: string[];
-  pinned?: boolean;
-  image_url?: string;
+  content: string;
+  is_published?: boolean;
+  image_url?: string | null;
+  author_id: string;
 }
 
 export interface NewsUpdateDTO {
   title?: string;
-  slug?: string;
   content?: string;
-  excerpt?: string;
-  visibility?: NewsVisibility;
-  author_id?: string;
-  category?: string;
-  tags?: string[];
-  pinned?: boolean;
-  image_url?: string;
+  is_published?: boolean;
+  image_url?: string | null;
 }
 
-// ── Filter / Query-Optionen ───────────────────────────────────
-
 export interface NewsFilter {
-  status?: NewsStatus;
-  visibility?: NewsVisibility;
-  category?: string;
-  authorId?: string;
-  search?: string;          // Volltextsuche in title + excerpt
-  pinnedFirst?: boolean;
+  is_published?: boolean;
+  search?: string;
   limit?: number;
   offset?: number;
 }

@@ -1,87 +1,25 @@
 /**
- * newsService
- *
- * CRUD + Statusverwaltung für news_articles.
- * Tabelle: news_articles (slug, status, visibility, category, tags, pinned)
- *
- * Statusübergänge (DB-Trigger übernimmt published_at automatisch):
- *   draft ──► published ──► archived
- *        ◄──             ◄──
- *
- * Sichtbarkeit:
- *   public   → Vereinswebsite / nicht eingeloggte Besucher
- *   internal → nur authentifizierte Mitglieder
+ * newsService – CRUD für die Tabelle `news`
  */
 
 import { supabase } from '@/integrations/supabase/client';
 import { ok, err, tryCatch } from '@/lib/api';
 import { fromSupabaseError, errors } from '@/lib/error';
-import { newsCreateSchema, newsUpdateSchema, slugify } from '@/schemas/news.schema';
+import { newsCreateSchema, newsUpdateSchema } from '@/schemas/news.schema';
 import type { ApiResult } from '@/types/api';
-import type {
-  NewsArticle,
-  NewsArticleUI,
-  NewsCreateDTO,
-  NewsFilter,
-  NewsStatus,
-  NewsUpdateDTO,
-} from '@/types/domain/news';
-
-// ── DB → UI ───────────────────────────────────────────────────
-
-function mapToUI(row: NewsArticle): NewsArticleUI {
-  return {
-    id:          row.id,
-    title:       row.title,
-    slug:        row.slug,
-    content:     row.content,
-    excerpt:     row.excerpt,
-    status:      row.status,
-    visibility:  row.visibility,
-    publishedAt: row.published_at,
-    authorId:    row.author_id,
-    category:    row.category,
-    tags:        row.tags,
-    pinned:      row.pinned,
-    imageUrl:    row.image_url,
-    createdAt:   row.created_at,
-    updatedAt:   row.updated_at,
-    // Berechnete Flags
-    isDraft:     row.status === 'draft',
-    isPublished: row.status === 'published',
-    isArchived:  row.status === 'archived',
-    isInternal:  row.visibility === 'internal',
-  };
-}
-
-// ── Service ───────────────────────────────────────────────────
+import type { NewsRow, NewsCreateDTO, NewsUpdateDTO, NewsFilter } from '@/types/domain/news';
 
 export const newsService = {
-  /**
-   * Listet Artikel mit optionalen Filtern.
-   * pinnedFirst=true (Standard): angeheftete Artikel stehen oben.
-   */
-  async list(filter: NewsFilter = {}): Promise<ApiResult<NewsArticleUI[]>> {
+  async list(filter: NewsFilter = {}): Promise<ApiResult<NewsRow[]>> {
     return tryCatch(async () => {
-      let q = supabase.from('news_articles').select('*');
+      let q = supabase.from('news').select('*');
 
-      if (filter.status)     q = q.eq('status', filter.status);
-      if (filter.visibility) q = q.eq('visibility', filter.visibility);
-      if (filter.category)   q = q.eq('category', filter.category);
-      if (filter.authorId)   q = q.eq('author_id', filter.authorId);
+      if (filter.is_published != null) q = q.eq('is_published', filter.is_published);
       if (filter.search) {
-        // Volltextsuche in Titel und Teaser
-        q = q.or(`title.ilike.%${filter.search}%,excerpt.ilike.%${filter.search}%`);
+        q = q.or(`title.ilike.%${filter.search}%,content.ilike.%${filter.search}%`);
       }
 
-      if (filter.pinnedFirst !== false) {
-        q = q
-          .order('pinned', { ascending: false })
-          .order('published_at', { ascending: false, nullsFirst: false })
-          .order('created_at', { ascending: false });
-      } else {
-        q = q.order('created_at', { ascending: false });
-      }
+      q = q.order('created_at', { ascending: false });
 
       const limit = filter.limit ?? 20;
       if (filter.offset != null) {
@@ -92,113 +30,70 @@ export const newsService = {
 
       const { data, error } = await q;
       if (error) throw error;
-      return ((data ?? []) as NewsArticle[]).map(mapToUI);
+      return (data ?? []) as NewsRow[];
     }, fromSupabaseError);
   },
 
-  async getById(id: string): Promise<ApiResult<NewsArticleUI>> {
+  async getById(id: string): Promise<ApiResult<NewsRow>> {
     const { data, error } = await supabase
-      .from('news_articles')
+      .from('news')
       .select('*')
       .eq('id', id)
       .maybeSingle();
     if (error) return err(fromSupabaseError(error));
-    if (!data)  return err(errors.notFound('Artikel', id));
-    return ok(mapToUI(data as NewsArticle));
+    if (!data) return err(errors.notFound('Artikel', id));
+    return ok(data as NewsRow);
   },
 
-  async getBySlug(slug: string): Promise<ApiResult<NewsArticleUI>> {
-    const { data, error } = await supabase
-      .from('news_articles')
-      .select('*')
-      .eq('slug', slug)
-      .maybeSingle();
-    if (error) return err(fromSupabaseError(error));
-    if (!data)  return err(errors.notFound('Artikel', slug));
-    return ok(mapToUI(data as NewsArticle));
-  },
-
-  async create(payload: NewsCreateDTO): Promise<ApiResult<NewsArticleUI>> {
+  async create(payload: NewsCreateDTO): Promise<ApiResult<NewsRow>> {
     return tryCatch(async () => {
-      const parsed = newsCreateSchema.parse({
-        ...payload,
-        slug: payload.slug ?? slugify(payload.title),
-      });
+      const parsed = newsCreateSchema.parse(payload);
       const { data, error } = await supabase
-        .from('news_articles')
-        .insert(parsed)
+        .from('news')
+        .insert({
+          ...parsed,
+          published_at: parsed.is_published ? new Date().toISOString() : null,
+        })
         .select()
         .single();
       if (error) throw error;
-      return mapToUI(data as NewsArticle);
+      return data as NewsRow;
     }, fromSupabaseError);
   },
 
-  async update(id: string, payload: NewsUpdateDTO): Promise<ApiResult<NewsArticleUI>> {
+  async update(id: string, payload: NewsUpdateDTO): Promise<ApiResult<NewsRow>> {
     return tryCatch(async () => {
       const parsed = newsUpdateSchema.parse(payload);
+      const updateData: Record<string, unknown> = { ...parsed };
+      if (parsed.is_published != null) {
+        updateData.published_at = parsed.is_published ? new Date().toISOString() : null;
+      }
       const { data, error } = await supabase
-        .from('news_articles')
-        .update(parsed)
+        .from('news')
+        .update(updateData)
         .eq('id', id)
         .select()
         .single();
       if (error) throw error;
-      return mapToUI(data as NewsArticle);
+      return data as NewsRow;
     }, fromSupabaseError);
   },
 
   async remove(id: string): Promise<ApiResult<void>> {
-    const { error } = await supabase
-      .from('news_articles')
-      .delete()
-      .eq('id', id);
+    const { error } = await supabase.from('news').delete().eq('id', id);
     if (error) return err(fromSupabaseError(error));
     return ok(undefined);
   },
 
-  // ── Statusübergänge ───────────────────────────────────────
-
-  /**
-   * Setzt den Status direkt.
-   * published_at wird vom DB-Trigger manage_news_published_at automatisch verwaltet.
-   */
-  async setStatus(id: string, status: NewsStatus): Promise<ApiResult<NewsArticleUI>> {
-    return tryCatch(async () => {
-      const { data, error } = await supabase
-        .from('news_articles')
-        .update({ status })
-        .eq('id', id)
-        .select()
-        .single();
-      if (error) throw error;
-      return mapToUI(data as NewsArticle);
-    }, fromSupabaseError);
+  async publish(id: string): Promise<ApiResult<NewsRow>> {
+    return newsService.update(id, { is_published: true });
   },
 
-  /** Entwurf → Veröffentlicht (setzt published_at via DB-Trigger) */
-  publish:   (id: string) => newsService.setStatus(id, 'published'),
-
-  /** Veröffentlicht → Entwurf (löscht published_at via DB-Trigger) */
-  unpublish: (id: string) => newsService.setStatus(id, 'draft'),
-
-  /** Archiviert – nicht mehr öffentlich sichtbar, bleibt erhalten */
-  archive:   (id: string) => newsService.setStatus(id, 'archived'),
-
-  // ── Convenience-Filter ─────────────────────────────────────
-
-  /** Nur veröffentlichte, öffentliche Artikel (Vereinswebsite / Dashboard) */
-  listPublic(filter: Omit<NewsFilter, 'status' | 'visibility'> = {}) {
-    return newsService.list({ ...filter, status: 'published', visibility: 'public' });
+  async unpublish(id: string): Promise<ApiResult<NewsRow>> {
+    return newsService.update(id, { is_published: false });
   },
 
-  /** Nur veröffentlichte, interne Artikel (eingeloggte Mitglieder) */
-  listInternal(filter: Omit<NewsFilter, 'status' | 'visibility'> = {}) {
-    return newsService.list({ ...filter, status: 'published', visibility: 'internal' });
-  },
-
-  /** Alle Entwürfe (Redaktionsansicht) */
-  listDrafts(filter: Omit<NewsFilter, 'status'> = {}) {
-    return newsService.list({ ...filter, status: 'draft' });
+  listPublished(filter: Omit<NewsFilter, 'is_published'> = {}) {
+    return newsService.list({ ...filter, is_published: true });
   },
 };
