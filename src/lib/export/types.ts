@@ -48,7 +48,7 @@ export interface ExportTableSection<T extends Record<string, unknown>> {
 
 export interface ExportColumn<T extends Record<string, unknown>> {
   /** Schlüssel im Datenobjekt */
-  key: keyof T;
+  key: string & keyof T;
   /** Spaltenüberschrift */
   label: string;
   /** Ausrichtung (Default: 'left') */
@@ -56,7 +56,7 @@ export interface ExportColumn<T extends Record<string, unknown>> {
   /** Relative Spaltenbreite (0–1, Summe muss 1 ergeben) */
   width?: number;
   /** Formatierungsfunktion */
-  format?: (value: T[keyof T], row: T) => string;
+  format?: (value: unknown, row: T) => string;
 }
 
 export interface ExportTextSection {
