@@ -1,7 +1,8 @@
 import type { Tables } from '@/integrations/supabase/types';
 import {
   MODULE_KEYS,
-  PERMISSION_LEVELS,
+  isModuleKey,
+  isPermissionLevel,
   type ModuleKey,
   type PermissionLevel,
 } from '@/constants/permissionsMatrix';
@@ -20,6 +21,13 @@ export interface CustomRoleAssignment {
   assignedAt: string;
 }
 
+interface CustomRoleAssignmentInput {
+  user_id?: unknown;
+  role_id?: unknown;
+  assigned_by?: unknown;
+  created_at?: unknown;
+}
+
 const PERMISSION_WEIGHT: Record<PermissionLevel, number> = {
   none: 0,
   read: 1,
@@ -31,11 +39,8 @@ export const EMPTY_ROLE_PERMISSIONS: RolePermissionsMap = MODULE_KEYS.reduce((ac
   return acc;
 }, {} as RolePermissionsMap);
 
-export const isModuleKey = (value: string): value is ModuleKey =>
-  (MODULE_KEYS as readonly string[]).includes(value);
-
 export const isPermissionLevelValue = (value: string): value is PermissionLevel =>
-  (PERMISSION_LEVELS as readonly string[]).includes(value);
+  isPermissionLevel(value);
 
 export const normalizeRolePermissions = (permissions: unknown): RolePermissionsMap => {
   const normalized: RolePermissionsMap = { ...EMPTY_ROLE_PERMISSIONS };
@@ -80,6 +85,24 @@ export const assertRoleMutable = (role: RoleWithPermissions): { mutable: boolean
   }
 
   return { mutable: true };
+};
+
+export const normalizeCustomRoleAssignments = (rows: unknown): CustomRoleAssignment[] => {
+  if (!Array.isArray(rows)) return [];
+
+  return rows.flatMap((row) => {
+    const candidate = row as CustomRoleAssignmentInput;
+    if (typeof candidate.user_id !== 'string' || typeof candidate.role_id !== 'string') {
+      return [];
+    }
+
+    return [{
+      userId: candidate.user_id,
+      roleId: candidate.role_id,
+      assignedBy: typeof candidate.assigned_by === 'string' ? candidate.assigned_by : null,
+      assignedAt: typeof candidate.created_at === 'string' ? candidate.created_at : '',
+    }];
+  });
 };
 
 export const resolveEffectivePermissions = (...sources: Array<RolePermissionsMap | null | undefined>): RolePermissionsMap => {

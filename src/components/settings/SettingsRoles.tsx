@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { Search, Trash2 } from 'lucide-react';
-import { APP_ROLE_LABELS } from '@/constants/permissionsMatrix';
+import { APP_ROLE_LABELS } from '@/constants/permissionLabels';
 
 export default function SettingsRoles() {
   const { user } = useAuth();
