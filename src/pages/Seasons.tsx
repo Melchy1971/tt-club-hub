@@ -1,16 +1,20 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Calendar, Plus, Pencil, Trash2, Star, StarOff } from 'lucide-react';
-import { seasonService } from '@/services/seasonService';
+import {
+  Calendar, Plus, Pencil, Trash2, ChevronDown, ChevronRight,
+  Star, StarOff, Users, Trophy,
+} from 'lucide-react';
+import {
+  seasonCycleService, seasonPhaseService,
+  type SeasonCycleWithPhases,
+} from '@/services/seasonCycleService';
 import { useSeason } from '@/contexts/SeasonContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { canWriteSeasons, canDeleteSeasons } from '@/lib/permissions';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
@@ -26,29 +30,41 @@ import {
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/common/EmptyState';
 import { Constants } from '@/integrations/supabase/types';
-import type { Season, SeasonInsert } from '@/types';
+import type { SeasonCycleInsert, SeasonPhaseInsert, SeasonPhase } from '@/types';
 
 const AGE_GROUP_LABELS: Record<string, string> = {
-  herren: 'Herren',
-  damen: 'Damen',
-  jungen_18: 'Jungen 18',
-  maedchen_18: 'Mädchen 18',
-  jungen_15: 'Jungen 15',
-  maedchen_15: 'Mädchen 15',
-  jungen_13: 'Jungen 13',
-  maedchen_13: 'Mädchen 13',
-  jungen_11: 'Jungen 11',
-  maedchen_11: 'Mädchen 11',
-  senioren: 'Senioren',
-  seniorinnen: 'Seniorinnen',
+  herren: 'Herren', damen: 'Damen',
+  jungen_18: 'Jungen 18', maedchen_18: 'Mädchen 18',
+  jungen_15: 'Jungen 15', maedchen_15: 'Mädchen 15',
+  jungen_13: 'Jungen 13', maedchen_13: 'Mädchen 13',
+  jungen_11: 'Jungen 11', maedchen_11: 'Mädchen 11',
+  senioren: 'Senioren', seniorinnen: 'Seniorinnen',
 };
 
-const initialForm = {
-  name: '',
-  start_date: '',
-  end_date: '',
-  age_group: 'herren' as string,
-  is_current: false,
+const PHASE_LABELS: Record<string, string> = {
+  first_half: 'Vorrunde',
+  second_half: 'Rückrunde',
+  single_half: 'Halbrunde',
+};
+
+const ADULT_GROUPS = ['herren', 'damen', 'senioren', 'seniorinnen'];
+
+function isAdult(ageGroup: string): boolean {
+  return ADULT_GROUPS.includes(ageGroup);
+}
+
+// ─── Cycle Form ──────────────────────────────────────────────────────────────
+
+const initialCycleForm = {
+  name: '', start_year: new Date().getFullYear(), end_year: new Date().getFullYear() + 1,
+  age_group: 'herren' as string, is_active: false,
+};
+
+// ─── Phase Form ──────────────────────────────────────────────────────────────
+
+const initialPhaseForm = {
+  name: '', start_date: '', end_date: '',
+  phase_type: 'first_half' as string, is_active: false, sort_order: 1,
 };
 
 export default function Seasons() {
@@ -58,101 +74,318 @@ export default function Seasons() {
   const canWrite = canWriteSeasons(role);
   const canDelete = canDeleteSeasons(role);
 
-  const [formOpen, setFormOpen] = useState(false);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [editingSeason, setEditingSeason] = useState<Season | null>(null);
-  const [form, setForm] = useState(initialForm);
+  // Cycle state
+  const [cycleFormOpen, setCycleFormOpen] = useState(false);
+  const [editingCycle, setEditingCycle] = useState<SeasonCycleWithPhases | null>(null);
+  const [cycleForm, setCycleForm] = useState(initialCycleForm);
+  const [deleteCycleId, setDeleteCycleId] = useState<string | null>(null);
+  const [expandedCycles, setExpandedCycles] = useState<Set<string>>(new Set());
+
+  // Phase state
+  const [phaseFormOpen, setPhaseFormOpen] = useState(false);
+  const [editingPhase, setEditingPhase] = useState<SeasonPhase | null>(null);
+  const [phaseForm, setPhaseForm] = useState(initialPhaseForm);
+  const [phaseParentCycleId, setPhaseParentCycleId] = useState<string | null>(null);
+  const [phaseParentAgeGroup, setPhaseParentAgeGroup] = useState<string>('herren');
+  const [deletePhaseId, setDeletePhaseId] = useState<string | null>(null);
+
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const { data: seasons = [], isLoading } = useQuery({
-    queryKey: ['seasons'],
-    queryFn: seasonService.getAll,
+  const { data: cycles = [], isLoading } = useQuery({
+    queryKey: ['season-cycles'],
+    queryFn: seasonCycleService.getAll,
   });
 
   const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['season-cycles'] });
     queryClient.invalidateQueries({ queryKey: ['seasons'] });
     refreshSeason();
   };
 
-  const createMut = useMutation({
-    mutationFn: (s: SeasonInsert) => seasonService.create(s),
-    onSuccess: () => { toast.success('Saison erstellt'); invalidate(); closeForm(); },
+  // ─── Cycle mutations ────────────────────────────────────────────────────────
+
+  const createCycleMut = useMutation({
+    mutationFn: (s: SeasonCycleInsert) => seasonCycleService.create(s),
+    onSuccess: () => { toast.success('Saisonzyklus erstellt'); invalidate(); closeCycleForm(); },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const updateMut = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<SeasonInsert> }) =>
-      seasonService.update(id, data),
-    onSuccess: () => { toast.success('Saison aktualisiert'); invalidate(); closeForm(); },
+  const updateCycleMut = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<SeasonCycleInsert> }) =>
+      seasonCycleService.update(id, data),
+    onSuccess: () => { toast.success('Saisonzyklus aktualisiert'); invalidate(); closeCycleForm(); },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const deleteMut = useMutation({
-    mutationFn: (id: string) => seasonService.remove(id),
-    onSuccess: () => { toast.success('Saison gelöscht'); invalidate(); },
+  const deleteCycleMut = useMutation({
+    mutationFn: (id: string) => seasonCycleService.remove(id),
+    onSuccess: () => { toast.success('Saisonzyklus gelöscht'); invalidate(); },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const toggleMut = useMutation({
+  const toggleCycleMut = useMutation({
     mutationFn: ({ id, val }: { id: string; val: boolean }) =>
-      seasonService.toggleCurrent(id, val),
+      seasonCycleService.toggleActive(id, val),
     onSuccess: () => { toast.success('Status aktualisiert'); invalidate(); },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  function closeForm() {
-    setFormOpen(false);
-    setEditingSeason(null);
-    setForm(initialForm);
+  // ─── Phase mutations ────────────────────────────────────────────────────────
+
+  const createPhaseMut = useMutation({
+    mutationFn: (p: SeasonPhaseInsert) => seasonPhaseService.create(p),
+    onSuccess: () => { toast.success('Phase erstellt'); invalidate(); closePhaseForm(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const updatePhaseMut = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<SeasonPhaseInsert> }) =>
+      seasonPhaseService.update(id, data),
+    onSuccess: () => { toast.success('Phase aktualisiert'); invalidate(); closePhaseForm(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deletePhaseMut = useMutation({
+    mutationFn: (id: string) => seasonPhaseService.remove(id),
+    onSuccess: () => { toast.success('Phase gelöscht'); invalidate(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const togglePhaseMut = useMutation({
+    mutationFn: ({ id, val }: { id: string; val: boolean }) =>
+      seasonPhaseService.toggleActive(id, val),
+    onSuccess: () => { toast.success('Phase-Status aktualisiert'); invalidate(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // ─── Cycle form helpers ─────────────────────────────────────────────────────
+
+  function closeCycleForm() {
+    setCycleFormOpen(false);
+    setEditingCycle(null);
+    setCycleForm(initialCycleForm);
     setErrors({});
   }
 
-  function openCreate() {
-    setEditingSeason(null);
-    setForm(initialForm);
+  function openCreateCycle() {
+    setEditingCycle(null);
+    setCycleForm(initialCycleForm);
     setErrors({});
-    setFormOpen(true);
+    setCycleFormOpen(true);
   }
 
-  function openEdit(s: Season) {
-    setEditingSeason(s);
-    setForm({
-      name: s.name,
-      start_date: s.start_date,
-      end_date: s.end_date,
-      age_group: s.age_group,
-      is_current: s.is_current,
+  function openEditCycle(c: SeasonCycleWithPhases) {
+    setEditingCycle(c);
+    setCycleForm({
+      name: c.name, start_year: c.start_year, end_year: c.end_year,
+      age_group: c.age_group, is_active: c.is_active,
     });
     setErrors({});
-    setFormOpen(true);
+    setCycleFormOpen(true);
   }
 
-  function validate(): boolean {
+  function validateCycle(): boolean {
     const e: Record<string, string> = {};
-    if (!form.name.trim()) e.name = 'Name ist erforderlich';
-    if (!form.start_date) e.start_date = 'Startdatum ist erforderlich';
-    if (!form.end_date) e.end_date = 'Enddatum ist erforderlich';
-    if (form.start_date && form.end_date && form.start_date >= form.end_date) {
+    if (!cycleForm.name.trim()) e.name = 'Name ist erforderlich';
+    if (cycleForm.start_year >= cycleForm.end_year) e.end_year = 'Endjahr muss nach dem Startjahr liegen';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
+  function handleCycleSubmit() {
+    if (!validateCycle()) return;
+    const payload: SeasonCycleInsert = {
+      name: cycleForm.name.trim(),
+      start_year: cycleForm.start_year,
+      end_year: cycleForm.end_year,
+      age_group: cycleForm.age_group as any,
+      is_active: cycleForm.is_active,
+    };
+    if (editingCycle) {
+      updateCycleMut.mutate({ id: editingCycle.id, data: payload });
+    } else {
+      createCycleMut.mutate(payload);
+    }
+  }
+
+  // ─── Phase form helpers ─────────────────────────────────────────────────────
+
+  function closePhaseForm() {
+    setPhaseFormOpen(false);
+    setEditingPhase(null);
+    setPhaseForm(initialPhaseForm);
+    setPhaseParentCycleId(null);
+    setErrors({});
+  }
+
+  function openCreatePhase(cycleId: string, ageGroup: string) {
+    setEditingPhase(null);
+    setPhaseParentCycleId(cycleId);
+    setPhaseParentAgeGroup(ageGroup);
+    const defaultType = isAdult(ageGroup) ? 'first_half' : 'single_half';
+    setPhaseForm({ ...initialPhaseForm, phase_type: defaultType });
+    setErrors({});
+    setPhaseFormOpen(true);
+  }
+
+  function openEditPhase(phase: SeasonPhase, ageGroup: string) {
+    setEditingPhase(phase);
+    setPhaseParentCycleId(phase.season_cycle_id);
+    setPhaseParentAgeGroup(ageGroup);
+    setPhaseForm({
+      name: phase.name, start_date: phase.start_date, end_date: phase.end_date,
+      phase_type: phase.phase_type, is_active: phase.is_active, sort_order: phase.sort_order,
+    });
+    setErrors({});
+    setPhaseFormOpen(true);
+  }
+
+  function validatePhase(): boolean {
+    const e: Record<string, string> = {};
+    if (!phaseForm.name.trim()) e.name = 'Name ist erforderlich';
+    if (!phaseForm.start_date) e.start_date = 'Startdatum ist erforderlich';
+    if (!phaseForm.end_date) e.end_date = 'Enddatum ist erforderlich';
+    if (phaseForm.start_date && phaseForm.end_date && phaseForm.start_date >= phaseForm.end_date) {
       e.end_date = 'Enddatum muss nach dem Startdatum liegen';
     }
     setErrors(e);
     return Object.keys(e).length === 0;
   }
 
-  function handleSubmit() {
-    if (!validate()) return;
-    const payload: SeasonInsert = {
-      name: form.name.trim(),
-      start_date: form.start_date,
-      end_date: form.end_date,
-      age_group: form.age_group as any,
-      is_current: form.is_current,
+  function handlePhaseSubmit() {
+    if (!validatePhase() || !phaseParentCycleId) return;
+    const payload: SeasonPhaseInsert = {
+      season_cycle_id: phaseParentCycleId,
+      phase_type: phaseForm.phase_type as any,
+      name: phaseForm.name.trim(),
+      start_date: phaseForm.start_date,
+      end_date: phaseForm.end_date,
+      is_active: phaseForm.is_active,
+      sort_order: phaseForm.sort_order,
     };
-    if (editingSeason) {
-      updateMut.mutate({ id: editingSeason.id, data: payload });
+    if (editingPhase) {
+      updatePhaseMut.mutate({ id: editingPhase.id, data: payload });
     } else {
-      createMut.mutate(payload);
+      createPhaseMut.mutate(payload);
     }
+  }
+
+  function toggleExpanded(id: string) {
+    setExpandedCycles((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  // ─── Group cycles by category ───────────────────────────────────────────────
+
+  const adultCycles = cycles.filter((c) => isAdult(c.age_group));
+  const youthCycles = cycles.filter((c) => !isAdult(c.age_group));
+
+  function renderCycleCard(cycle: SeasonCycleWithPhases) {
+    const expanded = expandedCycles.has(cycle.id);
+    const phases = (cycle.season_phases ?? []).sort((a, b) => a.sort_order - b.sort_order);
+    const adult = isAdult(cycle.age_group);
+    const maxPhases = adult ? 2 : 1;
+    const canAddPhase = canWrite && phases.length < maxPhases;
+
+    return (
+      <Card key={cycle.id} className="overflow-hidden">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-2">
+            <button
+              className="flex items-center gap-2 text-left flex-1 min-w-0"
+              onClick={() => toggleExpanded(cycle.id)}
+            >
+              {expanded
+                ? <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                : <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+              }
+              <CardTitle className="text-base truncate">{cycle.name}</CardTitle>
+              <Badge variant="outline" className="shrink-0">
+                {AGE_GROUP_LABELS[cycle.age_group] ?? cycle.age_group}
+              </Badge>
+              <span className="text-sm text-muted-foreground shrink-0">
+                {cycle.start_year}/{cycle.end_year}
+              </span>
+              {cycle.is_active && <Badge className="shrink-0">Aktiv</Badge>}
+            </button>
+            {canWrite && (
+              <div className="flex items-center gap-1 shrink-0">
+                <Switch
+                  checked={cycle.is_active}
+                  onCheckedChange={(val) => toggleCycleMut.mutate({ id: cycle.id, val })}
+                  aria-label="Zyklus aktiv/inaktiv"
+                />
+                <Button variant="ghost" size="icon" onClick={() => openEditCycle(cycle)}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                {canDelete && (
+                  <Button variant="ghost" size="icon" onClick={() => setDeleteCycleId(cycle.id)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        </CardHeader>
+
+        {expanded && (
+          <CardContent className="pt-0 space-y-2">
+            {phases.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-2">Keine Phasen angelegt.</p>
+            ) : (
+              <div className="space-y-2">
+                {phases.map((phase) => (
+                  <div
+                    key={phase.id}
+                    className="flex items-center justify-between gap-3 rounded-md border px-3 py-2"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Trophy className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <span className="font-medium truncate">{phase.name}</span>
+                      <Badge variant="secondary" className="shrink-0">
+                        {PHASE_LABELS[phase.phase_type] ?? phase.phase_type}
+                      </Badge>
+                      <span className="text-sm text-muted-foreground shrink-0">
+                        {phase.start_date} – {phase.end_date}
+                      </span>
+                      {phase.is_active && (
+                        <Badge variant="default" className="shrink-0">Aktiv</Badge>
+                      )}
+                    </div>
+                    {canWrite && (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Switch
+                          checked={phase.is_active}
+                          onCheckedChange={(val) => togglePhaseMut.mutate({ id: phase.id, val })}
+                          aria-label="Phase aktiv/inaktiv"
+                        />
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditPhase(phase, cycle.age_group)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        {canDelete && (
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeletePhaseId(phase.id)}>
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            {canAddPhase && (
+              <Button variant="outline" size="sm" onClick={() => openCreatePhase(cycle.id, cycle.age_group)}>
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                Phase hinzufügen
+              </Button>
+            )}
+          </CardContent>
+        )}
+      </Card>
+    );
   }
 
   return (
@@ -160,108 +393,82 @@ export default function Seasons() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Saisonverwaltung</h1>
-          <p className="text-muted-foreground">Saisons anlegen, bearbeiten und aktivieren</p>
+          <p className="text-muted-foreground">Saisonzyklen und Phasen verwalten</p>
         </div>
         {canWrite && (
-          <Button onClick={openCreate}>
-            <Plus className="mr-2 h-4 w-4" /> Neue Saison
+          <Button onClick={openCreateCycle}>
+            <Plus className="mr-2 h-4 w-4" /> Neuer Saisonzyklus
           </Button>
         )}
       </div>
 
       {isLoading ? (
         <div className="text-muted-foreground text-center py-12">Laden…</div>
-      ) : seasons.length === 0 ? (
+      ) : cycles.length === 0 ? (
         <EmptyState
           icon={Calendar}
-          title="Keine Saisons"
-          description="Erstelle die erste Saison, um loszulegen."
+          title="Keine Saisonzyklen"
+          description="Erstelle den ersten Saisonzyklus, um loszulegen."
         />
       ) : (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Altersgruppe</TableHead>
-                <TableHead>Zeitraum</TableHead>
-                <TableHead>Aktiv</TableHead>
-                {canWrite && <TableHead className="text-right">Aktionen</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {seasons.map((s) => (
-                <TableRow key={s.id}>
-                  <TableCell className="font-medium">
-                    {s.name}
-                    {s.is_current && (
-                      <Badge variant="default" className="ml-2">Aktiv</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>{AGE_GROUP_LABELS[s.age_group] ?? s.age_group}</TableCell>
-                  <TableCell>
-                    {s.start_date} – {s.end_date}
-                  </TableCell>
-                  <TableCell>
-                    {canWrite ? (
-                      <Switch
-                        checked={s.is_current}
-                        onCheckedChange={(val) => toggleMut.mutate({ id: s.id, val })}
-                      />
-                    ) : (
-                      s.is_current ? (
-                        <Star className="h-4 w-4 text-primary" />
-                      ) : (
-                        <StarOff className="h-4 w-4 text-muted-foreground" />
-                      )
-                    )}
-                  </TableCell>
-                  {canWrite && (
-                    <TableCell className="text-right space-x-1">
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(s)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      {canDelete && (
-                        <Button variant="ghost" size="icon" onClick={() => setDeleteId(s.id)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      )}
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <div className="space-y-8">
+          {/* Erwachsene */}
+          {adultCycles.length > 0 && (
+            <section>
+              <div className="flex items-center gap-2 mb-3">
+                <Users className="h-5 w-5 text-muted-foreground" />
+                <h2 className="text-lg font-semibold">Erwachsene</h2>
+                <Badge variant="secondary">{adultCycles.length}</Badge>
+              </div>
+              <div className="space-y-3">
+                {adultCycles.map(renderCycleCard)}
+              </div>
+            </section>
+          )}
+
+          {/* Jugend */}
+          {youthCycles.length > 0 && (
+            <section>
+              <div className="flex items-center gap-2 mb-3">
+                <Users className="h-5 w-5 text-muted-foreground" />
+                <h2 className="text-lg font-semibold">Jugend</h2>
+                <Badge variant="secondary">{youthCycles.length}</Badge>
+              </div>
+              <div className="space-y-3">
+                {youthCycles.map(renderCycleCard)}
+              </div>
+            </section>
+          )}
         </div>
       )}
 
-      {/* Create / Edit Dialog */}
-      <Dialog open={formOpen} onOpenChange={(o) => !o && closeForm()}>
+      {/* ─── Cycle Dialog ──────────────────────────────────────────────────────── */}
+      <Dialog open={cycleFormOpen} onOpenChange={(o) => !o && closeCycleForm()}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingSeason ? 'Saison bearbeiten' : 'Neue Saison'}</DialogTitle>
+            <DialogTitle>
+              {editingCycle ? 'Saisonzyklus bearbeiten' : 'Neuer Saisonzyklus'}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="cycle-name">Name</Label>
               <Input
-                id="name"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                id="cycle-name"
+                value={cycleForm.name}
+                onChange={(e) => setCycleForm({ ...cycleForm, name: e.target.value })}
                 placeholder="z.B. Saison 2025/26"
               />
               {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="age_group">Altersgruppe</Label>
+              <Label htmlFor="cycle-age-group">Altersgruppe</Label>
               <Select
-                value={form.age_group}
-                onValueChange={(v) => setForm({ ...form, age_group: v })}
+                value={cycleForm.age_group}
+                onValueChange={(v) => setCycleForm({ ...cycleForm, age_group: v })}
               >
-                <SelectTrigger id="age_group">
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger id="cycle-age-group"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {Constants.public.Enums.age_group.map((ag) => (
                     <SelectItem key={ag} value={ag}>
@@ -274,61 +481,169 @@ export default function Seasons() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="start_date">Startdatum</Label>
+                <Label htmlFor="start-year">Startjahr</Label>
                 <Input
-                  id="start_date"
-                  type="date"
-                  value={form.start_date}
-                  onChange={(e) => setForm({ ...form, start_date: e.target.value })}
+                  id="start-year" type="number"
+                  value={cycleForm.start_year}
+                  onChange={(e) => setCycleForm({ ...cycleForm, start_year: parseInt(e.target.value) || 0 })}
                 />
-                {errors.start_date && <p className="text-sm text-destructive">{errors.start_date}</p>}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="end_date">Enddatum</Label>
+                <Label htmlFor="end-year">Endjahr</Label>
                 <Input
-                  id="end_date"
-                  type="date"
-                  value={form.end_date}
-                  onChange={(e) => setForm({ ...form, end_date: e.target.value })}
+                  id="end-year" type="number"
+                  value={cycleForm.end_year}
+                  onChange={(e) => setCycleForm({ ...cycleForm, end_year: parseInt(e.target.value) || 0 })}
                 />
-                {errors.end_date && <p className="text-sm text-destructive">{errors.end_date}</p>}
+                {errors.end_year && <p className="text-sm text-destructive">{errors.end_year}</p>}
               </div>
             </div>
 
             <div className="flex items-center gap-3">
               <Switch
-                id="is_current"
-                checked={form.is_current}
-                onCheckedChange={(v) => setForm({ ...form, is_current: v })}
+                id="cycle-active"
+                checked={cycleForm.is_active}
+                onCheckedChange={(v) => setCycleForm({ ...cycleForm, is_active: v })}
               />
-              <Label htmlFor="is_current">Als aktive Saison setzen</Label>
+              <Label htmlFor="cycle-active">Aktiver Zyklus</Label>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={closeForm}>Abbrechen</Button>
+            <Button variant="outline" onClick={closeCycleForm}>Abbrechen</Button>
             <Button
-              onClick={handleSubmit}
-              disabled={createMut.isPending || updateMut.isPending}
+              onClick={handleCycleSubmit}
+              disabled={createCycleMut.isPending || updateCycleMut.isPending}
             >
-              {editingSeason ? 'Speichern' : 'Erstellen'}
+              {editingCycle ? 'Speichern' : 'Erstellen'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
+      {/* ─── Phase Dialog ──────────────────────────────────────────────────────── */}
+      <Dialog open={phaseFormOpen} onOpenChange={(o) => !o && closePhaseForm()}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {editingPhase ? 'Phase bearbeiten' : 'Neue Phase'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="phase-name">Name</Label>
+              <Input
+                id="phase-name"
+                value={phaseForm.name}
+                onChange={(e) => setPhaseForm({ ...phaseForm, name: e.target.value })}
+                placeholder="z.B. Vorrunde 2025/26"
+              />
+              {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="phase-type">Phasentyp</Label>
+              <Select
+                value={phaseForm.phase_type}
+                onValueChange={(v) => setPhaseForm({ ...phaseForm, phase_type: v })}
+              >
+                <SelectTrigger id="phase-type"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {isAdult(phaseParentAgeGroup) ? (
+                    <>
+                      <SelectItem value="first_half">Vorrunde</SelectItem>
+                      <SelectItem value="second_half">Rückrunde</SelectItem>
+                    </>
+                  ) : (
+                    <SelectItem value="single_half">Halbrunde</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="phase-start">Startdatum</Label>
+                <Input
+                  id="phase-start" type="date"
+                  value={phaseForm.start_date}
+                  onChange={(e) => setPhaseForm({ ...phaseForm, start_date: e.target.value })}
+                />
+                {errors.start_date && <p className="text-sm text-destructive">{errors.start_date}</p>}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="phase-end">Enddatum</Label>
+                <Input
+                  id="phase-end" type="date"
+                  value={phaseForm.end_date}
+                  onChange={(e) => setPhaseForm({ ...phaseForm, end_date: e.target.value })}
+                />
+                {errors.end_date && <p className="text-sm text-destructive">{errors.end_date}</p>}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="phase-sort">Sortierung</Label>
+              <Input
+                id="phase-sort" type="number" min={0} max={10}
+                value={phaseForm.sort_order}
+                onChange={(e) => setPhaseForm({ ...phaseForm, sort_order: parseInt(e.target.value) || 0 })}
+              />
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Switch
+                id="phase-active"
+                checked={phaseForm.is_active}
+                onCheckedChange={(v) => setPhaseForm({ ...phaseForm, is_active: v })}
+              />
+              <Label htmlFor="phase-active">Aktive Phase</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closePhaseForm}>Abbrechen</Button>
+            <Button
+              onClick={handlePhaseSubmit}
+              disabled={createPhaseMut.isPending || updatePhaseMut.isPending}
+            >
+              {editingPhase ? 'Speichern' : 'Erstellen'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Delete Cycle Confirmation ─────────────────────────────────────────── */}
+      <AlertDialog open={!!deleteCycleId} onOpenChange={(o) => !o && setDeleteCycleId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Saison löschen?</AlertDialogTitle>
+            <AlertDialogTitle>Saisonzyklus löschen?</AlertDialogTitle>
             <AlertDialogDescription>
-              Diese Aktion kann nicht rückgängig gemacht werden. Alle verknüpften Daten gehen verloren.
+              Alle zugehörigen Phasen und verknüpften Daten werden ebenfalls gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Abbrechen</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => { if (deleteId) deleteMut.mutate(deleteId); setDeleteId(null); }}
+              onClick={() => { if (deleteCycleId) deleteCycleMut.mutate(deleteCycleId); setDeleteCycleId(null); }}
+            >
+              Löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ─── Delete Phase Confirmation ─────────────────────────────────────────── */}
+      <AlertDialog open={!!deletePhaseId} onOpenChange={(o) => !o && setDeletePhaseId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Phase löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Diese Aktion kann nicht rückgängig gemacht werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { if (deletePhaseId) deletePhaseMut.mutate(deletePhaseId); setDeletePhaseId(null); }}
             >
               Löschen
             </AlertDialogAction>

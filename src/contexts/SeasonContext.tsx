@@ -1,40 +1,44 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
-import type { Season } from '@/types';
-import { seasonService } from '@/services/seasonService';
+import type { SeasonPhase } from '@/types';
+import { seasonPhaseService } from '@/services/seasonCycleService';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface SeasonContextType {
-  currentSeason: Season | null;
-  setCurrentSeason: (season: Season | null) => void;
+  /** Die aktuell aktive Saisonphase (Halb-/Rückrunde) */
+  currentPhase: SeasonPhase | null;
+  setCurrentPhase: (phase: SeasonPhase | null) => void;
   isLoading: boolean;
   refresh: () => Promise<void>;
+  /** @deprecated Verwende currentPhase */
+  currentSeason: SeasonPhase | null;
 }
 
 const SeasonContext = createContext<SeasonContextType>({
-  currentSeason: null,
-  setCurrentSeason: () => {},
+  currentPhase: null,
+  setCurrentPhase: () => {},
   isLoading: false,
   refresh: async () => {},
+  currentSeason: null,
 });
 
 export function SeasonProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const [currentSeason, setCurrentSeason] = useState<Season | null>(null);
+  const [currentPhase, setCurrentPhase] = useState<SeasonPhase | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadCurrentSeason = useCallback(async () => {
+  const loadCurrentPhase = useCallback(async () => {
     if (!isAuthenticated) {
-      setCurrentSeason(null);
+      setCurrentPhase(null);
       setIsLoading(false);
       return;
     }
 
     try {
       setIsLoading(true);
-      const season = await seasonService.getCurrent();
-      setCurrentSeason(season);
+      const phase = await seasonPhaseService.getActive();
+      setCurrentPhase(phase);
     } catch {
-      setCurrentSeason(null);
+      setCurrentPhase(null);
     } finally {
       setIsLoading(false);
     }
@@ -45,12 +49,20 @@ export function SeasonProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
       return;
     }
-
-    void loadCurrentSeason();
-  }, [authLoading, loadCurrentSeason]);
+    void loadCurrentPhase();
+  }, [authLoading, loadCurrentPhase]);
 
   return (
-    <SeasonContext.Provider value={{ currentSeason, setCurrentSeason, isLoading, refresh: loadCurrentSeason }}>
+    <SeasonContext.Provider
+      value={{
+        currentPhase,
+        setCurrentPhase,
+        isLoading,
+        refresh: loadCurrentPhase,
+        // backward compat: currentSeason maps to currentPhase
+        currentSeason: currentPhase,
+      }}
+    >
       {children}
     </SeasonContext.Provider>
   );

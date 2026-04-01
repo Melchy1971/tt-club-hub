@@ -17,6 +17,14 @@ export type Season = Tables<'seasons'>;
 export type SeasonInsert = TablesInsert<'seasons'>;
 export type SeasonUpdate = TablesUpdate<'seasons'>;
 
+export type SeasonCycle = Tables<'season_cycles'>;
+export type SeasonCycleInsert = TablesInsert<'season_cycles'>;
+export type SeasonCycleUpdate = TablesUpdate<'season_cycles'>;
+
+export type SeasonPhase = Tables<'season_phases'>;
+export type SeasonPhaseInsert = TablesInsert<'season_phases'>;
+export type SeasonPhaseUpdate = TablesUpdate<'season_phases'>;
+
 export type ScheduleMatch = Tables<'schedule_matches'>;
 export type ScheduleMatchInsert = TablesInsert<'schedule_matches'>;
 export type ScheduleMatchUpdate = TablesUpdate<'schedule_matches'>;
@@ -48,6 +56,7 @@ export type AppRole = Enums<'app_role'>;
 export type AgeGroup = Enums<'age_group'>;
 export type MatchStatus = Enums<'match_status'>;
 export type Gender = Enums<'gender'>;
+export type PhaseType = Enums<'phase_type'>;
 
 export * from './member';
 

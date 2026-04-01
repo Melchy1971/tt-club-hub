@@ -614,6 +614,7 @@ export type Database = {
           pin: string | null
           report_text: string | null
           season_id: string
+          season_phase_id: string | null
           status: Database["public"]["Enums"]["match_status"]
           team_id: string
           updated_at: string
@@ -634,6 +635,7 @@ export type Database = {
           pin?: string | null
           report_text?: string | null
           season_id: string
+          season_phase_id?: string | null
           status?: Database["public"]["Enums"]["match_status"]
           team_id: string
           updated_at?: string
@@ -654,6 +656,7 @@ export type Database = {
           pin?: string | null
           report_text?: string | null
           season_id?: string
+          season_phase_id?: string | null
           status?: Database["public"]["Enums"]["match_status"]
           team_id?: string
           updated_at?: string
@@ -668,6 +671,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "schedule_matches_season_phase_id_fkey"
+            columns: ["season_phase_id"]
+            isOneToOne: false
+            referencedRelation: "season_phases"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "schedule_matches_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
@@ -679,6 +689,86 @@ export type Database = {
             columns: ["venue_id"]
             isOneToOne: false
             referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      season_cycles: {
+        Row: {
+          age_group: Database["public"]["Enums"]["age_group"]
+          created_at: string
+          end_year: number
+          id: string
+          is_active: boolean
+          name: string
+          start_year: number
+          updated_at: string
+        }
+        Insert: {
+          age_group?: Database["public"]["Enums"]["age_group"]
+          created_at?: string
+          end_year: number
+          id?: string
+          is_active?: boolean
+          name: string
+          start_year: number
+          updated_at?: string
+        }
+        Update: {
+          age_group?: Database["public"]["Enums"]["age_group"]
+          created_at?: string
+          end_year?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          start_year?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      season_phases: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          is_active: boolean
+          name: string
+          phase_type: Database["public"]["Enums"]["phase_type"]
+          season_cycle_id: string
+          sort_order: number
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          is_active?: boolean
+          name: string
+          phase_type: Database["public"]["Enums"]["phase_type"]
+          season_cycle_id: string
+          sort_order?: number
+          start_date: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          phase_type?: Database["public"]["Enums"]["phase_type"]
+          season_cycle_id?: string
+          sort_order?: number
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "season_phases_season_cycle_id_fkey"
+            columns: ["season_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "season_cycles"
             referencedColumns: ["id"]
           },
         ]
@@ -834,6 +924,7 @@ export type Database = {
           league: string | null
           name: string
           season_id: string
+          season_phase_id: string | null
           updated_at: string
         }
         Insert: {
@@ -846,6 +937,7 @@ export type Database = {
           league?: string | null
           name: string
           season_id: string
+          season_phase_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -858,6 +950,7 @@ export type Database = {
           league?: string | null
           name?: string
           season_id?: string
+          season_phase_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -873,6 +966,13 @@ export type Database = {
             columns: ["season_id"]
             isOneToOne: false
             referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teams_season_phase_id_fkey"
+            columns: ["season_phase_id"]
+            isOneToOne: false
+            referencedRelation: "season_phases"
             referencedColumns: ["id"]
           },
         ]
@@ -1040,6 +1140,7 @@ export type Database = {
         | "verschoben"
         | "abgesagt"
       permission_level: "none" | "read" | "write"
+      phase_type: "first_half" | "second_half" | "single_half"
       substitute_status: "pending" | "accepted" | "rejected"
       training_booking_status: "pending" | "confirmed" | "cancelled"
     }
@@ -1194,6 +1295,7 @@ export const Constants = {
       gender: ["maennlich", "weiblich", "divers"],
       match_status: ["geplant", "laufend", "beendet", "verschoben", "abgesagt"],
       permission_level: ["none", "read", "write"],
+      phase_type: ["first_half", "second_half", "single_half"],
       substitute_status: ["pending", "accepted", "rejected"],
       training_booking_status: ["pending", "confirmed", "cancelled"],
     },
