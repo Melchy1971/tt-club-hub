@@ -57,8 +57,8 @@ const App = () => (
                   <Route path="/rollen" element={<Roles />} />
                   <Route path="/einstellungen" element={<SettingsPage />} />
                   <Route path="/saisons" element={<Seasons />} />
-                  <Route path="/profil" element={<PlaceholderPage title="Profil" />} />
-                  <Route path="/info" element={<PlaceholderPage title="Info" />} />
+                  <Route path="/profil" element={<Navigate to="/einstellungen?tab=profil" replace />} />
+                  <Route path="/info" element={<Navigate to="/einstellungen?tab=info" replace />} />
                 </Route>
               </Route>
               <Route path="*" element={<NotFound />} />
