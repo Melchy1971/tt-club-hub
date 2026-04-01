@@ -12,10 +12,10 @@ export const hasRole = (
 };
 
 export const canRead = (role: AppRole | null | undefined, domain: PermissionDomain): boolean =>
-  hasPermission(role, `${domain}:read`);
+  hasPermission(role, `${domain}:read` as Permission);
 
 export const canWrite = (role: AppRole | null | undefined, domain: PermissionDomain): boolean =>
-  hasPermission(role, `${domain}:write`);
+  hasPermission(role, `${domain}:write` as Permission);
 
 export const evaluateGuard = (
   auth: Pick<AuthContextValue, 'isAuthenticated' | 'role' | 'problem'>,
