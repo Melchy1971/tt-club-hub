@@ -76,9 +76,10 @@ export default function SettingsPermissions() {
                 <TableRow key={mod}>
                   <TableCell className="sticky left-0 bg-card z-10 font-medium">{getModuleLabel(mod)}</TableCell>
                   {roles.map((role) => {
-                    const matrix = resolveRolePermissions(role);
+                    const roleWithPerms = { id: role.id, name: role.name as any } as import('@/lib/auth/permissionsResolver').RoleWithPermissions;
+                    const matrix = resolveRolePermissions(roleWithPerms);
                     const level = matrix[mod];
-                    const mutability = assertRoleMutable(role);
+                    const mutability = assertRoleMutable(roleWithPerms);
 
                     return (
                       <TableCell key={role.id} className="text-center">

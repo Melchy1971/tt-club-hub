@@ -71,11 +71,11 @@ interface MemberRow {
 async function fetchPermissions(): Promise<RoleModulePerm[]> {
   const { data, error } = await supabase
     .from('roles')
-    .select('id, name, permissions, is_system')
+    .select('id, name, display_name, description')
     .order('name');
   if (error) throw error;
 
-  return ((data ?? []) as RoleWithPermissions[]).flatMap((role) => {
+  return ((data ?? []) as unknown as RoleWithPermissions[]).flatMap((role) => {
     const permissions = resolveRolePermissions(role);
     return MODULE_KEYS.map((module): RoleModulePerm => ({
       roleId: role.id,

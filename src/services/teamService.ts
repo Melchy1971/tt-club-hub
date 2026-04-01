@@ -199,8 +199,8 @@ export const teamService = {
 
     return tryCatch(async () => {
       const teams = teamsResult.data;
-      if (teams.length === 0) return [];
-      const teamIds = teams.map((team) => team.id);
+      if (teams.length === 0) return [] as TeamOverview[];
+      const teamIds = teams.map((team: Team) => team.id);
 
       const [{ data: rosterRows, error: rosterError }, { data: captainRows, error: captainError }] = await Promise.all([
         supabase
@@ -223,11 +223,12 @@ export const teamService = {
 
       const captainByTeam = new Map<string, TeamOverview['captain']>();
       for (const row of captainRows ?? []) {
-        captainByTeam.set(row.id, (row.members?.[0] ?? null) as TeamOverview['captain']);
+        const memberData = row.members as unknown as { id: string; first_name: string; last_name: string } | null;
+        captainByTeam.set(row.id, memberData ?? null);
       }
 
-      return teams.map((team) => ({
-        ...team,
+      return teams.map((team: Team): TeamOverview => ({
+        ...(team as any),
         captain: captainByTeam.get(team.id) ?? null,
         roster_size: rosterCountByTeam.get(team.id) ?? 0,
       }));
