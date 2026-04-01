@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Shield, Users, UserCircle, Building2, Calendar, MapPin,
-  Palette, Bell, Lock, ShieldAlert, Database, AlertTriangle,
+  Palette, Bell, Lock, ShieldAlert, Database, AlertTriangle, Info,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { hasPermission } from '@/lib/permissions';
