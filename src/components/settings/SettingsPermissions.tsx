@@ -26,9 +26,9 @@ export default function SettingsPermissions() {
   const { data: roles = [] } = useQuery({
     queryKey: ['role-module-permissions'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('roles').select('id, name, permissions, is_system').order('name');
+      const { data, error } = await supabase.from('roles').select('id, name, display_name, description').order('name');
       if (error) throw error;
-      return data;
+      return (data ?? []) as Array<{ id: string; name: string; display_name: string; description: string | null }>;
     },
   });
 
