@@ -1,34 +1,15 @@
 /**
- * boardMemberService
+ * boardMemberService – Vorstandsmitglieder verwalten.
  *
- * Verwaltet Vorstandsmitglieder (Positionen, Amtszeiten).
- *
- * DB-Tabelle: board_members
- *   id          uuid PK
- *   member_id   uuid → members.id
- *   position    text  (Enum: BOARD_POSITIONS)
- *   since       date
- *   until       date | null
- *   is_active   boolean DEFAULT true
- *   notes       text | null
- *   created_at  timestamptz
- *   updated_at  timestamptz
- *
- * Zugriffsregeln:
- *   SELECT  → board:read  (vorstand, admin, developer)
- *   INSERT  → board:write (vorstand, admin, developer)
- *   UPDATE  → board:write (vorstand, admin, developer)
- *   DELETE  → board:delete (admin, developer)
- *
- * RLS-Empfehlung (Supabase):
- *   SELECT: EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role IN ('vorstand','admin','developer'))
- *   INSERT/UPDATE: gleiche Bedingung
- *   DELETE: role IN ('admin','developer')
+ * Da keine separate board_members-Tabelle existiert, werden
+ * Vorstandsmitglieder über die user_roles-Tabelle mit der Rolle
+ * 'vorstand' identifiziert und die Mitgliederdaten aus der
+ * members-Tabelle geladen.
  */
 
 import { supabase } from '@/integrations/supabase/client';
 import { ok, err, tryCatch } from '@/lib/api';
-import { fromSupabaseError, errors } from '@/lib/error';
+import { fromSupabaseError } from '@/lib/error';
 import type { ApiResult } from '@/types/api';
 
 // ── Konstanten ────────────────────────────────────────────────
@@ -48,149 +29,52 @@ export type BoardPosition = (typeof BOARD_POSITIONS)[number];
 
 // ── Typen ─────────────────────────────────────────────────────
 
-export interface BoardMemberRow {
-  id:         string;
-  member_id:  string;
-  position:   string;
-  since:      string;
-  until:      string | null;
-  is_active:  boolean;
-  notes:      string | null;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface BoardMemberUI {
-  id:        string;
-  memberId:  string;
-  position:  string;
-  since:     string;
-  until:     string | null;
-  isActive:  boolean;
-  notes:     string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface BoardMemberCreateDTO {
-  member_id: string;
-  position:  string;
-  since:     string;
-  until?:    string | null;
-  is_active?: boolean;
-  notes?:    string | null;
-}
-
-export interface BoardMemberUpdateDTO {
-  position?:  string;
-  since?:     string;
-  until?:     string | null;
-  is_active?: boolean;
-  notes?:     string | null;
-}
-
-export interface BoardMemberFilter {
-  is_active?: boolean;
-  /** Nur Mitglieder einer bestimmten Position anzeigen */
-  position?:  string;
-}
-
-// ── Mapping ───────────────────────────────────────────────────
-
-function mapToUI(row: BoardMemberRow): BoardMemberUI {
-  return {
-    id:        row.id,
-    memberId:  row.member_id,
-    position:  row.position,
-    since:     row.since,
-    until:     row.until,
-    isActive:  row.is_active,
-    notes:     row.notes,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
+  id: string;
+  userId: string;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  role: string;
 }
 
 // ── Service ───────────────────────────────────────────────────
 
 export const boardMemberService = {
   /**
-   * Alle Vorstandsmitglieder, optional gefiltert.
-   * Standardmäßig nur aktive zurückgeben.
+   * Lädt alle Mitglieder mit Vorstandsrolle.
    */
-  async list(filter: BoardMemberFilter = {}): Promise<ApiResult<BoardMemberUI[]>> {
+  async listActive(): Promise<ApiResult<BoardMemberUI[]>> {
     return tryCatch(async () => {
-      let q = supabase
-        .from('board_members')
-        .select('*')
-        .order('since', { ascending: false });
+      // Get user_ids with vorstand or admin role
+      const { data: roleData, error: roleErr } = await supabase
+        .from('user_roles')
+        .select('user_id, role')
+        .in('role', ['vorstand', 'admin']);
+      if (roleErr) throw roleErr;
 
-      if (filter.is_active !== undefined) q = q.eq('is_active', filter.is_active);
-      if (filter.position)               q = q.eq('position', filter.position);
+      if (!roleData || roleData.length === 0) return [];
 
-      const { data, error } = await q;
-      if (error) throw error;
-      return ((data ?? []) as BoardMemberRow[]).map(mapToUI);
+      const userIds = roleData.map((r) => r.user_id);
+
+      // Get member data for those users
+      const { data: members, error: memErr } = await supabase
+        .from('members')
+        .select('id, user_id, first_name, last_name, email')
+        .in('user_id', userIds);
+      if (memErr) throw memErr;
+
+      const roleMap = new Map<string, string>();
+      roleData.forEach((r) => roleMap.set(r.user_id, r.role));
+
+      return (members ?? []).map((m) => ({
+        id: m.id,
+        userId: m.user_id ?? '',
+        firstName: m.first_name,
+        lastName: m.last_name,
+        email: m.email,
+        role: roleMap.get(m.user_id ?? '') ?? 'vorstand',
+      }));
     }, fromSupabaseError);
-  },
-
-  /** Nur aktuell aktiver Vorstand (Shortcut für Navigation/Öffentlichkeit). */
-  listActive(): Promise<ApiResult<BoardMemberUI[]>> {
-    return boardMemberService.list({ is_active: true });
-  },
-
-  async getById(id: string): Promise<ApiResult<BoardMemberUI>> {
-    const { data, error } = await supabase
-      .from('board_members')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle();
-    if (error) return err(fromSupabaseError(error));
-    if (!data)  return err(errors.notFound('Vorstandsmitglied', id));
-    return ok(mapToUI(data as BoardMemberRow));
-  },
-
-  async create(payload: BoardMemberCreateDTO): Promise<ApiResult<BoardMemberUI>> {
-    return tryCatch(async () => {
-      const insert = {
-        member_id: payload.member_id,
-        position:  payload.position,
-        since:     payload.since,
-        until:     payload.until ?? null,
-        is_active: payload.is_active ?? true,
-        notes:     payload.notes ?? null,
-      };
-      const { data, error } = await supabase
-        .from('board_members')
-        .insert(insert)
-        .select()
-        .single();
-      if (error) throw error;
-      return mapToUI(data as BoardMemberRow);
-    }, fromSupabaseError);
-  },
-
-  async update(id: string, payload: BoardMemberUpdateDTO): Promise<ApiResult<BoardMemberUI>> {
-    return tryCatch(async () => {
-      const { data, error } = await supabase
-        .from('board_members')
-        .update(payload)
-        .eq('id', id)
-        .select()
-        .single();
-      if (error) throw error;
-      return mapToUI(data as BoardMemberRow);
-    }, fromSupabaseError);
-  },
-
-  /** Beendet die Amtszeit (setzt until=today, is_active=false). */
-  async deactivate(id: string, until: string): Promise<ApiResult<BoardMemberUI>> {
-    return boardMemberService.update(id, { until, is_active: false });
-  },
-
-  async remove(id: string): Promise<ApiResult<void>> {
-    const { error } = await supabase.from('board_members').delete().eq('id', id);
-    if (error) return err(fromSupabaseError(error));
-    return ok(undefined);
   },
 };
