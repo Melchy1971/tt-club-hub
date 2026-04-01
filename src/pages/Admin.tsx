@@ -468,6 +468,7 @@ function BackupTab() {
       }));
 
       const doc: ExportDocument = {
+        filename: `backup_${tableName}_${new Date().toISOString().slice(0, 10)}`,
         title: `Backup: ${label}`,
         generatedAt: new Date().toISOString(),
         sections: [
