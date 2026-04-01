@@ -101,6 +101,8 @@ export const scheduleMatchFilterSchema = z.object({
   team_id: z.string().uuid().optional(),
   season_id: z.string().uuid().optional(),
   season_phase_id: z.string().uuid().optional(),
+  /** Wenn true, wird auf season_phases.is_active=true gefiltert. */
+  active_phase: z.boolean().optional(),
   status: matchStatusSchema.optional(),
   is_home: z.boolean().optional(),
   from_date: z.string().date().optional(),

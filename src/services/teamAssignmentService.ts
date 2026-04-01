@@ -65,12 +65,16 @@ export const teamAssignmentService = {
   /**
    * Alle Teamzugehörigkeiten eines Spielers.
    *
-   * Optionaler season_id-Filter – nutzt idx_team_members_member_team
-   * und idx_teams_season_active für den anschließenden JOIN.
+   * Optionale Filter über Teams:
+   *   - seasonId
+   *   - seasonPhaseId
+   *   - activePhase (season_phases.is_active = true)
    */
   async getByMember(
     memberId: string,
     seasonId?: string,
+    seasonPhaseId?: string,
+    activePhase = false,
   ): Promise<ApiResult<TeamMember[]>> {
     return tryCatch(async () => {
       let query = supabase
@@ -78,12 +82,17 @@ export const teamAssignmentService = {
         .select('*')
         .eq('member_id', memberId);
 
-      if (seasonId) {
-        // Filter by season via a sub-query on team_id
-        const { data: teamIds } = await supabase
-          .from('teams')
-          .select('id')
-          .eq('season_id', seasonId);
+      if (seasonId || seasonPhaseId || activePhase) {
+        let teamsQuery = supabase.from('teams').select('id');
+        if (seasonId) teamsQuery = teamsQuery.eq('season_id', seasonId);
+        if (seasonPhaseId) teamsQuery = teamsQuery.eq('season_phase_id', seasonPhaseId);
+        if (activePhase) {
+          teamsQuery = teamsQuery
+            .select('id, season_phases!inner(id, is_active)')
+            .eq('season_phases.is_active', true);
+        }
+
+        const { data: teamIds } = await teamsQuery;
         const ids = (teamIds ?? []).map((t) => t.id);
         if (ids.length === 0) return [];
         query = query.in('team_id', ids);

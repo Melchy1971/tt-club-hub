@@ -265,13 +265,18 @@ export const scheduleService = {
     if (!parsed.success) {
       return err(errors.validation(parsed.error.message, parsed.error.issues));
     }
-    const { team_id, season_id, season_phase_id, status, is_home, from_date, to_date, match_day } = parsed.data;
+    const { team_id, season_id, season_phase_id, active_phase, status, is_home, from_date, to_date, match_day } = parsed.data;
 
     return tryCatch(async () => {
       let q = supabase.from('schedule_matches').select('*');
       if (team_id)    q = q.eq('team_id', team_id);
       if (season_id)  q = q.eq('season_id', season_id);
       if (season_phase_id) q = q.eq('season_phase_id', season_phase_id);
+      if (active_phase) {
+        q = q
+          .select('*, season_phases!inner(id, is_active)')
+          .eq('season_phases.is_active', true);
+      }
       if (status)     q = q.eq('status', status);
       if (is_home != null) q = q.eq('is_home', is_home);
       if (from_date)  q = q.gte('match_date', from_date);
@@ -280,7 +285,10 @@ export const scheduleService = {
 
       const { data, error } = await q.order('match_date').order('match_time', { nullsFirst: false });
       if (error) throw error;
-      return sortMatches((data ?? []).map(toUI));
+      return sortMatches((data ?? []).map((row) => {
+        const { season_phases: _sp, ...match } = row as ScheduleMatch & { season_phases?: unknown };
+        return toUI(match);
+      }));
     }, fromSupabaseError);
   },
 

@@ -38,7 +38,9 @@ export const teamFilterSchema = z.object({
   is_active: z.boolean().optional(),
   season_id: z.string().uuid().optional(),
   season_phase_id: z.string().uuid().optional(),
-  /** Wenn true, wird season_id ignoriert und stattdessen is_current=true genutzt. */
+  /** Wenn true, wird auf die aktive Saisonphase (season_phases.is_active=true) gefiltert. */
+  active_phase: z.boolean().optional(),
+  /** @deprecated Backward-Compat: nutzt weiterhin seasons.is_current=true. */
   active_season: z.boolean().optional(),
 });
 
