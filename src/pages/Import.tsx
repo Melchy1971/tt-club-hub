@@ -491,142 +491,252 @@ function MemberImportTab() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TAB 2: Spielplan-Import (click-TT)
+// TAB 2: Vereinsspielplan-Import
 // ═══════════════════════════════════════════════════════════════════════════════
 
-interface ParsedMatch {
-  matchDay: number;
+interface ParsedVSPRow {
+  rowIndex: number;
   date: string;
   time: string | null;
+  staffel: string;
+  runde: string;
   homeTeam: string;
   awayTeam: string;
-  homeScore: number | null;
-  awayScore: number | null;
   isHome: boolean;
-  status: 'geplant' | 'laufend' | 'beendet' | 'verschoben' | 'abgesagt';
-  error?: string;
 }
 
 function ScheduleImportTab() {
   const queryClient = useQueryClient();
-  const [step, setStep] = useState<'config' | 'preview' | 'done'>('config');
+  const [step, setStep] = useState<'config' | 'preview' | 'importing' | 'done'>('config');
   const [file, setFile] = useState<File | null>(null);
-  const [parsed, setParsed] = useState<ParsedMatch[]>([]);
-  const [errors, setErrors] = useState<string[]>([]);
+  const [parsed, setParsed] = useState<ParsedVSPRow[]>([]);
+  const [parseErrors, setParseErrors] = useState<Array<{ rowIndex: number; message: string }>>([]);
   const [teamId, setTeamId] = useState('');
-  const [seasonId, setSeasonId] = useState('');
+  const [seasonPhaseId, setSeasonPhaseId] = useState('');
   const [clubName, setClubName] = useState('');
+  const [importResult, setImportResult] = useState<{ inserted: number; skipped: number; staffelInfo: string[] } | null>(null);
+  const [staffelFilter, setStaffelFilter] = useState<string>('__all__');
 
+  // Load season phases (grouped by cycle)
+  const { data: seasonPhases } = useQuery({
+    queryKey: ['season-phases-import'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('season_phases')
+        .select('id, name, phase_type, is_active, season_cycles(id, name, age_group)')
+        .order('start_date', { ascending: false });
+      return (data ?? []) as Array<{
+        id: string;
+        name: string;
+        phase_type: string;
+        is_active: boolean;
+        season_cycles: { id: string; name: string; age_group: string } | null;
+      }>;
+    },
+  });
+
+  // Load teams for the selected phase
   const { data: teams } = useQuery({
-    queryKey: ['teams-import'],
+    queryKey: ['teams-import-vsp', seasonPhaseId],
     queryFn: async () => {
-      const { data } = await supabase.from('teams').select('id, name, season_id').eq('is_active', true).order('name');
+      if (!seasonPhaseId) return [];
+      const { data } = await supabase
+        .from('teams')
+        .select('id, name, season_id')
+        .eq('season_phase_id', seasonPhaseId)
+        .eq('is_active', true)
+        .order('name');
       return data ?? [];
+    },
+    enabled: !!seasonPhaseId,
+  });
+
+  // Auto-fill club name from club_settings
+  const { data: clubSettings } = useQuery({
+    queryKey: ['club-settings-import'],
+    queryFn: async () => {
+      const { data } = await supabase.from('club_settings').select('club_name').limit(1).maybeSingle();
+      return data;
     },
   });
 
-  const { data: seasons } = useQuery({
-    queryKey: ['seasons-import'],
-    queryFn: async () => {
-      const { data } = await supabase.from('seasons').select('id, name').order('start_date', { ascending: false });
-      return data ?? [];
-    },
-  });
+  // Set club name when settings load
+  useEffect(() => {
+    if (clubSettings?.club_name && !clubName) {
+      setClubName(clubSettings.club_name);
+    }
+  }, [clubSettings, clubName]);
+
+  // Auto-select active phase
+  useEffect(() => {
+    if (!seasonPhaseId && seasonPhases?.length) {
+      const active = seasonPhases.find((p) => p.is_active);
+      if (active) setSeasonPhaseId(active.id);
+    }
+  }, [seasonPhases, seasonPhaseId]);
+
+  const selectedTeam = teams?.find((t) => t.id === teamId);
 
   const parseFile = async () => {
     if (!file) { toast.error('Bitte Datei auswählen'); return; }
-    if (!teamId || !seasonId || !clubName.trim()) { toast.error('Mannschaft, Saison und Vereinsname ausfüllen'); return; }
+    if (!teamId || !seasonPhaseId || !clubName.trim()) {
+      toast.error('Saisonphase, Mannschaft und Vereinsname ausfüllen');
+      return;
+    }
 
     try {
-      const rows = await parseFileToRows(file);
-      const results: ParsedMatch[] = [];
-      const errs: string[] = [];
+      // Parse with semicolon delimiter
+      const rawRows = await new Promise<Record<string, string>[]>((resolve, reject) => {
+        Papa.parse<Record<string, string>>(file, {
+          header: true,
+          skipEmptyLines: true,
+          delimiter: ';',
+          encoding: 'UTF-8',
+          complete: (r) => resolve(r.data),
+          error: (e) => reject(e),
+        });
+      });
 
-      for (let i = 0; i < rows.length; i++) {
-        const r = rows[i];
-        // Try to find columns by various names
-        const matchDay = parseInt(r['Spieltag'] || r['match_day'] || r['Nr'] || r['Nr.'] || '0', 10);
-        const dateRaw = r['Datum'] || r['date'] || r['Spieltag-Datum'] || '';
-        const timeRaw = r['Uhrzeit'] || r['time'] || r['Zeit'] || '';
-        const homeTeam = (r['Heim'] || r['home_team'] || r['Heimmannschaft'] || '').trim();
-        const awayTeam = (r['Gast'] || r['away_team'] || r['Gastmannschaft'] || '').trim();
-        const resultRaw = r['Ergebnis'] || r['result'] || r['Erg.'] || '';
+      if (rawRows.length === 0) { toast.error('Leere Datei'); return; }
+
+      // Validate expected columns
+      const firstRow = rawRows[0];
+      const expectedCols = ['Termin', 'HeimMannschaft', 'GastMannschaft'];
+      const missingCols = expectedCols.filter((c) => !(c in firstRow));
+      if (missingCols.length > 0) {
+        toast.error(`Fehlende Spalten: ${missingCols.join(', ')}. Erwartetes Format: Termin;Wochentag;Staffel;Runde;HalleNr;HeimMannschaft;GastMannschaft`);
+        return;
+      }
+
+      // Use normalizeVereinsspielplanRows from scheduleService
+      const { normalizeVereinsspielplanRows, parseTermin, deriveIsHome } = await import('@/services/scheduleService');
+
+      const results: ParsedVSPRow[] = [];
+      const errs: Array<{ rowIndex: number; message: string }> = [];
+
+      for (let i = 0; i < rawRows.length; i++) {
+        const r = rawRows[i];
+        const termin = r['Termin'] ?? '';
+        const homeTeam = (r['HeimMannschaft'] ?? '').trim();
+        const awayTeam = (r['GastMannschaft'] ?? '').trim();
+        const staffel = (r['Staffel'] ?? '').trim();
+        const runde = (r['Runde'] ?? '').trim();
 
         if (!homeTeam && !awayTeam) continue;
+        if (homeTeam.toLowerCase() === 'spielfrei' || awayTeam.toLowerCase() === 'spielfrei') continue;
 
-        const date = parseDate(dateRaw);
-        if (!date) { errs.push(`Zeile ${i + 1}: Ungültiges Datum "${dateRaw}"`); continue; }
-
-        const time = timeRaw.match(/^(\d{1,2}):(\d{2})/) ? `${timeRaw.match(/^(\d{1,2}):(\d{2})/)![1].padStart(2, '0')}:${timeRaw.match(/^(\d{1,2}):(\d{2})/)![2]}` : null;
-
-        let homeScore: number | null = null;
-        let awayScore: number | null = null;
-        let status: 'geplant' | 'beendet' = 'geplant';
-        const scoreMatch = resultRaw.match(/^(\d+):(\d+)$/);
-        if (scoreMatch) {
-          homeScore = parseInt(scoreMatch[1], 10);
-          awayScore = parseInt(scoreMatch[2], 10);
-          status = 'beendet';
+        const terminParsed = parseTermin(termin);
+        if (!terminParsed) {
+          errs.push({ rowIndex: i, message: `Ungültiger Termin: "${termin}"` });
+          continue;
         }
 
-        const cn = clubName.toLowerCase().trim();
-        const isHome = homeTeam.toLowerCase().includes(cn) || cn.includes(homeTeam.toLowerCase());
+        const isHome = deriveIsHome(homeTeam, clubName);
 
-        results.push({ matchDay: matchDay || 0, date, time, homeTeam, awayTeam, homeScore, awayScore, isHome, status });
+        results.push({
+          rowIndex: i,
+          date: terminParsed.date,
+          time: terminParsed.time,
+          staffel,
+          runde,
+          homeTeam,
+          awayTeam,
+          isHome,
+        });
       }
 
       setParsed(results);
-      setErrors(errs);
+      setParseErrors(errs);
+      setStaffelFilter('__all__');
       setStep('preview');
     } catch {
       toast.error('Fehler beim Parsen der Datei');
     }
   };
 
+  const filteredParsed = staffelFilter === '__all__'
+    ? parsed
+    : parsed.filter((r) => r.staffel === staffelFilter);
+
+  const uniqueStaffeln = useMemo(() =>
+    Array.from(new Set(parsed.map((r) => r.staffel))).filter(Boolean).sort(),
+    [parsed]
+  );
+
   const importMut = useMutation({
     mutationFn: async () => {
-      const inserts = parsed.filter((p) => !p.error).map((p) => ({
-        team_id: teamId,
-        season_id: seasonId,
-        match_day: p.matchDay || null,
-        match_date: p.date,
-        match_time: p.time,
-        home_team: p.homeTeam,
-        away_team: p.awayTeam,
-        is_home: p.isHome,
-        home_score: p.homeScore,
-        away_score: p.awayScore,
-        status: p.status,
-      }));
-      if (inserts.length === 0) throw new Error('Keine Spiele zum Importieren');
-      const { error } = await supabase.from('schedule_matches').insert(inserts);
-      if (error) throw error;
-      return inserts.length;
+      const seasonId = selectedTeam?.season_id;
+      if (!seasonId) throw new Error('Saison-ID nicht gefunden');
+
+      // Re-parse raw file and use the service
+      const rawRows = await new Promise<Record<string, string>[]>((resolve, reject) => {
+        Papa.parse<Record<string, string>>(file!, {
+          header: true,
+          skipEmptyLines: true,
+          delimiter: ';',
+          encoding: 'UTF-8',
+          complete: (r) => resolve(r.data),
+          error: (e) => reject(e),
+        });
+      });
+
+      const { scheduleService } = await import('@/services/scheduleService');
+      const result = await scheduleService.importFromVereinsspielplan(
+        rawRows,
+        teamId,
+        seasonId,
+        seasonPhaseId,
+        clubName,
+        true,
+      );
+
+      if (!result.success) {
+        throw new Error(result.error.message);
+      }
+
+      return result.data;
     },
-    onSuccess: (count) => {
-      toast.success(`${count} Spiele importiert`);
+    onSuccess: (result) => {
+      setImportResult(result);
       queryClient.invalidateQueries({ queryKey: ['schedule'] });
       setStep('done');
+      toast.success(`${result.inserted} Spiele importiert${result.skipped > 0 ? `, ${result.skipped} übersprungen` : ''}`);
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const downloadTemplate = () => {
-    const csv = 'Spieltag;Datum;Uhrzeit;Heim;Gast;Ergebnis\n1;15.09.2025;18:30;TTV Musterstadt;SC Gegner;9:5\n2;22.09.2025;19:00;FC Auswärts;TTV Musterstadt;\n';
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'spielplan_vorlage.csv'; a.click();
+  const reset = () => {
+    setStep('config');
+    setFile(null);
+    setParsed([]);
+    setParseErrors([]);
+    setImportResult(null);
+    setStaffelFilter('__all__');
   };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold">Spielplan importieren</h2>
-          <p className="text-sm text-muted-foreground">click-TT Format (CSV/Excel)</p>
+          <h2 className="text-lg font-semibold">Vereinsspielplan importieren</h2>
+          <p className="text-sm text-muted-foreground">
+            Format: Termin;Wochentag;Staffel;Runde;HalleNr;HeimMannschaft;GastMannschaft
+          </p>
         </div>
-        <Button variant="outline" size="sm" onClick={downloadTemplate}>
-          <Download className="mr-2 h-4 w-4" /> Vorlage
-        </Button>
+      </div>
+
+      {/* Steps */}
+      <div className="flex gap-2">
+        {(['config', 'preview', 'done'] as const).map((s, i) => {
+          const labels = ['Konfiguration & Datei', 'Vorschau & Import', 'Fertig'];
+          const isActive = step === s || (step === 'importing' && s === 'preview');
+          const isDone = ['config', 'preview', 'done'].indexOf(step) > i;
+          return (
+            <Badge key={s} variant={isActive ? 'default' : isDone ? 'secondary' : 'outline'} className="text-xs">
+              {i + 1}. {labels[i]}
+            </Badge>
+          );
+        })}
       </div>
 
       {step === 'config' && (
@@ -634,58 +744,159 @@ function ScheduleImportTab() {
           <CardContent className="pt-6 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label>Saison</Label>
-                <Select value={seasonId} onValueChange={setSeasonId}>
-                  <SelectTrigger><SelectValue placeholder="Saison wählen" /></SelectTrigger>
-                  <SelectContent>{seasons?.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                <Label>Saisonphase</Label>
+                <Select value={seasonPhaseId} onValueChange={(v) => { setSeasonPhaseId(v); setTeamId(''); }}>
+                  <SelectTrigger><SelectValue placeholder="Saisonphase wählen" /></SelectTrigger>
+                  <SelectContent>
+                    {seasonPhases?.map((sp) => (
+                      <SelectItem key={sp.id} value={sp.id}>
+                        {sp.season_cycles?.name ?? '–'} / {sp.name}
+                        {sp.is_active ? ' ✓' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label>Mannschaft</Label>
-                <Select value={teamId} onValueChange={setTeamId}>
-                  <SelectTrigger><SelectValue placeholder="Mannschaft wählen" /></SelectTrigger>
-                  <SelectContent>{teams?.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
+                <Select value={teamId} onValueChange={setTeamId} disabled={!seasonPhaseId}>
+                  <SelectTrigger><SelectValue placeholder={seasonPhaseId ? 'Mannschaft wählen' : 'Erst Saisonphase wählen'} /></SelectTrigger>
+                  <SelectContent>
+                    {teams?.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label>Vereinsname (für Heim/Auswärts)</Label>
-                <Input value={clubName} onChange={(e) => setClubName(e.target.value)} placeholder="z.B. TTV Musterstadt" />
+                <Input value={clubName} onChange={(e) => setClubName(e.target.value)} placeholder="z.B. TTC Zaberfeld" />
               </div>
             </div>
-            <FileDropZone onFile={setFile} />
-            {file && <p className="text-sm text-muted-foreground">Datei: {file.name}</p>}
-            <Button onClick={parseFile} disabled={!file}>Datei analysieren</Button>
+
+            <FileDropZone onFile={setFile} accept=".csv" hint="CSV-Datei mit Semikolon-Trennung (Vereinsspielplan)" />
+            {file && <p className="text-sm text-muted-foreground">Datei: <strong>{file.name}</strong></p>}
+
+            <Button onClick={parseFile} disabled={!file || !teamId || !seasonPhaseId || !clubName.trim()}>
+              Datei analysieren
+            </Button>
           </CardContent>
         </Card>
       )}
 
       {step === 'preview' && (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Card><CardContent className="pt-6 flex items-center gap-3"><CheckCircle2 className="h-8 w-8 text-green-500" /><div><p className="text-2xl font-bold">{parsed.length}</p><p className="text-sm text-muted-foreground">Spiele erkannt</p></div></CardContent></Card>
-            <Card><CardContent className="pt-6 flex items-center gap-3"><AlertCircle className="h-8 w-8 text-destructive" /><div><p className="text-2xl font-bold">{errors.length}</p><p className="text-sm text-muted-foreground">Fehler</p></div></CardContent></Card>
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="pt-6 flex items-center gap-3">
+                <CheckCircle2 className="h-8 w-8 text-green-500" />
+                <div>
+                  <p className="text-2xl font-bold">{parsed.length}</p>
+                  <p className="text-sm text-muted-foreground">Spiele erkannt</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6 flex items-center gap-3">
+                <CalendarDays className="h-8 w-8 text-primary" />
+                <div>
+                  <p className="text-2xl font-bold">{parsed.filter((p) => p.isHome).length}</p>
+                  <p className="text-sm text-muted-foreground">Heimspiele</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6 flex items-center gap-3">
+                <TableProperties className="h-8 w-8 text-muted-foreground" />
+                <div>
+                  <p className="text-2xl font-bold">{uniqueStaffeln.length}</p>
+                  <p className="text-sm text-muted-foreground">Staffeln</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6 flex items-center gap-3">
+                <AlertCircle className="h-8 w-8 text-destructive" />
+                <div>
+                  <p className="text-2xl font-bold">{parseErrors.length}</p>
+                  <p className="text-sm text-muted-foreground">Fehler</p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          {errors.length > 0 && (
-            <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{errors.map((e, i) => <div key={i}>{e}</div>)}</AlertDescription></Alert>
+          {parseErrors.length > 0 && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {parseErrors.slice(0, 5).map((e, i) => (
+                  <div key={i}>Zeile {e.rowIndex + 2}: {e.message}</div>
+                ))}
+                {parseErrors.length > 5 && <div className="mt-1 text-sm">… und {parseErrors.length - 5} weitere</div>}
+              </AlertDescription>
+            </Alert>
           )}
 
+          {/* Staffel filter */}
+          {uniqueStaffeln.length > 1 && (
+            <div className="flex items-center gap-3">
+              <Label className="text-sm">Staffel filtern:</Label>
+              <Select value={staffelFilter} onValueChange={setStaffelFilter}>
+                <SelectTrigger className="w-[300px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Alle Staffeln ({parsed.length})</SelectItem>
+                  {uniqueStaffeln.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s} ({parsed.filter((p) => p.staffel === s).length})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Preview table */}
           <Card>
-            <CardHeader><CardTitle className="text-base">Vorschau</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="text-base">Vorschau</CardTitle>
+              <CardDescription>
+                {filteredParsed.length} Spiele
+                {staffelFilter !== '__all__' ? ` in "${staffelFilter}"` : ''}
+              </CardDescription>
+            </CardHeader>
             <CardContent>
-              <div className="rounded-md border max-h-[400px] overflow-auto">
+              <div className="rounded-md border max-h-[450px] overflow-auto">
                 <Table>
-                  <TableHeader><TableRow><TableHead>Spieltag</TableHead><TableHead>Datum</TableHead><TableHead>Zeit</TableHead><TableHead>Heim</TableHead><TableHead>Gast</TableHead><TableHead>Ergebnis</TableHead><TableHead>H/A</TableHead></TableRow></TableHeader>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Datum</TableHead>
+                      <TableHead>Zeit</TableHead>
+                      <TableHead>Staffel</TableHead>
+                      <TableHead>Runde</TableHead>
+                      <TableHead>Heim</TableHead>
+                      <TableHead>Gast</TableHead>
+                      <TableHead>H/A</TableHead>
+                    </TableRow>
+                  </TableHeader>
                   <TableBody>
-                    {parsed.map((m, i) => (
-                      <TableRow key={i}>
-                        <TableCell>{m.matchDay || '–'}</TableCell>
+                    {filteredParsed.map((m) => (
+                      <TableRow key={m.rowIndex}>
                         <TableCell>{fmtDate(m.date)}</TableCell>
                         <TableCell>{m.time ?? '–'}</TableCell>
-                        <TableCell className={cn(m.isHome && 'font-medium')}>{m.homeTeam}</TableCell>
-                        <TableCell className={cn(!m.isHome && 'font-medium')}>{m.awayTeam}</TableCell>
-                        <TableCell>{m.homeScore != null ? `${m.homeScore}:${m.awayScore}` : '–'}</TableCell>
-                        <TableCell><Badge variant={m.isHome ? 'default' : 'outline'}>{m.isHome ? 'Heim' : 'Auswärts'}</Badge></TableCell>
+                        <TableCell className="text-xs max-w-[200px] truncate">{m.staffel}</TableCell>
+                        <TableCell>
+                          <Badge variant={m.runde === 'VR' ? 'secondary' : m.runde === 'RR' ? 'default' : 'outline'} className="text-xs">
+                            {m.runde || '–'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className={cn(m.isHome && 'font-semibold text-primary')}>{m.homeTeam}</TableCell>
+                        <TableCell className={cn(!m.isHome && 'font-semibold text-primary')}>{m.awayTeam}</TableCell>
+                        <TableCell>
+                          <Badge variant={m.isHome ? 'default' : 'outline'} className="text-xs">
+                            {m.isHome ? 'Heim' : 'Auswärts'}
+                          </Badge>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -695,8 +906,11 @@ function ScheduleImportTab() {
           </Card>
 
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setStep('config')}>Zurück</Button>
-            <Button onClick={() => importMut.mutate()} disabled={parsed.length === 0 || importMut.isPending}>
+            <Button variant="outline" onClick={reset}>Zurück</Button>
+            <Button
+              onClick={() => importMut.mutate()}
+              disabled={parsed.length === 0 || importMut.isPending}
+            >
               {importMut.isPending ? 'Importiere…' : `${parsed.length} Spiele importieren`}
             </Button>
           </div>
@@ -704,19 +918,33 @@ function ScheduleImportTab() {
       )}
 
       {step === 'done' && (
-        <Card><CardContent className="pt-6 text-center space-y-4">
-          <CheckCircle2 className="mx-auto h-16 w-16 text-green-500" />
-          <h2 className="text-xl font-semibold">Import abgeschlossen</h2>
-          <div className="flex justify-center gap-2">
-            <Button variant="outline" onClick={() => { setStep('config'); setFile(null); setParsed([]); setErrors([]); }}>Neuer Import</Button>
-            <Button onClick={() => window.location.href = '/spielplan'}>Zum Spielplan</Button>
-          </div>
-        </CardContent></Card>
+        <Card>
+          <CardContent className="pt-6 text-center space-y-4">
+            <CheckCircle2 className="mx-auto h-16 w-16 text-green-500" />
+            <h2 className="text-xl font-semibold">Import abgeschlossen</h2>
+            {importResult && (
+              <div className="text-sm text-muted-foreground space-y-1">
+                <p><strong>{importResult.inserted}</strong> Spiele importiert</p>
+                {importResult.skipped > 0 && <p><strong>{importResult.skipped}</strong> Duplikate übersprungen</p>}
+                {importResult.staffelInfo.length > 0 && (
+                  <div className="flex flex-wrap justify-center gap-1 mt-2">
+                    {importResult.staffelInfo.map((s) => (
+                      <Badge key={s} variant="outline" className="text-xs">{s}</Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="flex justify-center gap-2">
+              <Button variant="outline" onClick={reset}>Neuer Import</Button>
+              <Button onClick={() => window.location.href = '/spielplan'}>Zum Spielplan</Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
 }
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // TAB 3: Pin/Code-Import
 // ═══════════════════════════════════════════════════════════════════════════════
