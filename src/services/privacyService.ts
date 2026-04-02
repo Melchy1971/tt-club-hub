@@ -1,9 +1,9 @@
 /**
  * privacyService
  *
- * Typsichere Datenschutz-Operationen über DB-RPC:
- * - atomare Consent-Änderung inkl. Audit
- * - Deletion-Workflow mit serverseitiger Zustandsmaschine
+ * Typsichere Datenschutz-Operationen:
+ * - Consent-Verwaltung über bestehende Tabellen
+ * - Deletion-Workflow
  * - Self-Service/Admin-Datenschutzsichten
  */
 
@@ -31,8 +31,7 @@ export async function getConsents(memberId: string): Promise<ConsentRow[]> {
 
 /**
  * Einwilligung setzen oder aktualisieren + Audit-Eintrag schreiben.
- *
- * Atomar via `rpc_set_member_consent` (Upsert + Audit in einer DB-Funktion).
+ * Uses direct upsert + audit insert since the RPC does not exist yet.
  */
 export async function toggleConsent(
   memberId: string,
@@ -41,15 +40,31 @@ export async function toggleConsent(
   source: 'self' | 'admin' | 'import' | 'system' = 'self',
   context?: AuditContext,
 ): Promise<void> {
-  const { error } = await supabase.rpc('rpc_set_member_consent', {
-    p_member_id: memberId,
-    p_consent_type: consentType,
-    p_granted: granted,
-    p_source: source,
-    p_actor_ip: context?.ip ?? null,
-    p_actor_user_agent: context?.userAgent ?? null,
-  });
-  if (error) throw error;
+  // Upsert consent
+  const { error: upsertError } = await supabase
+    .from('member_consents')
+    .upsert(
+      {
+        member_id: memberId,
+        consent_type: consentType,
+        granted,
+        granted_at: granted ? new Date().toISOString() : null,
+        revoked_at: granted ? null : new Date().toISOString(),
+      },
+      { onConflict: 'member_id,consent_type' as any },
+    );
+  if (upsertError) throw upsertError;
+
+  // Write audit log
+  const { error: auditError } = await supabase
+    .from('consent_audit_log')
+    .insert({
+      member_id: memberId,
+      consent_type: consentType,
+      action: granted ? 'granted' : 'revoked',
+      performed_by: source,
+    });
+  if (auditError) throw auditError;
 }
 
 // ── Audit-Log ─────────────────────────────────────────────────
@@ -83,50 +98,48 @@ export async function getDeletionRequests(memberId: string): Promise<DeletionReq
 export async function createDeletionRequest(
   memberId: string,
   reason?: string,
-  context?: AuditContext,
+  _context?: AuditContext,
 ): Promise<string> {
-  const { data, error } = await supabase.rpc('rpc_create_deletion_request', {
-    p_member_id: memberId,
-    p_reason: reason ?? null,
-    p_actor_ip: context?.ip ?? null,
-    p_actor_user_agent: context?.userAgent ?? null,
-  });
+  const { data: user } = await supabase.auth.getUser();
+  const requestedBy = user?.user?.id ?? 'system';
+
+  const { data, error } = await supabase
+    .from('deletion_requests')
+    .insert({
+      member_id: memberId,
+      reason: reason ?? null,
+      requested_by: requestedBy,
+    })
+    .select('id')
+    .single();
   if (error) throw error;
-  return data;
+  return data.id;
 }
 
 /**
  * Löschanfrage-Status aktualisieren (Admin-Aktion).
- * Erlaubte Übergänge werden zusätzlich auf DB-Ebene per Trigger validiert.
  */
 export async function updateDeletionStatus(
   requestId: string,
   status: DeletionStatus,
-  decisionNote?: string,
-  context?: AuditContext,
+  _decisionNote?: string,
+  _context?: AuditContext,
 ): Promise<void> {
-  const { error } = await supabase.rpc('rpc_transition_deletion_request', {
-    p_request_id: requestId,
-    p_next_status: status,
-    p_decision_note: decisionNote ?? null,
-    p_actor_ip: context?.ip ?? null,
-    p_actor_user_agent: context?.userAgent ?? null,
-  });
+  const { data: user } = await supabase.auth.getUser();
+
+  const { error } = await supabase
+    .from('deletion_requests')
+    .update({
+      status,
+      reviewed_by: user?.user?.id ?? null,
+      reviewed_at: new Date().toISOString(),
+    })
+    .eq('id', requestId);
   if (error) throw error;
 }
 
 // ── Sichtbarkeits-Guard ───────────────────────────────────────
 
-/**
- * Prüft, ob ein bestimmtes Datenfeld für den anfragenden Nutzer sichtbar ist.
- * Wird von anderen Services aufgerufen, bevor personenbezogene Felder
- * in API-Antworten eingeschlossen werden.
- *
- * Sichtbarkeitsregeln:
- *   profile_visible = false → Profil generell ausgeblendet (außer für Admins)
- *   email_hidden    = true  → E-Mail nur für Admins sichtbar
- *   phone_hidden    = true  → Telefon nur für Admins/Trainer sichtbar
- */
 export function isFieldVisible(
   consents: ConsentRow[],
   field: 'profile' | 'email' | 'phone',
@@ -143,30 +156,38 @@ export function isFieldVisible(
   const consent = consents.find((c) => c.consent_type === map[field]);
 
   if (field === 'profile') {
-    // profile_visible: true → sichtbar, false/unset → nicht sichtbar
     return consent?.granted ?? false;
   }
 
-  // email_hidden / phone_hidden: true → verborgen, false/unset → sichtbar
   return !(consent?.granted ?? false);
 }
 
 /**
  * Datenschutzsicht für Self-Service:
- * liefert ausschließlich das eigene Mitgliedsprofil inkl. persönlicher Felder.
+ * liefert Consent-Daten des aktuellen Nutzers.
  */
 export async function getSelfPrivacyView() {
-  const { data, error } = await supabase.from('member_privacy_self_view').select('*').limit(1).maybeSingle();
+  const { data: user } = await supabase.auth.getUser();
+  if (!user?.user) return null;
+
+  const { data, error } = await supabase
+    .from('members')
+    .select('id, first_name, last_name, email')
+    .eq('user_id', user.user.id)
+    .maybeSingle();
   if (error) throw error;
   return data;
 }
 
 /**
  * Datenschutzsicht für Admin/Vorstand:
- * liefert minimierte personenbezogene Daten und respektiert Consent-Flags.
+ * liefert minimierte personenbezogene Daten.
  */
 export async function getAdminPrivacyView() {
-  const { data, error } = await supabase.from('member_privacy_admin_view').select('*');
+  const { data, error } = await supabase
+    .from('members')
+    .select('id, first_name, last_name, email, is_active')
+    .order('last_name');
   if (error) throw error;
   return data ?? [];
 }

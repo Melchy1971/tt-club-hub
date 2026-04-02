@@ -23,8 +23,8 @@ const handleError = (error: { message?: string } | null, context: string) => {
 export const infoService: InfoService = {
   async getPublicClubInfo() {
     const { data, error } = await supabase
-      .from('club_public_info' as any)
-      .select('*')
+      .from('club_settings')
+      .select('club_name, club_number, association, website, contact_email, contact_phone, street, zip_code, city')
       .limit(1)
       .maybeSingle();
 
@@ -64,43 +64,13 @@ export const infoService: InfoService = {
   },
 
   async getToolMetadata() {
-    const { data, error } = await supabase
-      .from('tool_metadata' as any)
-      .select('version, build_date, support_email')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    handleError(error, 'getToolMetadata');
-
-    if (!data) return null;
-
-    return {
-      version: data.version,
-      buildDate: data.build_date,
-      supportEmail: data.support_email,
-    };
+    // tool_metadata table does not exist yet – return null gracefully
+    return null;
   },
 
   async getLicense() {
-    const { data, error } = await supabase
-      .from('licenses' as any)
-      .select('serial_key, status, activated_at, valid_until')
-      .order('activated_at', { ascending: false, nullsFirst: false })
-      .limit(1)
-      .maybeSingle();
-
-    handleError(error, 'getLicense');
-
-    if (!data) return null;
-
-    return {
-      serialKey: data.serial_key,
-      status: data.status,
-      activatedAt: data.activated_at,
-      validUntil: data.valid_until,
-    };
+    // licenses table does not exist yet – return null gracefully
+    return null;
   },
 
   async getDeveloperInfo() {

@@ -24,7 +24,7 @@ function toCsv(rows: RatingExportRow[]): string {
   const csvRows = rows.map((row) => [
     row.rank,
     row.memberId,
-    `"${row.fullName.replaceAll('"', '""')}"`,
+    `"${row.fullName.replace(/"/g, '""')}"`,
     row.qttr ?? '',
     row.ttr ?? '',
   ].join(','));
