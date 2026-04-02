@@ -1,4 +1,5 @@
 import type { Enums, Tables } from '@/integrations/supabase/types';
+import type { Session } from '@supabase/supabase-js';
 
 // === Rollen ===
 export const APP_ROLES = [
@@ -146,6 +147,26 @@ export interface AuthSessionState {
   readonly isAuthenticated: boolean;
 }
 
+export interface AuthSessionModel {
+  readonly session: Session;
+  readonly user: AuthUser;
+  readonly roles: readonly AppRole[];
+  readonly primaryRole: AppRole | null;
+  readonly member: Tables<'members'> | null;
+}
+
+export interface AuthState {
+  readonly isLoading: boolean;
+  readonly isAuthenticated: boolean;
+  readonly user: AuthUser | null;
+  readonly session: Session | null;
+  readonly role: AppRole | null;
+  readonly roles: readonly AppRole[];
+  readonly member: Tables<'members'> | null;
+  readonly problem: AuthProblem | null;
+  readonly problems: readonly AuthProblem[];
+}
+
 // === Auth-Modelle ===
 export interface AuthUser {
   readonly id: string;
@@ -155,13 +176,15 @@ export interface AuthUser {
 }
 
 export interface AuthContextValue {
-  user: AuthUser | null;
-  session: import('@supabase/supabase-js').Session | null;
-  role: AppRole | null;
-  member: Tables<'members'> | null;
-  isLoading: boolean;
-  isAuthenticated: boolean;
-  problem: AuthProblem | null;
+  user: AuthState['user'];
+  session: AuthState['session'];
+  role: AuthState['role'];
+  roles: AuthState['roles'];
+  member: AuthState['member'];
+  isLoading: AuthState['isLoading'];
+  isAuthenticated: AuthState['isAuthenticated'];
+  problem: AuthState['problem'];
+  problems: AuthState['problems'];
   refresh: () => Promise<void>;
   signOut: () => Promise<void>;
 }

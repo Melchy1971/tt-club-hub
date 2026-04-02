@@ -2,7 +2,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import type { AppRole } from '@/types';
 import { Loader2 } from 'lucide-react';
-import { evaluateGuard } from '@/lib/auth/guards';
+import { evaluateGuard, resolveRouteRedirect } from '@/lib/auth/guards';
 
 interface ProtectedRouteProps {
   allowedRoles?: AppRole[];
@@ -10,7 +10,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ allowedRoles, fallbackPath = '/' }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading, role, problem } = useAuth();
+  const { isAuthenticated, isLoading, roles, problem } = useAuth();
 
   if (isLoading) {
     return (
@@ -20,10 +20,9 @@ export function ProtectedRoute({ allowedRoles, fallbackPath = '/' }: ProtectedRo
     );
   }
 
-  const guard = evaluateGuard({ isAuthenticated, role, problem }, allowedRoles);
-  if (!guard.allowed) {
-    const authReasons = ['NO_SESSION', 'MISSING_MEMBER', 'NO_USER_ROLES', 'INVALID_ROLE', 'INCONSISTENT_DATA'] as const;
-    const target = (authReasons as readonly string[]).includes(guard.reason) ? '/auth' : fallbackPath;
+  const guard = evaluateGuard({ isAuthenticated, roles, problem }, allowedRoles);
+  const target = resolveRouteRedirect(guard, fallbackPath);
+  if (target) {
     return <Navigate to={target} replace />;
   }
 

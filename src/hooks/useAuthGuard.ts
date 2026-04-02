@@ -5,7 +5,7 @@ import { evaluateGuard } from '@/lib/auth/guards';
 export const useAuthGuard = (allowedRoles?: AppRole | AppRole[]) => {
   const auth = useAuth();
   const guard = evaluateGuard(
-    { isAuthenticated: auth.isAuthenticated, role: auth.role, problem: auth.problem },
+    { isAuthenticated: auth.isAuthenticated, roles: auth.roles, problem: auth.problem },
     allowedRoles
   );
 

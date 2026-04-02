@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import type { Session } from '@supabase/supabase-js';
 import { resolvePrimaryRole, resolveRolesFromAssignments, resolveSessionState } from '@/lib/auth/resolver';
-import { canRead, canWrite, evaluateGuard, hasRole } from '@/lib/auth/guards';
+import {
+  assertAuthorized,
+  canRead,
+  canWrite,
+  evaluateGuard,
+  hasAnyRole,
+  hasRole,
+  isAdminOrBoard,
+} from '@/lib/auth/guards';
+import { MissingMemberProfileError, MissingUserRolesError } from '@/lib/auth/errors';
 
 const createSession = (userId = 'user-1'): Session =>
   ({
@@ -73,6 +82,12 @@ describe('guard utilities', () => {
     expect(hasRole('spieler', ['admin', 'trainer'])).toBe(false);
   });
 
+  it('prüft hasAnyRole und isAdminOrBoard', () => {
+    expect(hasAnyRole(['spieler', 'trainer'], ['admin', 'trainer'])).toBe(true);
+    expect(isAdminOrBoard(['vorstand'])).toBe(true);
+    expect(isAdminOrBoard(['spieler'])).toBe(false);
+  });
+
   it('prüft canRead/canWrite Utilities', () => {
     expect(canRead('mitglied', 'match')).toBe(true);
     expect(canWrite('mitglied', 'match')).toBe(false);
@@ -80,10 +95,20 @@ describe('guard utilities', () => {
   });
 
   it('bewertet Guard auf Routenebene', () => {
-    const denied = evaluateGuard({ isAuthenticated: false, role: null, problem: 'NO_SESSION' }, ['admin']);
-    const allowed = evaluateGuard({ isAuthenticated: true, role: 'admin', problem: null }, ['admin']);
+    const denied = evaluateGuard({ isAuthenticated: false, roles: [], problem: 'NO_SESSION' }, ['admin']);
+    const allowed = evaluateGuard({ isAuthenticated: true, roles: ['admin'], problem: null }, ['admin']);
 
     expect(denied.allowed).toBe(false);
     expect(allowed.allowed).toBe(true);
+  });
+
+  it('wirft spezialisierte Fehler für Component-Guards', () => {
+    expect(() =>
+      assertAuthorized({ isAuthenticated: false, roles: [], problem: 'MISSING_MEMBER' }, ['admin'])
+    ).toThrow(MissingMemberProfileError);
+
+    expect(() =>
+      assertAuthorized({ isAuthenticated: false, roles: [], problem: 'NO_USER_ROLES' }, ['admin'])
+    ).toThrow(MissingUserRolesError);
   });
 });
