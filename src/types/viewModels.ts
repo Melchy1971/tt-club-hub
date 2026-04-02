@@ -63,3 +63,31 @@ export interface PublicClubInfoViewModel {
   zipCode: string | null;
   city: string | null;
 }
+
+
+export interface InternalClubInfoViewModel {
+  id: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface ToolMetadataViewModel {
+  version: string;
+  buildDate: string;
+  supportEmail: string;
+}
+
+export type LicenseStatus = 'active' | 'inactive' | 'expired' | 'revoked';
+
+export interface LicenseViewModel {
+  serialKey: string;
+  status: LicenseStatus;
+  activatedAt: string | null;
+  validUntil: string | null;
+}
+
+export interface DeveloperInfoViewModel {
+  toolMetadata: ToolMetadataViewModel | null;
+  license: LicenseViewModel | null;
+  internalClubInfo: InternalClubInfoViewModel | null;
+}
