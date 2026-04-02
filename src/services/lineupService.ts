@@ -118,7 +118,7 @@ export const lineupService = {
     await validateLineup(matchId, parsed.team_id, parsed.entries);
 
     const { error: deleteError } = await supabase
-      .from('match_lineups' as never)
+      .from('match_lineup')
       .delete()
       .eq('match_id', matchId);
     if (deleteError) throw deleteError;
