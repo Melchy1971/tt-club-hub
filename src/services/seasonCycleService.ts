@@ -15,7 +15,45 @@ export const seasonCycleService = {
       .select('*, season_phases(*)')
       .order('start_year', { ascending: false });
     if (error) throw error;
-    return (data ?? []) as SeasonCycleWithPhases[];
+    return ((data ?? []) as SeasonCycleWithPhases[]).map((cycle) => ({
+      ...cycle,
+      season_phases: [...(cycle.season_phases ?? [])].sort((a, b) => {
+        if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+        return a.start_date.localeCompare(b.start_date);
+      }),
+    }));
+  },
+
+  async getActive(): Promise<SeasonCycle | null> {
+    const { data, error } = await supabase
+      .from('season_cycles')
+      .select('*')
+      .eq('is_active', true)
+      .order('start_year', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    return data;
+  },
+
+  async getActiveWithPhases(): Promise<SeasonCycleWithPhases | null> {
+    const { data, error } = await supabase
+      .from('season_cycles')
+      .select('*, season_phases(*)')
+      .eq('is_active', true)
+      .order('start_year', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    const cycle = data as SeasonCycleWithPhases;
+    return {
+      ...cycle,
+      season_phases: [...(cycle.season_phases ?? [])].sort((a, b) => {
+        if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+        return a.start_date.localeCompare(b.start_date);
+      }),
+    };
   },
 
   async create(cycle: SeasonCycleInsert): Promise<SeasonCycle> {
@@ -57,6 +95,17 @@ export const seasonCycleService = {
 };
 
 export const seasonPhaseService = {
+  async listByCycle(seasonCycleId: string): Promise<SeasonPhase[]> {
+    const { data, error } = await supabase
+      .from('season_phases')
+      .select('*')
+      .eq('season_cycle_id', seasonCycleId)
+      .order('sort_order', { ascending: true })
+      .order('start_date', { ascending: true });
+    if (error) throw error;
+    return data ?? [];
+  },
+
   async create(phase: SeasonPhaseInsert): Promise<SeasonPhase> {
     const { data, error } = await supabase
       .from('season_phases')

@@ -1,4 +1,4 @@
-import type { MemberId, SeasonId, TeamId } from '../api';
+import type { MemberId, SeasonCycleId, SeasonPhaseId, TeamId } from '../api';
 import type { Member } from './member';
 import type { AGE_GROUP_VALUES } from '@/schemas/team.schema';
 
@@ -9,8 +9,12 @@ export interface Team {
   name: string;
   /** Nullable in der DB, aber im UI als Pflichtfeld behandelt. */
   league: string | null;
-  season_id: SeasonId;
-  season_phase_id: string;
+  /** Operative Referenz – primär für Reads/Writes verwenden. */
+  season_phase_id: SeasonPhaseId;
+  /** Zyklusreferenz (technische Redundanz für Legacy-Kompatibilität). */
+  season_cycle_id: SeasonCycleId;
+  /** @deprecated Alias auf season_cycle_id (DB-Spalte teams.season_id). */
+  season_id: SeasonCycleId;
   age_group: AgeGroup;
   division: string | null;
   captain_id: MemberId | null;
@@ -66,8 +70,10 @@ export interface TeamTrainingTime {
 export interface MemberTeamAssignment {
   team_id: TeamId;
   member_id: MemberId;
-  season_phase_id: string;
-  season_id: SeasonId;
+  season_phase_id: SeasonPhaseId;
+  season_cycle_id: SeasonCycleId;
+  /** @deprecated Alias auf season_cycle_id */
+  season_id: SeasonCycleId;
   position: number;
   is_captain: boolean;
 }

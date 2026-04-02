@@ -118,6 +118,7 @@ export const teamAssignmentService = {
         team_id: row.team_id,
         member_id: row.member_id,
         season_phase_id: row.teams.season_phase_id,
+        season_cycle_id: row.teams.season_id,
         season_id: row.teams.season_id,
         position: row.position,
         is_captain: row.teams.captain_id === row.member_id,

@@ -1,6 +1,11 @@
+/** Fachliche Gruppierung, abgeleitet aus dem DB-Enum age_group. */
+export type SeasonAudience = 'erwachsene' | 'jugend';
+
 export type AgeGroup =
   | 'herren'
   | 'damen'
+  | 'senioren'
+  | 'seniorinnen'
   | 'jungen_18'
   | 'maedchen_18'
   | 'jungen_15'
@@ -8,9 +13,7 @@ export type AgeGroup =
   | 'jungen_13'
   | 'maedchen_13'
   | 'jungen_11'
-  | 'maedchen_11'
-  | 'senioren'
-  | 'seniorinnen';
+  | 'maedchen_11';
 
 export type PhaseType = 'first_half' | 'second_half' | 'single_half';
 

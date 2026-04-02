@@ -46,7 +46,7 @@ export const teamService = {
    * Gibt alle Mannschaften zurück, optional gefiltert.
    *
    * Filter-Optionen:
-   *   season_id   – nur Mannschaften dieser Saison
+   *   season_cycle_id – nur Mannschaften dieses Saisonzyklus
    *   season_phase_id – nur Mannschaften dieser Saisonphase
    *   is_active   – Aktiv-/Inaktiv-Filter
    *   active_phase – ignoriert season_id/season_phase_id und nimmt stattdessen
@@ -58,7 +58,7 @@ export const teamService = {
     if (!parsed.success) {
       return err(errors.validation(parsed.error.message));
     }
-    const { is_active, season_id, season_phase_id, active_phase, active_season } = parsed.data;
+    const { is_active, season_cycle_id, season_id, season_phase_id, active_phase, active_season } = parsed.data;
 
     return tryCatch(async () => {
       if (active_phase) {
@@ -88,7 +88,8 @@ export const teamService = {
       }
 
       let query = supabase.from('teams').select('*');
-      if (season_id) query = query.eq('season_id', season_id);
+      const cycleId = season_cycle_id ?? season_id;
+      if (cycleId) query = query.eq('season_id', cycleId);
       if (season_phase_id) query = query.eq('season_phase_id', season_phase_id);
       if (is_active !== undefined) query = query.eq('is_active', is_active);
       const { data, error } = await query.order('name');
@@ -141,12 +142,15 @@ export const teamService = {
       return err(errors.validation(parsed.error.message, parsed.error.flatten()));
     }
     return tryCatch(async () => {
-      const seasonId = parsed.data.season_id ?? await resolveSeasonIdByPhaseId(parsed.data.season_phase_id);
+      const seasonCycleId = parsed.data.season_cycle_id
+        ?? parsed.data.season_id
+        ?? await resolveSeasonIdByPhaseId(parsed.data.season_phase_id);
+      const { season_cycle_id: _seasonCycleId, ...payload } = parsed.data;
       const { data, error } = await supabase
         .from('teams')
         .insert({
-          ...parsed.data,
-          season_id: seasonId,
+          ...payload,
+          season_id: seasonCycleId,
         })
         .select()
         .single();
@@ -165,13 +169,17 @@ export const teamService = {
     }
     return tryCatch(async () => {
       const patch: TeamUpdateInput = { ...parsed.data };
-      if (patch.season_phase_id && !patch.season_id) {
+      if (patch.season_phase_id && !patch.season_cycle_id && !patch.season_id) {
         patch.season_id = await resolveSeasonIdByPhaseId(patch.season_phase_id);
       }
+      if (patch.season_cycle_id && !patch.season_id) {
+        patch.season_id = patch.season_cycle_id;
+      }
+      const { season_cycle_id: _seasonCycleId, ...dbPatch } = patch;
 
       const { data, error } = await supabase
         .from('teams')
-        .update(patch)
+        .update(dbPatch)
         .eq('id', id)
         .select()
         .single();
