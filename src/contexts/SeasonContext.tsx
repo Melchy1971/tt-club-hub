@@ -1,11 +1,13 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
-import type { SeasonPhase } from '@/types';
-import { seasonPhaseService } from '@/services/seasonCycleService';
+import type { SeasonCycle, SeasonPhase } from '@/types';
+import { seasonCycleService, seasonPhaseService } from '@/services/seasonCycleService';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface SeasonContextType {
   /** Die aktuell aktive Saisonphase (Halb-/Rückrunde) */
   currentPhase: SeasonPhase | null;
+  /** Der aktuell aktive Saisonzyklus (kann aktiv sein, ohne dass eine Phase aktiv ist). */
+  currentCycle: SeasonCycle | null;
   setCurrentPhase: (phase: SeasonPhase | null) => void;
   isLoading: boolean;
   refresh: () => Promise<void>;
@@ -15,6 +17,7 @@ interface SeasonContextType {
 
 const SeasonContext = createContext<SeasonContextType>({
   currentPhase: null,
+  currentCycle: null,
   setCurrentPhase: () => {},
   isLoading: false,
   refresh: async () => {},
@@ -24,6 +27,7 @@ const SeasonContext = createContext<SeasonContextType>({
 export function SeasonProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [currentPhase, setCurrentPhase] = useState<SeasonPhase | null>(null);
+  const [currentCycle, setCurrentCycle] = useState<SeasonCycle | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const loadCurrentPhase = useCallback(async () => {
@@ -35,10 +39,15 @@ export function SeasonProvider({ children }: { children: ReactNode }) {
 
     try {
       setIsLoading(true);
-      const phase = await seasonPhaseService.getActive();
+      const [phase, cycle] = await Promise.all([
+        seasonPhaseService.getActive(),
+        seasonCycleService.getActive(),
+      ]);
       setCurrentPhase(phase);
+      setCurrentCycle(cycle);
     } catch {
       setCurrentPhase(null);
+      setCurrentCycle(null);
     } finally {
       setIsLoading(false);
     }
@@ -56,6 +65,7 @@ export function SeasonProvider({ children }: { children: ReactNode }) {
     <SeasonContext.Provider
       value={{
         currentPhase,
+        currentCycle,
         setCurrentPhase,
         isLoading,
         refresh: loadCurrentPhase,

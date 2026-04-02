@@ -25,8 +25,10 @@ export const teamCreateSchema = z.object({
   // league ist in der DB nullable; im UI aber Pflichtfeld → min(1) erzwingen.
   league: z.string().trim().min(1, 'Liga ist erforderlich').max(100),
   season_phase_id: z.string().uuid('Ungültige Saisonphasen-ID'),
+  season_cycle_id: z.string().uuid('Ungültige Saisonzyklus-ID').optional(),
   /**
-   * Deprecated Fallback: wenn nicht angegeben, wird season_id aus season_phase_id aufgelöst.
+   * Deprecated Alias auf season_cycle_id.
+   * Wenn weder season_cycle_id noch season_id angegeben ist, wird aus season_phase_id aufgelöst.
    * Dadurch ist Team-CRUD primär phase-basiert.
    */
   season_id: z.string().uuid('Ungültige Saison-ID').optional(),
@@ -40,6 +42,8 @@ export const teamUpdateSchema = teamCreateSchema.partial();
 
 export const teamFilterSchema = z.object({
   is_active: z.boolean().optional(),
+  season_cycle_id: z.string().uuid().optional(),
+  /** @deprecated Alias auf season_cycle_id */
   season_id: z.string().uuid().optional(),
   season_phase_id: z.string().uuid().optional(),
   /** Wenn true, wird auf die aktive Saisonphase (season_phases.is_active=true) gefiltert. */

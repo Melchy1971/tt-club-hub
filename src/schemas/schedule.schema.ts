@@ -44,7 +44,9 @@ export const scoreRefinement = (
 
 export const scheduleMatchCreateSchema = z
   .object({
-    season_id: z.string().uuid('Ungültige Saison-ID'),
+    season_cycle_id: z.string().uuid('Ungültige Saisonzyklus-ID').optional(),
+    /** @deprecated Alias auf season_cycle_id */
+    season_id: z.string().uuid('Ungültige Saison-ID').optional(),
     season_phase_id: z.string().uuid('Ungültige Saisonphasen-ID'),
     team_id: z.string().uuid('Ungültige Mannschafts-ID'),
     match_date: z.string().date('Datum im Format YYYY-MM-DD angeben'),
@@ -66,12 +68,21 @@ export const scheduleMatchCreateSchema = z
     report_text: z.string().max(5000).nullable().optional(),
   })
   .superRefine((data, ctx) => {
+    if (!data.season_cycle_id && !data.season_id) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['season_cycle_id'],
+        message: 'season_cycle_id oder season_id ist erforderlich',
+      });
+    }
     if (data.status === 'beendet') scoreRefinement(data, ctx);
   });
 
 // Extract the inner object schema before superRefine to allow .partial()
 const scheduleMatchBaseSchema = z.object({
-  season_id: z.string().uuid('Ungültige Saison-ID'),
+  season_cycle_id: z.string().uuid('Ungültige Saisonzyklus-ID').optional(),
+  /** @deprecated Alias auf season_cycle_id */
+  season_id: z.string().uuid('Ungültige Saison-ID').optional(),
   season_phase_id: z.string().uuid('Ungültige Saisonphasen-ID'),
   team_id: z.string().uuid('Ungültige Mannschafts-ID'),
   match_date: z.string().date('Datum im Format YYYY-MM-DD angeben'),
@@ -99,6 +110,8 @@ export const scheduleMatchUpdateSchema = scheduleMatchBaseSchema
 
 export const scheduleMatchFilterSchema = z.object({
   team_id: z.string().uuid().optional(),
+  season_cycle_id: z.string().uuid().optional(),
+  /** @deprecated Alias auf season_cycle_id */
   season_id: z.string().uuid().optional(),
   season_phase_id: z.string().uuid().optional(),
   /** Wenn true, wird auf season_phases.is_active=true gefiltert. */

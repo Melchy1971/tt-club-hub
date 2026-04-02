@@ -21,10 +21,22 @@ import {
   type MatchResultUpdateInput,
 } from '@/schemas/schedule.schema';
 
+const resolveSeasonCycleIdByPhaseId = async (seasonPhaseId: string): Promise<string> => {
+  const { data, error } = await supabase
+    .from('season_phases')
+    .select('season_cycle_id')
+    .eq('id', seasonPhaseId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data?.season_cycle_id) throw new Error('season_phase_id not found');
+  return data.season_cycle_id;
+};
+
 // ─── UI-Typ ────────────────────────────────────────────────────────────────────
 
 export interface ScheduleMatchUI {
   id: string;
+  seasonCycleId: string;
   seasonId: string;
   seasonPhaseId: string | null;
   teamId: string;
@@ -69,6 +81,7 @@ function toUI(row: ScheduleMatch): ScheduleMatchUI {
 
   return {
     id: row.id,
+    seasonCycleId: row.season_id,
     seasonId: row.season_id,
     seasonPhaseId: row.season_phase_id,
     teamId: row.team_id,
@@ -389,7 +402,7 @@ export const scheduleService = {
     if (!parsed.success) {
       return err(errors.validation(parsed.error.message, parsed.error.issues));
     }
-    const { team_id, season_id, season_phase_id, active_phase, status, is_home, from_date, to_date, match_day } = parsed.data;
+    const { team_id, season_cycle_id, season_id, season_phase_id, active_phase, status, is_home, from_date, to_date, match_day } = parsed.data;
 
     return tryCatch(async () => {
       let selectStr = '*';
@@ -399,7 +412,8 @@ export const scheduleService = {
 
       let q = supabase.from('schedule_matches').select(selectStr);
       if (team_id)    q = q.eq('team_id', team_id);
-      if (season_id)  q = q.eq('season_id', season_id);
+      const cycleId = season_cycle_id ?? season_id;
+      if (cycleId)  q = q.eq('season_id', cycleId);
       if (season_phase_id) q = q.eq('season_phase_id', season_phase_id);
       if (active_phase) {
         q = q.eq('season_phases.is_active' as any, true);
@@ -517,9 +531,13 @@ export const scheduleService = {
       return err(errors.validation(parsed.error.message, parsed.error.issues));
     }
     return tryCatch(async () => {
+      const cycleId = parsed.data.season_cycle_id
+        ?? parsed.data.season_id
+        ?? await resolveSeasonCycleIdByPhaseId(parsed.data.season_phase_id);
+      const { season_cycle_id: _seasonCycleId, ...payload } = parsed.data;
       const { data, error } = await supabase
         .from('schedule_matches')
-        .insert(parsed.data as ScheduleMatchInsert)
+        .insert({ ...payload, season_id: cycleId } as ScheduleMatchInsert)
         .select()
         .single();
       if (error) throw error;
@@ -533,9 +551,12 @@ export const scheduleService = {
       return err(errors.validation(parsed.error.message, parsed.error.issues));
     }
     return tryCatch(async () => {
+      const patch: Record<string, unknown> = { ...parsed.data };
+      if (patch.season_cycle_id && !patch.season_id) patch.season_id = patch.season_cycle_id;
+      delete patch.season_cycle_id;
       const { data, error } = await supabase
         .from('schedule_matches')
-        .update(parsed.data)
+        .update(patch)
         .eq('id', id)
         .select()
         .single();

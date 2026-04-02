@@ -1,4 +1,4 @@
-import type { MatchId, MemberId, SeasonId, TeamId } from '../api';
+import type { MatchId, MemberId, SeasonCycleId, SeasonPhaseId, TeamId } from '../api';
 import type { Member } from './member';
 import type { Team } from './team';
 
@@ -6,8 +6,12 @@ export type MatchStatus = 'geplant' | 'laufend' | 'beendet' | 'verschoben';
 
 export interface Match {
   readonly id: MatchId;
-  season_id: SeasonId;
-  season_phase_id: string;
+  /** Operative Referenz – primär für Reads/Writes verwenden. */
+  season_phase_id: SeasonPhaseId;
+  /** Zyklusreferenz (technische Redundanz für Legacy-Kompatibilität). */
+  season_cycle_id: SeasonCycleId;
+  /** @deprecated Alias auf season_cycle_id (DB-Spalte schedule_matches.season_id). */
+  season_id: SeasonCycleId;
   team_id: TeamId;
   match_day: number;
   date: string; // ISO-Datum
@@ -38,4 +42,4 @@ export interface SingleMatch {
 }
 
 export type MatchCreate = Omit<Match, 'id' | 'created_at' | 'updated_at' | 'team'>;
-export type MatchUpdate = Partial<Omit<MatchCreate, 'season_id' | 'season_phase_id' | 'team_id'>>;
+export type MatchUpdate = Partial<Omit<MatchCreate, 'season_id' | 'season_cycle_id' | 'season_phase_id' | 'team_id'>>;

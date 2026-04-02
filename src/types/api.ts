@@ -4,13 +4,18 @@ type Brand<T, B extends string> = T & { readonly __brand: B };
 export type MemberId = Brand<string, 'MemberId'>;
 export type TeamId = Brand<string, 'TeamId'>;
 export type MatchId = Brand<string, 'MatchId'>;
+/** @deprecated Verwende SeasonCycleId bzw. SeasonPhaseId. */
 export type SeasonId = Brand<string, 'SeasonId'>;
+export type SeasonCycleId = Brand<string, 'SeasonCycleId'>;
+export type SeasonPhaseId = Brand<string, 'SeasonPhaseId'>;
 
 // Hilfsfunktion zum Casten einer rohen string-ID
 export const asMemberId = (id: string): MemberId => id as MemberId;
 export const asTeamId = (id: string): TeamId => id as TeamId;
 export const asMatchId = (id: string): MatchId => id as MatchId;
 export const asSeasonId = (id: string): SeasonId => id as SeasonId;
+export const asSeasonCycleId = (id: string): SeasonCycleId => id as SeasonCycleId;
+export const asSeasonPhaseId = (id: string): SeasonPhaseId => id as SeasonPhaseId;
 
 // === Fehler-Typen ===
 export type AppErrorCode =
