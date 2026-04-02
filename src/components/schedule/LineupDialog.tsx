@@ -97,7 +97,7 @@ export function LineupDialog({ match, teamId, open, onOpenChange }: Props) {
     mutationFn: async () => {
       // Delete old lineup
       const { error: delErr } = await supabase
-        .from('match_lineups' as never)
+        .from('match_lineup')
         .delete()
         .eq('match_id', match.id);
       if (delErr) throw delErr;
