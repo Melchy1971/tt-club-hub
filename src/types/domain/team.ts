@@ -62,6 +62,17 @@ export interface TeamTrainingTime {
   partner_id: MemberId;
 }
 
+export type TeamAssignmentStatus = 'active' | 'historical';
+
+export interface TeamMemberRatingContext {
+  /**
+   * Optionale Momentaufnahme im Team-Kontext (kann bei Bedarf aus `members` befüllt werden).
+   * Null bedeutet: bewusst unbekannt/nicht gepflegt.
+   */
+  ttr_rating?: number | null;
+  qttr_rating?: number | null;
+}
+
 /**
  * Persistente Teamzuordnung eines Mitglieds innerhalb einer Saisonphase.
  * Wichtig: Diese Struktur ist eine API-View auf Basis von team_members + teams.
@@ -76,6 +87,14 @@ export interface MemberTeamAssignment {
   season_id: SeasonCycleId;
   position: number;
   is_captain: boolean;
+  status: TeamAssignmentStatus;
+  /**
+   * Für aktive Einträge i.d.R. null (offenes Intervall).
+   * Historische Einträge sind über `valid_to` abgeschlossen.
+   */
+  valid_from: string | null;
+  valid_to: string | null;
+  ratings?: TeamMemberRatingContext;
 }
 
 export interface TeamOverview extends Team {
