@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { TeamEditDialog } from '@/components/admin/TeamEditDialog';
+import { TeamRosterDialog } from '@/components/admin/TeamRosterDialog';
 import { EmptyState } from '@/components/common/EmptyState';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
