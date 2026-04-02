@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import { lineupSetSchema, type LineupSetInput } from '@/schemas/availability.schema';
 import type { MatchLineup } from '@/types';
 
 export const lineupService = {
@@ -17,10 +18,11 @@ export const lineupService = {
     return data ?? [];
   },
 
-  async setLineup(
-    matchId: string,
-    entries: Array<{ member_id: string; position: number }>,
-  ): Promise<MatchLineup[]> {
+  async setLineup(input: LineupSetInput): Promise<MatchLineup[]> {
+    const parsed = lineupSetSchema.parse(input);
+    const matchId = parsed.match_id;
+    const entries = parsed.entries;
+
     // Delete existing
     const { error: deleteError } = await supabase
       .from('match_lineup')

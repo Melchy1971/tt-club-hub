@@ -40,6 +40,47 @@ export const scoreRefinement = (
   }
 };
 
+const statusScoreRefinement = (
+  data: { status?: MatchStatusValue; home_score?: number | null; away_score?: number | null },
+  ctx: z.RefinementCtx,
+) => {
+  const { status, home_score, away_score } = data;
+  const hasHome = home_score != null;
+  const hasAway = away_score != null;
+  const hasPartialScore = hasHome !== hasAway;
+
+  if (hasPartialScore) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['home_score'],
+      message: 'Ergebnis ist unvollständig: beide Scores müssen gemeinsam gesetzt werden',
+    });
+  }
+
+  if (status === 'beendet') {
+    if (!hasHome || !hasAway) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['home_score'],
+        message: 'Bei beendetem Spiel müssen beide Scores gesetzt sein',
+      });
+      return;
+    }
+    scoreRefinement({ home_score, away_score }, ctx);
+    return;
+  }
+
+  if (status === 'geplant' || status === 'verschoben' || status === 'abgesagt') {
+    if (hasHome || hasAway) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['status'],
+        message: 'Für geplante/verschobene/abgesagte Spiele darf kein Ergebnis gesetzt sein',
+      });
+    }
+  }
+};
+
 // === CRUD-Schemas ===
 
 export const scheduleMatchCreateSchema = z
@@ -75,7 +116,7 @@ export const scheduleMatchCreateSchema = z
         message: 'season_cycle_id oder season_id ist erforderlich',
       });
     }
-    if (data.status === 'beendet') scoreRefinement(data, ctx);
+    statusScoreRefinement(data, ctx);
   });
 
 // Extract the inner object schema before superRefine to allow .partial()
@@ -106,7 +147,12 @@ const scheduleMatchBaseSchema = z.object({
 
 export const scheduleMatchUpdateSchema = scheduleMatchBaseSchema
   .partial()
-  .omit({ season_id: true, team_id: true });
+  .omit({ season_id: true, team_id: true })
+  .superRefine((data, ctx) => {
+    if (data.status || data.home_score !== undefined || data.away_score !== undefined) {
+      statusScoreRefinement(data, ctx);
+    }
+  });
 
 export const scheduleMatchFilterSchema = z.object({
   team_id: z.string().uuid().optional(),
@@ -121,6 +167,14 @@ export const scheduleMatchFilterSchema = z.object({
   from_date: z.string().date().optional(),
   to_date: z.string().date().optional(),
   match_day: z.number().int().min(1).optional(),
+}).superRefine((data, ctx) => {
+  if (data.from_date && data.to_date && data.from_date > data.to_date) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['to_date'],
+      message: 'to_date muss größer/gleich from_date sein',
+    });
+  }
 });
 
 // === Bulk pin/code ===
@@ -135,6 +189,16 @@ export const bulkPinCodeSchema = z
   .array(pinCodeEntrySchema)
   .min(1, 'Mindestens ein Eintrag erforderlich')
   .max(100, 'Maximal 100 Einträge pro Batch');
+
+export const pinCodeUpdateSchema = z
+  .object({
+    pin: z.string().max(20).nullable().optional(),
+    code: z.string().max(20).nullable().optional(),
+  })
+  .refine((value) => value.pin !== undefined || value.code !== undefined, {
+    message: 'Mindestens pin oder code muss gesetzt sein',
+    path: ['pin'],
+  });
 
 // === click-TT Import ===
 // Spaltennamen nach click-TT CSV-Export (Mannschaftsspielbetrieb)
@@ -185,7 +249,27 @@ export const matchResultUpdateSchema = z
     status: matchStatusSchema.optional(),
     report_text: z.string().max(5000).nullable().optional(),
   })
-  .superRefine((data, ctx) => scoreRefinement(data, ctx));
+  .superRefine((data, ctx) =>
+    statusScoreRefinement(
+      {
+        status: data.status ?? 'beendet',
+        home_score: data.home_score,
+        away_score: data.away_score,
+      },
+      ctx,
+    ));
+
+export const matchRescheduleSchema = z.object({
+  match_date: z.string().date('Datum im Format YYYY-MM-DD angeben'),
+  match_time: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/, 'Zeit im Format HH:MM angeben')
+    .nullable()
+    .optional(),
+  venue_id: z.string().uuid('Ungültige Hallen-ID').nullable().optional(),
+  report_text: z.string().max(5000).nullable().optional(),
+  keep_status: z.boolean().optional().default(false),
+});
 
 export type MatchStatusValue = z.infer<typeof matchStatusSchema>;
 export type ScheduleMatchCreateInput = z.infer<typeof scheduleMatchCreateSchema>;
@@ -193,6 +277,8 @@ export type ScheduleMatchUpdateInput = z.infer<typeof scheduleMatchUpdateSchema>
 export type ScheduleMatchFilterInput = z.infer<typeof scheduleMatchFilterSchema>;
 export type PinCodeEntry = z.infer<typeof pinCodeEntrySchema>;
 export type BulkPinCodeInput = z.infer<typeof bulkPinCodeSchema>;
+export type PinCodeUpdateInput = z.infer<typeof pinCodeUpdateSchema>;
 export type ClickTTRow = z.infer<typeof clickTTRowSchema>;
 export type VereinsspielplanRow = z.infer<typeof vereinsspielplanRowSchema>;
 export type MatchResultUpdateInput = z.infer<typeof matchResultUpdateSchema>;
+export type MatchRescheduleInput = z.infer<typeof matchRescheduleSchema>;
