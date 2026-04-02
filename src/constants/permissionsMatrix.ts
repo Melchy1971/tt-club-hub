@@ -1,23 +1,21 @@
 import type { AppRole } from '@/types/auth';
 
-export const PERMISSION_LEVELS = ['none', 'read', 'write'] as const;
+export const PERMISSION_LEVELS = ['NONE', 'READ', 'WRITE'] as const;
 export type PermissionLevel = (typeof PERMISSION_LEVELS)[number];
+
 export const MODULE_KEYS = [
-  'members',
+  'dashboard',
   'teams',
-  'matches',
   'schedule',
-  'seasons',
-  'training',
-  'substitutes',
+  'members',
   'communication',
   'board',
   'settings',
   'import',
-  'admin',
 ] as const;
 
 export type ModuleKey = (typeof MODULE_KEYS)[number];
+
 export const SYSTEM_APP_ROLES: readonly AppRole[] = [
   'developer',
   'admin',
@@ -32,3 +30,66 @@ export const isPermissionLevel = (value: string): value is PermissionLevel =>
 
 export const isModuleKey = (value: string): value is ModuleKey =>
   (MODULE_KEYS as readonly string[]).includes(value);
+
+export const SYSTEM_APP_ROLE_PERMISSIONS: Record<AppRole, Record<ModuleKey, PermissionLevel>> = {
+  developer: {
+    dashboard: 'WRITE',
+    teams: 'WRITE',
+    schedule: 'WRITE',
+    members: 'WRITE',
+    communication: 'WRITE',
+    board: 'WRITE',
+    settings: 'WRITE',
+    import: 'WRITE',
+  },
+  admin: {
+    dashboard: 'WRITE',
+    teams: 'WRITE',
+    schedule: 'WRITE',
+    members: 'WRITE',
+    communication: 'WRITE',
+    board: 'WRITE',
+    settings: 'WRITE',
+    import: 'WRITE',
+  },
+  vorstand: {
+    dashboard: 'READ',
+    teams: 'WRITE',
+    schedule: 'WRITE',
+    members: 'WRITE',
+    communication: 'WRITE',
+    board: 'WRITE',
+    settings: 'WRITE',
+    import: 'READ',
+  },
+  trainer: {
+    dashboard: 'READ',
+    teams: 'WRITE',
+    schedule: 'WRITE',
+    members: 'READ',
+    communication: 'READ',
+    board: 'NONE',
+    settings: 'NONE',
+    import: 'NONE',
+  },
+  spieler: {
+    dashboard: 'READ',
+    teams: 'READ',
+    schedule: 'READ',
+    members: 'READ',
+    communication: 'READ',
+    board: 'NONE',
+    settings: 'NONE',
+    import: 'NONE',
+  },
+  mitglied: {
+    dashboard: 'READ',
+    teams: 'READ',
+    schedule: 'READ',
+    members: 'READ',
+    communication: 'NONE',
+    board: 'NONE',
+    settings: 'NONE',
+    import: 'NONE',
+  },
+};
