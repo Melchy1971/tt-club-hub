@@ -49,7 +49,7 @@ export function LineupDialog({ match, teamId, open, onOpenChange }: Props) {
     queryKey: ['match-availability', match.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('match_player_availability' as never)
+        .from('match_availability')
         .select('*')
         .eq('match_id', match.id);
       if (error) throw error;
@@ -63,7 +63,7 @@ export function LineupDialog({ match, teamId, open, onOpenChange }: Props) {
     queryKey: ['match-lineup', match.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('match_lineups' as never)
+        .from('match_lineup')
         .select('*')
         .eq('match_id', match.id);
       if (error) throw error;
@@ -97,7 +97,7 @@ export function LineupDialog({ match, teamId, open, onOpenChange }: Props) {
     mutationFn: async () => {
       // Delete old lineup
       const { error: delErr } = await supabase
-        .from('match_lineups' as never)
+        .from('match_lineup')
         .delete()
         .eq('match_id', match.id);
       if (delErr) throw delErr;
@@ -114,7 +114,7 @@ export function LineupDialog({ match, teamId, open, onOpenChange }: Props) {
         };
       }).sort((a, b) => a.position - b.position);
 
-      const { error } = await supabase.from('match_lineups' as never).insert(entries);
+      const { error } = await supabase.from('match_lineup').insert(entries as any);
       if (error) throw error;
     },
     onSuccess: () => {

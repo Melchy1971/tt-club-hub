@@ -51,7 +51,7 @@ export function AvailabilityDialog({ match, teamId, open, onOpenChange }: Props)
     queryKey: ['match-availability', match.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('match_player_availability' as never)
+        .from('match_availability')
         .select('*')
         .eq('match_id', match.id);
       if (error) throw error;
@@ -76,9 +76,9 @@ export function AvailabilityDialog({ match, teamId, open, onOpenChange }: Props)
       for (const tm of teamMembers) {
         const status = statuses[tm.member_id] ?? 'unknown';
         const { error } = await supabase
-          .from('match_player_availability' as never)
+          .from('match_availability')
           .upsert(
-            { match_id: match.id, member_id: tm.member_id, team_id: teamId, status },
+            { match_id: match.id, member_id: tm.member_id, status } as any,
             { onConflict: 'match_id,member_id' }
           );
         if (error) throw error;

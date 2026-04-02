@@ -491,7 +491,7 @@ function MemberImportTab() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TAB 2: Vereinsspielplan-Import
+// TAB 2: Vereinsspielplan-Import (Gesamtspielplan mit Staffel→Team-Zuordnung)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 interface ParsedVSPRow {
@@ -507,14 +507,15 @@ interface ParsedVSPRow {
 
 function ScheduleImportTab() {
   const queryClient = useQueryClient();
-  const [step, setStep] = useState<'config' | 'preview' | 'importing' | 'done'>('config');
+  const [step, setStep] = useState<'config' | 'assign' | 'importing' | 'done'>('config');
   const [file, setFile] = useState<File | null>(null);
   const [parsed, setParsed] = useState<ParsedVSPRow[]>([]);
   const [parseErrors, setParseErrors] = useState<Array<{ rowIndex: number; message: string }>>([]);
-  const [teamId, setTeamId] = useState('');
   const [seasonPhaseId, setSeasonPhaseId] = useState('');
   const [clubName, setClubName] = useState('');
-  const [importResult, setImportResult] = useState<{ inserted: number; skipped: number; staffelInfo: string[] } | null>(null);
+  const [importResult, setImportResult] = useState<{ inserted: number; skipped: number } | null>(null);
+  // staffel → teamId mapping
+  const [staffelTeamMap, setStaffelTeamMap] = useState<Record<string, string>>({});
   const [staffelFilter, setStaffelFilter] = useState<string>('__all__');
 
   // Load season phases (grouped by cycle)
@@ -536,7 +537,7 @@ function ScheduleImportTab() {
     },
   });
 
-  // Load teams for the selected phase
+  // Load ALL teams for the selected phase
   const { data: teams } = useQuery({
     queryKey: ['teams-import-vsp', seasonPhaseId],
     queryFn: async () => {
@@ -561,7 +562,6 @@ function ScheduleImportTab() {
     },
   });
 
-  // Set club name when settings load
   useEffect(() => {
     if (clubSettings?.club_name && !clubName) {
       setClubName(clubSettings.club_name);
@@ -572,26 +572,23 @@ function ScheduleImportTab() {
   useEffect(() => {
     if (!seasonPhaseId && seasonPhases?.length) {
       const active = seasonPhases.find((p) => p.is_active);
-      if (active) {
-        setSeasonPhaseId(active.id);
-        return;
-      }
-
-      setSeasonPhaseId(seasonPhases[0].id);
+      setSeasonPhaseId(active?.id ?? seasonPhases[0].id);
     }
   }, [seasonPhases, seasonPhaseId]);
 
-  const selectedTeam = teams?.find((t) => t.id === teamId);
+  const uniqueStaffeln = useMemo(() =>
+    Array.from(new Set(parsed.map((r) => r.staffel))).filter(Boolean).sort(),
+    [parsed]
+  );
 
   const parseFile = async () => {
     if (!file) { toast.error('Bitte Datei auswählen'); return; }
-    if (!teamId || !seasonPhaseId || !clubName.trim()) {
-      toast.error('Saisonphase, Mannschaft und Vereinsname ausfüllen');
+    if (!seasonPhaseId || !clubName.trim()) {
+      toast.error('Saisonphase und Vereinsname ausfüllen');
       return;
     }
 
     try {
-      // Parse with semicolon delimiter
       const rawRows = await new Promise<Record<string, string>[]>((resolve, reject) => {
         Papa.parse<Record<string, string>>(file, {
           header: true,
@@ -605,17 +602,15 @@ function ScheduleImportTab() {
 
       if (rawRows.length === 0) { toast.error('Leere Datei'); return; }
 
-      // Validate expected columns
       const firstRow = rawRows[0];
       const expectedCols = ['Termin', 'HeimMannschaft', 'GastMannschaft'];
       const missingCols = expectedCols.filter((c) => !(c in firstRow));
       if (missingCols.length > 0) {
-        toast.error(`Fehlende Spalten: ${missingCols.join(', ')}. Erwartetes Format: Termin;Wochentag;Staffel;Runde;HalleNr;HeimMannschaft;GastMannschaft`);
+        toast.error(`Fehlende Spalten: ${missingCols.join(', ')}`);
         return;
       }
 
-      // Use normalizeVereinsspielplanRows from scheduleService
-      const { normalizeVereinsspielplanRows, parseTermin, deriveIsHome } = await import('@/services/scheduleService');
+      const { parseTermin, deriveIsHome } = await import('@/services/scheduleService');
 
       const results: ParsedVSPRow[] = [];
       const errs: Array<{ rowIndex: number; message: string }> = [];
@@ -639,68 +634,98 @@ function ScheduleImportTab() {
 
         const isHome = deriveIsHome(homeTeam, clubName);
 
-        results.push({
-          rowIndex: i,
-          date: terminParsed.date,
-          time: terminParsed.time,
-          staffel,
-          runde,
-          homeTeam,
-          awayTeam,
-          isHome,
-        });
+        results.push({ rowIndex: i, date: terminParsed.date, time: terminParsed.time, staffel, runde, homeTeam, awayTeam, isHome });
       }
 
       setParsed(results);
       setParseErrors(errs);
+      setStaffelTeamMap({});
       setStaffelFilter('__all__');
-      setStep('preview');
+      setStep('assign');
     } catch {
       toast.error('Fehler beim Parsen der Datei');
     }
   };
 
+  const assignedStaffeln = Object.keys(staffelTeamMap).filter((s) => staffelTeamMap[s]);
+  const assignedMatchCount = parsed.filter((r) => staffelTeamMap[r.staffel]).length;
+  const unassignedStaffeln = uniqueStaffeln.filter((s) => !staffelTeamMap[s]);
+
   const filteredParsed = staffelFilter === '__all__'
     ? parsed
     : parsed.filter((r) => r.staffel === staffelFilter);
 
-  const uniqueStaffeln = useMemo(() =>
-    Array.from(new Set(parsed.map((r) => r.staffel))).filter(Boolean).sort(),
-    [parsed]
-  );
-
   const importMut = useMutation({
     mutationFn: async () => {
-      const seasonId = selectedTeam?.season_id;
-      if (!seasonId) throw new Error('Saison-ID nicht gefunden');
+      // Get season_id from the first team
+      const firstTeamId = Object.values(staffelTeamMap).find(Boolean);
+      const firstTeam = teams?.find((t) => t.id === firstTeamId);
+      if (!firstTeam) throw new Error('Kein Team gefunden');
+      const seasonId = firstTeam.season_id;
 
-      // Re-parse raw file and use the service
-      const rawRows = await new Promise<Record<string, string>[]>((resolve, reject) => {
-        Papa.parse<Record<string, string>>(file!, {
-          header: true,
-          skipEmptyLines: true,
-          delimiter: ';',
-          encoding: 'UTF-8',
-          complete: (r) => resolve(r.data),
-          error: (e) => reject(e),
+      // Build inserts grouped by team
+      const inserts: Array<{
+        team_id: string;
+        season_id: string;
+        season_phase_id: string;
+        match_day: null;
+        match_date: string;
+        match_time: string | null;
+        home_team: string;
+        away_team: string;
+        is_home: boolean;
+        home_score: null;
+        away_score: null;
+        status: 'geplant';
+      }> = [];
+
+      for (const row of parsed) {
+        const tid = staffelTeamMap[row.staffel];
+        if (!tid) continue; // skip unassigned staffeln
+        inserts.push({
+          team_id: tid,
+          season_id: seasonId,
+          season_phase_id: seasonPhaseId,
+          match_day: null,
+          match_date: row.date,
+          match_time: row.time,
+          home_team: row.homeTeam,
+          away_team: row.awayTeam,
+          is_home: row.isHome,
+          home_score: null,
+          away_score: null,
+          status: 'geplant',
         });
-      });
-
-      const { scheduleService } = await import('@/services/scheduleService');
-      const result = await scheduleService.importFromVereinsspielplan(
-        rawRows,
-        teamId,
-        seasonId,
-        seasonPhaseId,
-        clubName,
-        true,
-      );
-
-      if (!result.success) {
-        throw new Error(result.error.message);
       }
 
-      return result.data;
+      if (inserts.length === 0) throw new Error('Keine Spiele zum Importieren');
+
+      // Dedup: check existing matches per team
+      const teamIds = [...new Set(inserts.map((i) => i.team_id))];
+      const existingKeys = new Set<string>();
+
+      for (const tid of teamIds) {
+        const { data: existing } = await supabase
+          .from('schedule_matches')
+          .select('match_date, home_team, away_team')
+          .eq('team_id', tid)
+          .eq('season_phase_id', seasonPhaseId);
+        (existing ?? []).forEach((r) => {
+          existingKeys.add(`${tid}|${r.match_date}|${r.home_team}|${r.away_team}`);
+        });
+      }
+
+      const toInsert = inserts.filter(
+        (m) => !existingKeys.has(`${m.team_id}|${m.match_date}|${m.home_team}|${m.away_team}`)
+      );
+      const skipped = inserts.length - toInsert.length;
+
+      if (toInsert.length > 0) {
+        const { error } = await supabase.from('schedule_matches').insert(toInsert);
+        if (error) throw error;
+      }
+
+      return { inserted: toInsert.length, skipped };
     },
     onSuccess: (result) => {
       setImportResult(result);
@@ -717,6 +742,7 @@ function ScheduleImportTab() {
     setParsed([]);
     setParseErrors([]);
     setImportResult(null);
+    setStaffelTeamMap({});
     setStaffelFilter('__all__');
   };
 
@@ -724,19 +750,19 @@ function ScheduleImportTab() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold">Vereinsspielplan importieren</h2>
+          <h2 className="text-lg font-semibold">Gesamtspielplan importieren</h2>
           <p className="text-sm text-muted-foreground">
-            Format: Termin;Wochentag;Staffel;Runde;HalleNr;HeimMannschaft;GastMannschaft
+            Vereinsspielplan hochladen und Staffeln den Mannschaften zuordnen
           </p>
         </div>
       </div>
 
       {/* Steps */}
       <div className="flex gap-2">
-        {(['config', 'preview', 'done'] as const).map((s, i) => {
-          const labels = ['Konfiguration & Datei', 'Vorschau & Import', 'Fertig'];
-          const isActive = step === s || (step === 'importing' && s === 'preview');
-          const isDone = ['config', 'preview', 'done'].indexOf(step) > i;
+        {(['config', 'assign', 'done'] as const).map((s, i) => {
+          const labels = ['Datei & Saisonphase', 'Staffel → Mannschaft zuordnen', 'Fertig'];
+          const isActive = step === s || (step === 'importing' && s === 'assign');
+          const isDone = ['config', 'assign', 'done'].indexOf(step) > i;
           return (
             <Badge key={s} variant={isActive ? 'default' : isDone ? 'secondary' : 'outline'} className="text-xs">
               {i + 1}. {labels[i]}
@@ -748,10 +774,10 @@ function ScheduleImportTab() {
       {step === 'config' && (
         <Card>
           <CardContent className="pt-6 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Saisonphase</Label>
-                <Select value={seasonPhaseId} onValueChange={(v) => { setSeasonPhaseId(v); setTeamId(''); }}>
+                <Select value={seasonPhaseId} onValueChange={setSeasonPhaseId}>
                   <SelectTrigger><SelectValue placeholder="Saisonphase wählen" /></SelectTrigger>
                   <SelectContent>
                     {seasonPhases?.map((sp) => (
@@ -764,18 +790,7 @@ function ScheduleImportTab() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Mannschaft</Label>
-                <Select value={teamId} onValueChange={setTeamId} disabled={!seasonPhaseId}>
-                  <SelectTrigger><SelectValue placeholder={seasonPhaseId ? 'Mannschaft wählen' : 'Erst Saisonphase wählen'} /></SelectTrigger>
-                  <SelectContent>
-                    {teams?.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Vereinsname (für Heim/Auswärts)</Label>
+                <Label>Vereinsname (für Heim/Auswärts-Erkennung)</Label>
                 <Input value={clubName} onChange={(e) => setClubName(e.target.value)} placeholder="z.B. TTC Zaberfeld" />
               </div>
             </div>
@@ -783,14 +798,14 @@ function ScheduleImportTab() {
             <FileDropZone onFile={setFile} accept=".csv" hint="CSV-Datei mit Semikolon-Trennung (Vereinsspielplan)" />
             {file && <p className="text-sm text-muted-foreground">Datei: <strong>{file.name}</strong></p>}
 
-            <Button onClick={parseFile} disabled={!file || !teamId || !seasonPhaseId || !clubName.trim()}>
+            <Button onClick={parseFile} disabled={!file || !seasonPhaseId || !clubName.trim()}>
               Datei analysieren
             </Button>
           </CardContent>
         </Card>
       )}
 
-      {step === 'preview' && (
+      {step === 'assign' && (
         <div className="space-y-4">
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -805,19 +820,19 @@ function ScheduleImportTab() {
             </Card>
             <Card>
               <CardContent className="pt-6 flex items-center gap-3">
-                <CalendarDays className="h-8 w-8 text-primary" />
+                <TableProperties className="h-8 w-8 text-primary" />
                 <div>
-                  <p className="text-2xl font-bold">{parsed.filter((p) => p.isHome).length}</p>
-                  <p className="text-sm text-muted-foreground">Heimspiele</p>
+                  <p className="text-2xl font-bold">{uniqueStaffeln.length}</p>
+                  <p className="text-sm text-muted-foreground">Staffeln</p>
                 </div>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6 flex items-center gap-3">
-                <TableProperties className="h-8 w-8 text-muted-foreground" />
+                <Trophy className="h-8 w-8 text-primary" />
                 <div>
-                  <p className="text-2xl font-bold">{uniqueStaffeln.length}</p>
-                  <p className="text-sm text-muted-foreground">Staffeln</p>
+                  <p className="text-2xl font-bold">{assignedStaffeln.length}/{uniqueStaffeln.length}</p>
+                  <p className="text-sm text-muted-foreground">Zugeordnet</p>
                 </div>
               </CardContent>
             </Card>
@@ -844,80 +859,149 @@ function ScheduleImportTab() {
             </Alert>
           )}
 
-          {/* Staffel filter */}
-          {uniqueStaffeln.length > 1 && (
-            <div className="flex items-center gap-3">
-              <Label className="text-sm">Staffel filtern:</Label>
-              <Select value={staffelFilter} onValueChange={setStaffelFilter}>
-                <SelectTrigger className="w-[300px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">Alle Staffeln ({parsed.length})</SelectItem>
-                  {uniqueStaffeln.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s} ({parsed.filter((p) => p.staffel === s).length})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {/* Preview table */}
+          {/* Staffel → Team Assignment */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Vorschau</CardTitle>
+              <CardTitle className="text-base">Staffel → Mannschaft zuordnen</CardTitle>
               <CardDescription>
-                {filteredParsed.length} Spiele
-                {staffelFilter !== '__all__' ? ` in "${staffelFilter}"` : ''}
+                Ordne jede Staffel der entsprechenden Mannschaft zu. Nicht zugeordnete Staffeln werden übersprungen.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border max-h-[450px] overflow-auto">
+              <div className="rounded-md border">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Datum</TableHead>
-                      <TableHead>Zeit</TableHead>
                       <TableHead>Staffel</TableHead>
-                      <TableHead>Runde</TableHead>
-                      <TableHead>Heim</TableHead>
-                      <TableHead>Gast</TableHead>
-                      <TableHead>H/A</TableHead>
+                      <TableHead className="text-center">Spiele</TableHead>
+                      <TableHead className="text-center">Heim</TableHead>
+                      <TableHead>Mannschaft zuordnen</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredParsed.map((m) => (
-                      <TableRow key={m.rowIndex}>
-                        <TableCell>{fmtDate(m.date)}</TableCell>
-                        <TableCell>{m.time ?? '–'}</TableCell>
-                        <TableCell className="text-xs max-w-[200px] truncate">{m.staffel}</TableCell>
-                        <TableCell>
-                          <Badge variant={m.runde === 'VR' ? 'secondary' : m.runde === 'RR' ? 'default' : 'outline'} className="text-xs">
-                            {m.runde || '–'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className={cn(m.isHome && 'font-semibold text-primary')}>{m.homeTeam}</TableCell>
-                        <TableCell className={cn(!m.isHome && 'font-semibold text-primary')}>{m.awayTeam}</TableCell>
-                        <TableCell>
-                          <Badge variant={m.isHome ? 'default' : 'outline'} className="text-xs">
-                            {m.isHome ? 'Heim' : 'Auswärts'}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {uniqueStaffeln.map((staffel) => {
+                      const staffelMatches = parsed.filter((r) => r.staffel === staffel);
+                      const homeCount = staffelMatches.filter((r) => r.isHome).length;
+                      return (
+                        <TableRow key={staffel}>
+                          <TableCell className="font-medium text-sm">{staffel}</TableCell>
+                          <TableCell className="text-center">{staffelMatches.length}</TableCell>
+                          <TableCell className="text-center">{homeCount}</TableCell>
+                          <TableCell>
+                            <Select
+                              value={staffelTeamMap[staffel] ?? '__none__'}
+                              onValueChange={(v) =>
+                                setStaffelTeamMap((prev) => ({
+                                  ...prev,
+                                  [staffel]: v === '__none__' ? '' : v,
+                                }))
+                              }
+                            >
+                              <SelectTrigger className="w-[250px]">
+                                <SelectValue placeholder="Mannschaft wählen" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">— Nicht importieren —</SelectItem>
+                                {teams?.map((t) => (
+                                  <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
             </CardContent>
           </Card>
 
+          {/* Preview of assigned matches */}
+          {assignedMatchCount > 0 && (
+            <>
+              {/* Staffel filter */}
+              {uniqueStaffeln.length > 1 && (
+                <div className="flex items-center gap-3">
+                  <Label className="text-sm">Vorschau filtern:</Label>
+                  <Select value={staffelFilter} onValueChange={setStaffelFilter}>
+                    <SelectTrigger className="w-[300px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__all__">Alle Staffeln ({parsed.length})</SelectItem>
+                      {uniqueStaffeln.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {s} ({parsed.filter((p) => p.staffel === s).length})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Vorschau</CardTitle>
+                  <CardDescription>
+                    {assignedMatchCount} Spiele werden importiert
+                    {unassignedStaffeln.length > 0 && ` (${parsed.length - assignedMatchCount} übersprungen)`}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-md border max-h-[400px] overflow-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Datum</TableHead>
+                          <TableHead>Zeit</TableHead>
+                          <TableHead>Staffel</TableHead>
+                          <TableHead>Mannschaft</TableHead>
+                          <TableHead>Heim</TableHead>
+                          <TableHead>Gast</TableHead>
+                          <TableHead>H/A</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredParsed.map((m) => {
+                          const tid = staffelTeamMap[m.staffel];
+                          const team = teams?.find((t) => t.id === tid);
+                          const assigned = !!tid;
+                          return (
+                            <TableRow key={m.rowIndex} className={cn(!assigned && 'opacity-40')}>
+                              <TableCell>{fmtDate(m.date)}</TableCell>
+                              <TableCell>{m.time ?? '–'}</TableCell>
+                              <TableCell className="text-xs max-w-[180px] truncate">{m.staffel}</TableCell>
+                              <TableCell>
+                                {assigned ? (
+                                  <Badge variant="secondary" className="text-xs">{team?.name ?? '–'}</Badge>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground italic">nicht zugeordnet</span>
+                                )}
+                              </TableCell>
+                              <TableCell className={cn(m.isHome && 'font-semibold text-primary')}>{m.homeTeam}</TableCell>
+                              <TableCell className={cn(!m.isHome && 'font-semibold text-primary')}>{m.awayTeam}</TableCell>
+                              <TableCell>
+                                <Badge variant={m.isHome ? 'default' : 'outline'} className="text-xs">
+                                  {m.isHome ? 'Heim' : 'Auswärts'}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+
           <div className="flex gap-2">
             <Button variant="outline" onClick={reset}>Zurück</Button>
             <Button
               onClick={() => importMut.mutate()}
-              disabled={parsed.length === 0 || importMut.isPending}
+              disabled={assignedMatchCount === 0 || importMut.isPending}
             >
-              {importMut.isPending ? 'Importiere…' : `${parsed.length} Spiele importieren`}
+              {importMut.isPending ? 'Importiere…' : `${assignedMatchCount} Spiele importieren`}
             </Button>
           </div>
         </div>
@@ -932,13 +1016,6 @@ function ScheduleImportTab() {
               <div className="text-sm text-muted-foreground space-y-1">
                 <p><strong>{importResult.inserted}</strong> Spiele importiert</p>
                 {importResult.skipped > 0 && <p><strong>{importResult.skipped}</strong> Duplikate übersprungen</p>}
-                {importResult.staffelInfo.length > 0 && (
-                  <div className="flex flex-wrap justify-center gap-1 mt-2">
-                    {importResult.staffelInfo.map((s) => (
-                      <Badge key={s} variant="outline" className="text-xs">{s}</Badge>
-                    ))}
-                  </div>
-                )}
               </div>
             )}
             <div className="flex justify-center gap-2">
