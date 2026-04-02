@@ -34,6 +34,9 @@ import {
   Download,
   Copy,
   CheckCircle2,
+  Plus,
+  Pencil,
+  UserPlus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { csvAdapter } from '@/lib/export/csvAdapter';
