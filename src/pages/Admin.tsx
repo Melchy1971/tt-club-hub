@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { TeamEditDialog } from '@/components/admin/TeamEditDialog';
+import { TeamRosterDialog } from '@/components/admin/TeamRosterDialog';
 import { EmptyState } from '@/components/common/EmptyState';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -32,6 +34,9 @@ import {
   Download,
   Copy,
   CheckCircle2,
+  Plus,
+  Pencil,
+  UserPlus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { csvAdapter } from '@/lib/export/csvAdapter';
@@ -171,11 +176,17 @@ function MembersAdminTab() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TAB 2: Mannschaften
+// TAB 2: Mannschaften (CRUD + Spielerzuordnung)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function TeamsAdminTab() {
   const [search, setSearch] = useState('');
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editTeam, setEditTeam] = useState<any | null>(null);
+  const [rosterDialogOpen, setRosterDialogOpen] = useState(false);
+  const [rosterTeam, setRosterTeam] = useState<{ id: string; name: string } | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const { data: teams, isLoading } = useQuery({
     queryKey: ['admin-teams'],
@@ -198,13 +209,83 @@ function TeamsAdminTab() {
     );
   }, [teams, search]);
 
+  const saveMutation = useMutation({
+    mutationFn: async ({ data, id }: { data: any; id?: string }) => {
+      if (id) {
+        const { error } = await supabase.from('teams').update({
+          name: data.name,
+          league: data.league || null,
+          division: data.division || null,
+          age_group: data.age_group,
+          season_id: data.season_id,
+          is_active: data.is_active,
+        }).eq('id', id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('teams').insert({
+          name: data.name,
+          league: data.league || null,
+          division: data.division || null,
+          age_group: data.age_group,
+          season_id: data.season_id,
+          is_active: data.is_active,
+        });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-teams'] });
+      setEditDialogOpen(false);
+      setEditTeam(null);
+      toast.success(editTeam ? 'Mannschaft aktualisiert' : 'Mannschaft angelegt');
+    },
+    onError: () => toast.error('Fehler beim Speichern'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('teams').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-teams'] });
+      toast.success('Mannschaft gelöscht');
+    },
+    onError: () => toast.error('Fehler beim Löschen'),
+  });
+
+  const handleSave = (data: any, id?: string) => {
+    saveMutation.mutate({ data, id });
+  };
+
+  const handleEdit = (team: any) => {
+    setEditTeam(team);
+    setEditDialogOpen(true);
+  };
+
+  const handleCreate = () => {
+    setEditTeam(null);
+    setEditDialogOpen(true);
+  };
+
+  const handleRoster = (team: any) => {
+    setRosterTeam({ id: team.id, name: team.name });
+    setRosterDialogOpen(true);
+  };
+
   if (isLoading) return <LoadingSkeleton />;
 
   return (
     <div className="space-y-4">
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Mannschaft suchen…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Mannschaft suchen…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+        </div>
+        <Button onClick={handleCreate}>
+          <Plus className="mr-2 h-4 w-4" />
+          Neue Mannschaft
+        </Button>
       </div>
 
       {!filtered.length ? (
@@ -219,6 +300,7 @@ function TeamsAdminTab() {
                 <TableHead>Staffel</TableHead>
                 <TableHead>Spieler</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="w-32">Aktionen</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -233,15 +315,66 @@ function TeamsAdminTab() {
                       {t.is_active ? 'Aktiv' : 'Inaktiv'}
                     </Badge>
                   </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <Button size="icon" variant="ghost" onClick={() => handleRoster(t)} title="Kader verwalten">
+                        <UserPlus className="h-4 w-4" />
+                      </Button>
+                      <Button size="icon" variant="ghost" onClick={() => handleEdit(t)} title="Bearbeiten">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button size="icon" variant="ghost" onClick={() => setDeleteConfirmId(t.id)} title="Löschen">
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </div>
       )}
+
+      <TeamEditDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        team={editTeam}
+        onSave={handleSave}
+        saving={saveMutation.isPending}
+      />
+
+      <TeamRosterDialog
+        open={rosterDialogOpen}
+        onOpenChange={setRosterDialogOpen}
+        team={rosterTeam}
+      />
+
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={(o) => { if (!o) setDeleteConfirmId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mannschaft löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Die Mannschaft und alle Spielerzuordnungen werden unwiderruflich gelöscht.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteConfirmId) deleteMutation.mutate(deleteConfirmId);
+                setDeleteConfirmId(null);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TAB 3: Spielplan
