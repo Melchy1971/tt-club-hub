@@ -41,9 +41,9 @@ import {
 type PermLevel = PermissionLevel;
 
 const LEVEL_COLORS: Record<PermLevel, string> = {
-  none: 'bg-muted text-muted-foreground',
-  read: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-  write: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  NONE: 'bg-muted text-muted-foreground',
+  READ: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+  WRITE: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
 };
 
 interface RoleModulePerm {
@@ -121,7 +121,7 @@ export default function Roles() {
     const key = `${role}:${module}`;
     if (editedPerms[key] !== undefined) return editedPerms[key];
     const found = perms.find((p) => p.roleName === role && p.module === module);
-    return found?.level ?? 'none';
+    return found?.level ?? 'NONE';
   };
 
   const hasChanges = Object.keys(editedPerms).length > 0;

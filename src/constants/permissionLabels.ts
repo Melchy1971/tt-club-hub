@@ -1,29 +1,22 @@
 import type { ModuleKey, PermissionLevel } from '@/constants/permissionsMatrix';
-import { getModuleLabel, ROLE_LABELS_DE } from '@/constants/uiLabels';
+import { ROLE_LABELS_DE } from '@/constants/uiLabels';
+import { getPermissionLevelLabelsDe } from '@/lib/auth/permissionsResolver';
 import type { AppRole } from '@/types/auth';
 
 export const APP_ROLE_LABELS: Record<AppRole, string> = ROLE_LABELS_DE;
 
 export const MODULE_LABELS: Record<ModuleKey, string> = {
-  members: getModuleLabel('members'),
-  teams: getModuleLabel('teams'),
-  matches: getModuleLabel('matches'),
-  schedule: getModuleLabel('schedule'),
-  seasons: getModuleLabel('seasons'),
-  training: getModuleLabel('training'),
-  substitutes: getModuleLabel('substitutes'),
-  communication: getModuleLabel('communication'),
-  board: getModuleLabel('board'),
-  settings: getModuleLabel('settings'),
-  import: getModuleLabel('import'),
-  admin: getModuleLabel('admin'),
+  dashboard: 'Übersicht',
+  teams: 'Mannschaften',
+  schedule: 'Spielplan',
+  members: 'Mitglieder',
+  communication: 'Kommunikation',
+  board: 'Vorstand',
+  settings: 'Einstellungen',
+  import: 'Import',
 };
 
-export const PERMISSION_LEVEL_LABELS: Record<PermissionLevel, string> = {
-  none: 'Keine',
-  read: 'Lesen',
-  write: 'Schreiben',
-};
+export const PERMISSION_LEVEL_LABELS: Record<PermissionLevel, string> = getPermissionLevelLabelsDe;
 
 const FALLBACK_MODULE_LABEL = 'Unbekanntes Modul';
 
