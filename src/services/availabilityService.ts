@@ -115,15 +115,14 @@ export const availabilityService = {
     await validateMembersForMatch(parsed.match_id, parsed.team_id, [parsed.member_id]);
 
     const { data, error } = await supabase
-      .from('match_player_availability' as never)
+      .from('match_availability')
       .upsert(
         {
           match_id: parsed.match_id,
           member_id: parsed.member_id,
-          team_id: parsed.team_id,
           status: parsed.status,
           note: parsed.note ?? null,
-        },
+        } as any,
         { onConflict: 'match_id,member_id' },
       )
       .select('*')
