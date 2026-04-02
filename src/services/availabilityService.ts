@@ -102,7 +102,7 @@ export const availabilityService = {
 
   async getForMatch(matchId: string): Promise<MatchPlayerAvailability[]> {
     const { data, error } = await supabase
-      .from('match_player_availability' as never)
+      .from('match_availability')
       .select('*')
       .eq('match_id', matchId)
       .order('updated_at', { ascending: false });
