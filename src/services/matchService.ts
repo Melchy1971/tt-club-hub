@@ -1,72 +1,62 @@
-import { supabase } from '@/integrations/supabase/client';
-import type { ScheduleMatch, ScheduleMatchInsert, ScheduleMatchUpdate } from '@/types';
+import { scheduleService, type ScheduleMatchUI } from '@/services/scheduleService';
+import type {
+  MatchRescheduleInput,
+  MatchResultUpdateInput,
+  PinCodeUpdateInput,
+  ScheduleMatchCreateInput,
+  ScheduleMatchFilterInput,
+  ScheduleMatchUpdateInput,
+} from '@/schemas/schedule.schema';
+import type { ApiResult } from '@/types/api';
 
+/**
+ * Match-Domain Facade auf Basis von `schedule_matches`.
+ * Hält die ältere API (`matchService`) kompatibel und delegiert an `scheduleService`.
+ */
 export const matchService = {
-  async getAll(): Promise<ScheduleMatch[]> {
-    const { data, error } = await supabase
-      .from('schedule_matches')
-      .select('*')
-      .order('match_date', { ascending: true });
-    if (error) throw error;
-    return data ?? [];
+  async list(filter: ScheduleMatchFilterInput = {}): Promise<ApiResult<ScheduleMatchUI[]>> {
+    return scheduleService.list(filter);
   },
 
-  async getByTeam(teamId: string): Promise<ScheduleMatch[]> {
-    const { data, error } = await supabase
-      .from('schedule_matches')
-      .select('*')
-      .eq('team_id', teamId)
-      .order('match_date', { ascending: true });
-    if (error) throw error;
-    return data ?? [];
+  async getById(id: string): Promise<ApiResult<ScheduleMatchUI>> {
+    return scheduleService.getById(id);
   },
 
-  async getBySeason(seasonId: string): Promise<ScheduleMatch[]> {
-    const { data, error } = await supabase
-      .from('schedule_matches')
-      .select('*')
-      .eq('season_id', seasonId)
-      .order('match_date', { ascending: true });
-    if (error) throw error;
-    return data ?? [];
+  async getByTeam(teamId: string): Promise<ApiResult<ScheduleMatchUI[]>> {
+    return scheduleService.list({ team_id: teamId });
   },
 
-  async getById(id: string): Promise<ScheduleMatch | null> {
-    const { data, error } = await supabase
-      .from('schedule_matches')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle();
-    if (error) throw error;
-    return data;
+  async getBySeasonPhase(seasonPhaseId: string): Promise<ApiResult<ScheduleMatchUI[]>> {
+    return scheduleService.listBySeasonPhase(seasonPhaseId);
   },
 
-  async create(match: ScheduleMatchInsert): Promise<ScheduleMatch> {
-    const { data, error } = await supabase
-      .from('schedule_matches')
-      .insert(match)
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
+  async create(match: ScheduleMatchCreateInput): Promise<ApiResult<ScheduleMatchUI>> {
+    return scheduleService.create(match);
   },
 
-  async update(id: string, updates: ScheduleMatchUpdate): Promise<ScheduleMatch> {
-    const { data, error } = await supabase
-      .from('schedule_matches')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
+  async update(id: string, updates: ScheduleMatchUpdateInput): Promise<ApiResult<ScheduleMatchUI>> {
+    return scheduleService.update(id, updates);
   },
 
-  async delete(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('schedule_matches')
-      .delete()
-      .eq('id', id);
-    if (error) throw error;
+  async updateResult(id: string, input: MatchResultUpdateInput): Promise<ApiResult<ScheduleMatchUI>> {
+    return scheduleService.updateResult(id, input);
+  },
+
+  async reschedule(id: string, input: MatchRescheduleInput): Promise<ApiResult<ScheduleMatchUI>> {
+    return scheduleService.reschedule(id, input);
+  },
+
+  async updatePinCode(id: string, input: PinCodeUpdateInput): Promise<ApiResult<ScheduleMatchUI>> {
+    return scheduleService.updatePinCode(id, input);
+  },
+
+  async bulkUpdatePinCode(
+    input: Array<{ id: string; pin?: string | null; code?: string | null }>,
+  ): ReturnType<typeof scheduleService.bulkUpdatePinCode> {
+    return scheduleService.bulkUpdatePinCode(input);
+  },
+
+  async remove(id: string): Promise<ApiResult<void>> {
+    return scheduleService.remove(id);
   },
 };

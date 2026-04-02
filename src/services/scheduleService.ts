@@ -12,6 +12,8 @@ import {
   clickTTRowSchema,
   vereinsspielplanRowSchema,
   matchResultUpdateSchema,
+  matchRescheduleSchema,
+  pinCodeUpdateSchema,
   type ScheduleMatchCreateInput,
   type ScheduleMatchUpdateInput,
   type ScheduleMatchFilterInput,
@@ -19,6 +21,8 @@ import {
   type ClickTTRow,
   type VereinsspielplanRow,
   type MatchResultUpdateInput,
+  type MatchRescheduleInput,
+  type PinCodeUpdateInput,
 } from '@/schemas/schedule.schema';
 
 const resolveSeasonCycleIdByPhaseId = async (seasonPhaseId: string): Promise<string> => {
@@ -63,6 +67,8 @@ export interface ScheduleMatchUI {
   isToday: boolean;
   /** Eigene Mannschaft hat gewonnen */
   hasWon: boolean | null;
+  /** Datenqualitäts-/Edge-Case-Hinweise für UI/Workflow */
+  dataIssues: Array<'missing_venue' | 'incomplete_score' | 'postponed_match'>;
 }
 
 // ─── Mapping ───────────────────────────────────────────────────────────────────
@@ -77,6 +83,16 @@ function toUI(row: ScheduleMatch): ScheduleMatchUI {
     hasWon = row.is_home
       ? row.home_score > row.away_score
       : row.away_score > row.home_score;
+  }
+  const dataIssues: ScheduleMatchUI['dataIssues'] = [];
+  if (row.is_home && !row.venue_id && (row.status === 'geplant' || row.status === 'laufend')) {
+    dataIssues.push('missing_venue');
+  }
+  if ((row.home_score == null) !== (row.away_score == null)) {
+    dataIssues.push('incomplete_score');
+  }
+  if (row.status === 'verschoben') {
+    dataIssues.push('postponed_match');
   }
 
   return {
@@ -103,6 +119,7 @@ function toUI(row: ScheduleMatch): ScheduleMatchUI {
     isPast,
     isToday,
     hasWon,
+    dataIssues,
   };
 }
 
@@ -120,7 +137,9 @@ export function sortMatches(matches: ScheduleMatchUI[]): ScheduleMatchUI[] {
     if (dayCmp !== 0) return dayCmp;
     const ta = a.matchTime ?? '99:99';
     const tb = b.matchTime ?? '99:99';
-    return ta.localeCompare(tb);
+    const timeCmp = ta.localeCompare(tb);
+    if (timeCmp !== 0) return timeCmp;
+    return a.createdAt.localeCompare(b.createdAt);
   });
 }
 
@@ -138,7 +157,19 @@ export function parseGermanDate(raw: string): string | null {
   const m = trimmed.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
   if (!m) return null;
   const [, d, mo, y] = m;
-  return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  const day = d.padStart(2, '0');
+  const month = mo.padStart(2, '0');
+  const iso = `${y}-${month}-${day}`;
+  const dateObj = new Date(`${iso}T00:00:00Z`);
+  if (
+    Number.isNaN(dateObj.getTime())
+    || dateObj.getUTCFullYear().toString() !== y
+    || `${dateObj.getUTCMonth() + 1}`.padStart(2, '0') !== month
+    || `${dateObj.getUTCDate()}`.padStart(2, '0') !== day
+  ) {
+    return null;
+  }
+  return iso;
 }
 
 /**
@@ -150,6 +181,9 @@ export function parseTime(raw: string): string | null {
   if (!trimmed) return null;
   const m = trimmed.match(/^(\d{1,2}):(\d{2})/);
   if (!m) return null;
+  const hour = Number(m[1]);
+  const minute = Number(m[2]);
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
   return `${m[1].padStart(2, '0')}:${m[2]}`;
 }
 
@@ -164,7 +198,14 @@ export function parseTime(raw: string): string | null {
  * 3. Fallback: false (Auswärts)
  */
 export function deriveIsHome(homeTeam: string, clubTeamName: string): boolean {
-  const normalize = (s: string) => s.toLowerCase().trim().replace(/\s+/g, ' ');
+  const normalize = (s: string) =>
+    s
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
+      .trim()
+      .replace(/\s+/g, ' ');
   const h = normalize(homeTeam);
   const c = normalize(clubTeamName);
   return h === c || h.includes(c) || c.includes(h);
@@ -183,7 +224,10 @@ export function parseScore(
   if (!trimmed || trimmed === '-' || trimmed === ':') return null;
   const m = trimmed.match(/^(\d+):(\d+)$/);
   if (!m) return null;
-  return { homeScore: parseInt(m[1], 10), awayScore: parseInt(m[2], 10) };
+  const homeScore = parseInt(m[1], 10);
+  const awayScore = parseInt(m[2], 10);
+  if (homeScore > 9 || awayScore > 9) return null;
+  return { homeScore, awayScore };
 }
 
 // ─── Vereinsspielplan-Normalisierung ────────────────────────────────────────────
@@ -446,6 +490,10 @@ export const scheduleService = {
     }, fromSupabaseError);
   },
 
+  async listBySeasonPhase(seasonPhaseId: string): Promise<ApiResult<ScheduleMatchUI[]>> {
+    return this.list({ season_phase_id: seasonPhaseId });
+  },
+
   async getUpcoming(teamId: string, limit = 5): Promise<ApiResult<ScheduleMatchUI[]>> {
     return tryCatch(async () => {
       const { data, error } = await supabase
@@ -589,6 +637,31 @@ export const scheduleService = {
     }, fromSupabaseError);
   },
 
+  /** Spiel verschieben: neues Datum/Zeit setzen und Status standardmäßig auf "verschoben". */
+  async reschedule(id: string, payload: MatchRescheduleInput): Promise<ApiResult<ScheduleMatchUI>> {
+    const parsed = matchRescheduleSchema.safeParse(payload);
+    if (!parsed.success) {
+      return err(errors.validation(parsed.error.message, parsed.error.issues));
+    }
+    return tryCatch(async () => {
+      const patch = {
+        match_date: parsed.data.match_date,
+        match_time: parsed.data.match_time ?? null,
+        venue_id: parsed.data.venue_id ?? null,
+        ...(parsed.data.keep_status ? {} : { status: 'verschoben' as const }),
+        ...(parsed.data.report_text !== undefined ? { report_text: parsed.data.report_text } : {}),
+      };
+      const { data, error } = await supabase
+        .from('schedule_matches')
+        .update(patch)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return toUI(data);
+    }, fromSupabaseError);
+  },
+
   async remove(id: string): Promise<ApiResult<void>> {
     return tryCatch(async () => {
       const { error } = await supabase.from('schedule_matches').delete().eq('id', id);
@@ -597,6 +670,26 @@ export const scheduleService = {
   },
 
   // --- Bulk pin/code ---
+
+  async updatePinCode(id: string, input: PinCodeUpdateInput): Promise<ApiResult<ScheduleMatchUI>> {
+    const parsed = pinCodeUpdateSchema.safeParse(input);
+    if (!parsed.success) {
+      return err(errors.validation(parsed.error.message, parsed.error.issues));
+    }
+    return tryCatch(async () => {
+      const patch: Record<string, string | null> = {};
+      if (parsed.data.pin !== undefined) patch.pin = parsed.data.pin ?? null;
+      if (parsed.data.code !== undefined) patch.code = parsed.data.code ?? null;
+      const { data, error } = await supabase
+        .from('schedule_matches')
+        .update(patch)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return toUI(data);
+    }, fromSupabaseError);
+  },
 
   async bulkUpdatePinCode(
     input: BulkPinCodeInput,
