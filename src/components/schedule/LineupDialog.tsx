@@ -49,7 +49,7 @@ export function LineupDialog({ match, teamId, open, onOpenChange }: Props) {
     queryKey: ['match-availability', match.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('match_player_availability' as never)
+        .from('match_availability')
         .select('*')
         .eq('match_id', match.id);
       if (error) throw error;
