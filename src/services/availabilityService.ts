@@ -150,8 +150,8 @@ export const availabilityService = {
     }));
 
     const { data, error } = await supabase
-      .from('match_player_availability' as never)
-      .upsert(payload, { onConflict: 'match_id,member_id' })
+      .from('match_availability')
+      .upsert(payload as any, { onConflict: 'match_id,member_id' })
       .select('*');
     if (error) throw error;
     return (data ?? []) as MatchPlayerAvailability[];

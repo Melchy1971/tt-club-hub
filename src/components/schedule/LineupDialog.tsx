@@ -114,7 +114,7 @@ export function LineupDialog({ match, teamId, open, onOpenChange }: Props) {
         };
       }).sort((a, b) => a.position - b.position);
 
-      const { error } = await supabase.from('match_lineups' as never).insert(entries);
+      const { error } = await supabase.from('match_lineup').insert(entries as any);
       if (error) throw error;
     },
     onSuccess: () => {

@@ -126,7 +126,7 @@ export const lineupService = {
     if (parsed.entries.length === 0) return [];
 
     const { data, error } = await supabase
-      .from('match_lineups' as never)
+      .from('match_lineup')
       .insert(
         parsed.entries.map((e) => ({
           match_id: matchId,
