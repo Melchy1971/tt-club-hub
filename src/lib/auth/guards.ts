@@ -71,6 +71,6 @@ export const assertAuthorized = (
       (error as Error & { code?: string }).code = result.reason;
       throw error;
     }
-    throw toAuthError(result.reason);
+    throw toAuthError(result.reason as import('@/types/auth').AuthProblem);
   }
 };

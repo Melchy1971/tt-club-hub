@@ -89,7 +89,7 @@ export const meetingDocumentService = {
 
   async listForActor(role: BoardActorRole, meetingId: string, filter: BoardDocumentFilter = {}): Promise<ApiResult<MeetingDocumentUI[]>> {
     const auth = guard(role, 'read');
-    if (!auth.ok) return auth;
+    if (!auth.success) return auth as ApiResult<MeetingDocumentUI[]>;
     return meetingDocumentService.list(meetingId, { ...filter, visibility: 'internal' });
   },
 
@@ -150,7 +150,7 @@ export const meetingDocumentService = {
     payload: MeetingDocumentUploadDTO,
   ): Promise<ApiResult<MeetingDocumentUI>> {
     const auth = guard(role, 'write');
-    if (!auth.ok) return auth;
+    if (!auth.success) return auth as ApiResult<MeetingDocumentUI>;
     return meetingDocumentService.upload(meetingId, file, payload);
   },
 
@@ -165,7 +165,7 @@ export const meetingDocumentService = {
 
   async removeForActor(role: BoardActorRole, id: string): Promise<ApiResult<void>> {
     const auth = guard(role, 'delete');
-    if (!auth.ok) return auth;
+    if (!auth.success) return auth;
     return meetingDocumentService.remove(id);
   },
 

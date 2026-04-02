@@ -111,7 +111,7 @@ export const boardMeetingService = {
 
   async listForActor(role: BoardActorRole, filter: BoardMeetingFilter = {}): Promise<ApiResult<BoardMeetingUI[]>> {
     const auth = guard(role, 'read');
-    if (!auth.ok) return auth;
+    if (!auth.success) return auth as ApiResult<BoardMeetingUI[]>;
     return boardMeetingService.list({ ...filter, visibility: 'internal' });
   },
 
@@ -147,7 +147,7 @@ export const boardMeetingService = {
 
   async createForActor(role: BoardActorRole, payload: BoardMeetingCreateDTO): Promise<ApiResult<BoardMeetingUI>> {
     const auth = guard(role, 'write');
-    if (!auth.ok) return auth;
+    if (!auth.success) return auth as ApiResult<BoardMeetingUI>;
     return boardMeetingService.create(payload);
   },
 
@@ -166,7 +166,7 @@ export const boardMeetingService = {
 
   async updateForActor(role: BoardActorRole, id: string, payload: BoardMeetingUpdateDTO): Promise<ApiResult<BoardMeetingUI>> {
     const auth = guard(role, 'write');
-    if (!auth.ok) return auth;
+    if (!auth.success) return auth as ApiResult<BoardMeetingUI>;
     return boardMeetingService.update(id, payload);
   },
 
@@ -178,7 +178,7 @@ export const boardMeetingService = {
 
   async removeForActor(role: BoardActorRole, id: string): Promise<ApiResult<void>> {
     const auth = guard(role, 'delete');
-    if (!auth.ok) return auth;
+    if (!auth.success) return auth;
     return boardMeetingService.remove(id);
   },
 };

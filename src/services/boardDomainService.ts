@@ -22,7 +22,7 @@ export const boardDomainService = {
   async listNews(role: BoardActorRole, filter: BoardNewsFilter = {}) {
     const visibility = filter.visibility === 'public' ? 'public' : 'internal';
     const auth = boardAccessPolicy.authorize(role, { channel: 'news', visibility }, 'read');
-    if (!auth.ok) return auth;
+    if (!auth.success) return auth;
     return newsService.list({
       audience: visibility,
       status: filter.status,
@@ -42,16 +42,16 @@ export const boardDomainService = {
 
   async listDocuments(role: BoardActorRole, visibility: 'public' | 'internal') {
     const auth = boardAccessPolicy.authorize(role, { channel: 'documents', visibility }, 'read');
-    if (!auth.ok) return auth;
+    if (!auth.success) return auth;
     return documentService.list({ audience: visibility });
   },
 
   async listDistributionLists(role: BoardActorRole, visibility: 'public' | 'internal'): Promise<ApiResult<BoardDistributionList[]>> {
     const auth = boardAccessPolicy.authorize(role, { channel: 'lists', visibility }, 'read');
-    if (!auth.ok) return auth;
+    if (!auth.success) return auth as ApiResult<BoardDistributionList[]>;
 
     const res = await communicationListService.listWithCounts();
-    if (!res.ok) return err(res.error);
+    if (!res.success) return err(res.error);
 
     const mapped: BoardDistributionList[] = res.data
       .filter((list) => list.audience === visibility)
@@ -67,7 +67,7 @@ export const boardDomainService = {
 
   buildEmailDraft(role: BoardActorRole, input: BoardEmailDraft): ApiResult<BoardEmailDraft> {
     const auth = boardAccessPolicy.authorize(role, { channel: 'email', visibility: input.visibility }, 'write');
-    if (!auth.ok) return auth;
+    if (!auth.success) return auth as ApiResult<BoardEmailDraft>;
     return ok(input);
   },
 };

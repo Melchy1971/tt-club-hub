@@ -1,5 +1,5 @@
 import { hasPermission } from '@/lib/permissions';
-import type { Permission } from '@/types/auth';
+import type { AppRole, Permission } from '@/types/auth';
 import type { SettingsAccessContext, SettingsSubpageDef } from './types';
 
 export function canAccessSettingsPage(
@@ -7,7 +7,7 @@ export function canAccessSettingsPage(
   ctx: SettingsAccessContext,
 ): boolean {
   if (!page.requiredPermission) return true;
-  return hasPermission(ctx.role, page.requiredPermission);
+  return hasPermission(ctx.role as AppRole | null | undefined, page.requiredPermission);
 }
 
 export function canWriteSettingsPage(
@@ -16,5 +16,5 @@ export function canWriteSettingsPage(
 ): boolean {
   const required = (page.writePermission ?? page.requiredPermission) as Permission | undefined;
   if (!required) return true;
-  return hasPermission(ctx.role, required);
+  return hasPermission(ctx.role as AppRole | null | undefined, required);
 }
