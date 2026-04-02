@@ -524,7 +524,6 @@ function ScheduleImportTab() {
       const { data } = await supabase
         .from('season_phases')
         .select('id, name, phase_type, is_active, start_date, season_cycles!inner(id, name, age_group, is_active)')
-        .eq('season_cycles.is_active', true)
         .order('start_date', { ascending: false });
       return (data ?? []) as Array<{
         id: string;
