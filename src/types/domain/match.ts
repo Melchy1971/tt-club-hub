@@ -46,7 +46,7 @@ export interface SingleMatch {
   home_player?: Member;
 }
 
-export type MatchAvailabilityStatus = 'unknown' | 'available' | 'unavailable' | 'uncertain';
+export type MatchAvailabilityStatus = 'unknown' | 'available' | 'unavailable';
 
 export interface MatchAvailabilityEntry {
   readonly id: string;

@@ -6,11 +6,11 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, X, HelpCircle, Minus } from 'lucide-react';
+import { Check, X, Minus } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ScheduleMatch, Member } from '@/types';
 
-type AvailabilityStatus = 'available' | 'unavailable' | 'maybe' | 'unknown';
+type AvailabilityStatus = 'available' | 'unavailable' | 'unknown';
 
 interface Props {
   match: ScheduleMatch;
@@ -22,11 +22,10 @@ interface Props {
 const STATUS_CONFIG: Record<AvailabilityStatus, { label: string; icon: React.ReactNode; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   available: { label: 'Verfügbar', icon: <Check className="h-3.5 w-3.5" />, variant: 'default' },
   unavailable: { label: 'Nicht verfügbar', icon: <X className="h-3.5 w-3.5" />, variant: 'destructive' },
-  maybe: { label: 'Unsicher', icon: <HelpCircle className="h-3.5 w-3.5" />, variant: 'secondary' },
-  unknown: { label: 'Unbekannt', icon: <Minus className="h-3.5 w-3.5" />, variant: 'outline' },
+    unknown: { label: 'Unbekannt', icon: <Minus className="h-3.5 w-3.5" />, variant: 'outline' },
 };
 
-const CYCLE: AvailabilityStatus[] = ['unknown', 'available', 'maybe', 'unavailable'];
+const CYCLE: AvailabilityStatus[] = ['unknown', 'available', 'unavailable'];
 
 export function AvailabilityDialog({ match, teamId, open, onOpenChange }: Props) {
   const queryClient = useQueryClient();
@@ -52,7 +51,7 @@ export function AvailabilityDialog({ match, teamId, open, onOpenChange }: Props)
     queryKey: ['match-availability', match.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('match_availability')
+        .from('match_player_availability' as never)
         .select('*')
         .eq('match_id', match.id);
       if (error) throw error;
@@ -77,9 +76,9 @@ export function AvailabilityDialog({ match, teamId, open, onOpenChange }: Props)
       for (const tm of teamMembers) {
         const status = statuses[tm.member_id] ?? 'unknown';
         const { error } = await supabase
-          .from('match_availability')
+          .from('match_player_availability' as never)
           .upsert(
-            { match_id: match.id, member_id: tm.member_id, status },
+            { match_id: match.id, member_id: tm.member_id, team_id: teamId, status },
             { onConflict: 'match_id,member_id' }
           );
         if (error) throw error;

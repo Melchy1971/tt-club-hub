@@ -6,17 +6,16 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, X, HelpCircle, UserPlus, UserMinus } from 'lucide-react';
+import { Check, X, UserPlus, UserMinus } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ScheduleMatch, Member } from '@/types';
 
-type AvailabilityStatus = 'available' | 'unavailable' | 'maybe' | 'unknown';
+type AvailabilityStatus = 'available' | 'unavailable' | 'unknown';
 
 const AVAIL_ICON: Record<AvailabilityStatus, React.ReactNode> = {
   available: <Check className="h-3 w-3 text-green-600" />,
   unavailable: <X className="h-3 w-3 text-destructive" />,
-  maybe: <HelpCircle className="h-3 w-3 text-yellow-600" />,
-  unknown: null,
+    unknown: null,
 };
 
 interface Props {
@@ -50,7 +49,7 @@ export function LineupDialog({ match, teamId, open, onOpenChange }: Props) {
     queryKey: ['match-availability', match.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('match_availability')
+        .from('match_player_availability' as never)
         .select('*')
         .eq('match_id', match.id);
       if (error) throw error;
@@ -64,7 +63,7 @@ export function LineupDialog({ match, teamId, open, onOpenChange }: Props) {
     queryKey: ['match-lineup', match.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('match_lineup')
+        .from('match_lineups' as never)
         .select('*')
         .eq('match_id', match.id);
       if (error) throw error;
@@ -98,7 +97,7 @@ export function LineupDialog({ match, teamId, open, onOpenChange }: Props) {
     mutationFn: async () => {
       // Delete old lineup
       const { error: delErr } = await supabase
-        .from('match_lineup')
+        .from('match_lineups' as never)
         .delete()
         .eq('match_id', match.id);
       if (delErr) throw delErr;
@@ -115,7 +114,7 @@ export function LineupDialog({ match, teamId, open, onOpenChange }: Props) {
         };
       }).sort((a, b) => a.position - b.position);
 
-      const { error } = await supabase.from('match_lineup').insert(entries);
+      const { error } = await supabase.from('match_lineups' as never).insert(entries);
       if (error) throw error;
     },
     onSuccess: () => {

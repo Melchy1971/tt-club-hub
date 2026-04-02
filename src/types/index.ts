@@ -32,10 +32,32 @@ export type ScheduleMatchUpdate = TablesUpdate<'schedule_matches'>;
 export type Venue = Tables<'venues'>;
 export type VenueInsert = TablesInsert<'venues'>;
 
-export type MatchAvailability = Tables<'match_availability'>;
-export type MatchAvailabilityInsert = TablesInsert<'match_availability'>;
-export type MatchLineup = Tables<'match_lineup'>;
-export type MatchLineupInsert = TablesInsert<'match_lineup'>;
+export interface MatchAvailability {
+  id: string;
+  match_id: string;
+  member_id: string;
+  team_id: string;
+  status: 'unknown' | 'available' | 'unavailable';
+  note: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type MatchAvailabilityInsert = Omit<MatchAvailability, 'id' | 'created_at' | 'updated_at'>;
+
+export interface MatchLineup {
+  id: string;
+  match_id: string;
+  team_id: string;
+  member_id: string;
+  position: number;
+  is_substitute: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type MatchLineupInsert = Omit<MatchLineup, 'id' | 'created_at' | 'updated_at'>;
 
 export type Role = Tables<'roles'>;
 export type UserRole = Tables<'user_roles'>;
