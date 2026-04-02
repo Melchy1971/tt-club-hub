@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 // ─── Availability-Status ──────────────────────────────────────────────────────
 
-export const AVAILABILITY_STATUS = ['unknown', 'available', 'unavailable', 'uncertain'] as const;
+export const AVAILABILITY_STATUS = ['unknown', 'available', 'unavailable'] as const;
 export type AvailabilityStatusValue = (typeof AVAILABILITY_STATUS)[number];
 
 export const availabilityStatusSchema = z.enum(AVAILABILITY_STATUS);
