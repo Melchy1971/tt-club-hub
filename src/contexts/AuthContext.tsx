@@ -10,16 +10,18 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import type { Session, User } from '@supabase/supabase-js';
 import type { AuthContextValue } from '@/types/auth';
-import { resolveSessionState } from '@/lib/auth/resolver';
+import { resolveAuthUser, resolveSessionState } from '@/lib/auth/resolver';
 
 const initialContext: AuthContextValue = {
   user: null,
   session: null,
   role: null,
+  roles: [],
   member: null,
   isLoading: true,
   isAuthenticated: false,
   problem: null,
+  problems: [],
   refresh: async () => {},
   signOut: async () => {},
 };
@@ -44,9 +46,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: null,
         session: null,
         role: null,
+        roles: [],
         member: null,
         isAuthenticated: false,
         problem: 'NO_SESSION',
+        problems: ['NO_SESSION'],
         isLoading: false,
       }));
       return;
@@ -71,17 +75,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setState((prev) => ({
       ...prev,
-      user: {
-        id: supaUser.id,
-        email: resolved.email,
-        name: resolved.name,
-        role: resolved.primaryRole,
-      },
+      user: resolveAuthUser(supaUser, resolved.primaryRole),
       session,
       role: resolved.primaryRole,
+      roles: resolved.roles,
       member: resolved.member,
       isAuthenticated: resolved.isAuthenticated,
       problem: resolved.problems[0] ?? null,
+      problems: resolved.problems,
       isLoading: false,
     }));
   }, []);

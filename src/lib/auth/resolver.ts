@@ -1,5 +1,5 @@
 import type { Session, User } from '@supabase/supabase-js';
-import type { AppRole, AuthProblem, AuthSessionState } from '@/types/auth';
+import type { AppRole, AuthProblem, AuthSessionState, AuthUser } from '@/types/auth';
 import { APP_ROLES } from '@/types/auth';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -39,6 +39,13 @@ export const resolvePrimaryRole = (roles: readonly AppRole[]): AppRole | null =>
 const resolveDisplayName = (user: User): string | null =>
   user.user_metadata?.full_name ??
   ([user.user_metadata?.first_name, user.user_metadata?.last_name].filter(Boolean).join(' ') || null);
+
+export const resolveAuthUser = (user: User, primaryRole: AppRole | null): AuthUser => ({
+  id: user.id,
+  email: user.email ?? null,
+  name: resolveDisplayName(user),
+  role: primaryRole,
+});
 
 export const resolveSessionState = ({
   session,
