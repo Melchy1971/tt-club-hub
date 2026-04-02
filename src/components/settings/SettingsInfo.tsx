@@ -1,13 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
-import { profileInfoService } from '@/services/profileInfoService';
+import { useAuth } from '@/contexts/AuthContext';
+import { infoService } from '@/services/infoService';
+import { resolveInfoAccess } from '@/services/infoAccessPolicy';
 import { profileInfoKeys } from '@/lib/queryKeys';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Building2, Code2, Mail, Globe, Cpu } from 'lucide-react';
+import { Building2, Code2, Mail, Globe, Cpu, Wrench, KeyRound } from 'lucide-react';
 
-const APP_VERSION = '1.0.0';
-const BUILD_DATE = '2026-04-01';
 const TECH_STACK = [
   { name: 'React', version: '18' },
   { name: 'TypeScript', version: '5' },
@@ -18,21 +18,31 @@ const TECH_STACK = [
 ];
 
 export default function SettingsInfo() {
+  const { role } = useAuth();
+  const access = resolveInfoAccess(role);
+
   const { data: club } = useQuery({
     queryKey: profileInfoKeys.publicClubInfo(),
-    queryFn: () => profileInfoService.getPublicClubInfo(),
+    queryFn: () => infoService.getPublicClubInfo(),
   });
+
+  const { data: developerInfo } = useQuery({
+    queryKey: profileInfoKeys.developerInfo(),
+    queryFn: () => infoService.getDeveloperInfo(),
+    enabled: access.canReadDeveloperArea,
+  });
+
+  const toolMetadata = developerInfo?.toolMetadata;
 
   return (
     <div className="space-y-6">
-      {/* Club Info */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
             <Building2 className="h-5 w-5 text-primary" />
             <div>
-              <CardTitle>Vereinsinformationen</CardTitle>
-              <CardDescription>Daten aus den Vereinseinstellungen</CardDescription>
+              <CardTitle>Vereinsinformationen (öffentlich)</CardTitle>
+              <CardDescription>Getrenntes Lesemodell für öffentliche Club-Daten</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -63,7 +73,6 @@ export default function SettingsInfo() {
         </CardContent>
       </Card>
 
-      {/* App Info */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
@@ -76,8 +85,8 @@ export default function SettingsInfo() {
         </CardHeader>
         <CardContent className="space-y-4">
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
-            <InfoRow label="Version" value={APP_VERSION} />
-            <InfoRow label="Build-Datum" value={BUILD_DATE} />
+            <InfoRow label="Version" value={toolMetadata?.version ?? '–'} />
+            <InfoRow label="Build-Datum" value={toolMetadata?.buildDate ?? '–'} />
           </dl>
 
           <Separator />
@@ -101,12 +110,54 @@ export default function SettingsInfo() {
           <div className="flex items-center gap-2 text-sm">
             <Mail className="h-4 w-4 text-muted-foreground" />
             <span className="text-muted-foreground">Support:</span>
-            <a href="mailto:support@ttv-pro.de" className="text-primary hover:underline">
-              support@ttv-pro.de
-            </a>
+            {toolMetadata?.supportEmail ? (
+              <a href={`mailto:${toolMetadata.supportEmail}`} className="text-primary hover:underline">
+                {toolMetadata.supportEmail}
+              </a>
+            ) : (
+              <span>–</span>
+            )}
           </div>
         </CardContent>
       </Card>
+
+      {access.canReadDeveloperArea && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Wrench className="h-5 w-5 text-primary" />
+              <div>
+                <CardTitle>Entwicklerbereich</CardTitle>
+                <CardDescription>Interne Daten und Lizenzmodell (nur Rolle developer)</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <h4 className="text-sm font-medium mb-2">Interne Datenbasis</h4>
+              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                <InfoRow label="Club-Settings-ID" value={developerInfo?.internalClubInfo?.id} />
+                <InfoRow label="Letzte Änderung" value={developerInfo?.internalClubInfo?.updatedAt} />
+              </dl>
+            </div>
+
+            <Separator />
+
+            <div>
+              <h4 className="text-sm font-medium mb-2 flex items-center gap-1.5">
+                <KeyRound className="h-4 w-4 text-muted-foreground" />
+                Lizenz
+              </h4>
+              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                <InfoRow label="Serial Key" value={developerInfo?.license?.serialKey} />
+                <InfoRow label="Status" value={developerInfo?.license?.status} />
+                <InfoRow label="Aktiviert am" value={developerInfo?.license?.activatedAt} />
+                <InfoRow label="Gültig bis" value={developerInfo?.license?.validUntil} />
+              </dl>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

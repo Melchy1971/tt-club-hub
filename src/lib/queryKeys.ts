@@ -166,6 +166,10 @@ export const profileInfoKeys = {
   all: ['profile-info'] as const,
   memberViewModel: (userId: string) => [...profileInfoKeys.all, 'member-view-model', userId] as const,
   publicClubInfo: () => [...profileInfoKeys.all, 'public-club-info'] as const,
+  internalClubInfo: () => [...profileInfoKeys.all, 'internal-club-info'] as const,
+  toolMetadata: () => [...profileInfoKeys.all, 'tool-metadata'] as const,
+  license: () => [...profileInfoKeys.all, 'license'] as const,
+  developerInfo: () => [...profileInfoKeys.all, 'developer-info'] as const,
 };
 
 // ── Club Settings ─────────────────────────────────────────────
