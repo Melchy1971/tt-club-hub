@@ -688,7 +688,7 @@ export default function SettingsProfile() {
         </TabsContent>
 
         <TabsContent value="teams">
-          <TabTeams profileVM={profileVM} />
+          <TabTeams profileVM={profileVM} memberId={member?.id} />
         </TabsContent>
       </Tabs>
 
