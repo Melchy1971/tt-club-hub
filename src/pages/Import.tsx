@@ -1453,7 +1453,19 @@ function TeamImportTab() {
   // Build preview rows
   const previewRows = useMemo(() => {
     if (step !== 'preview') return [];
-    return rawRows.map((row) => {
+
+    // Deduplicate input rows by name+league combination
+    const seen = new Set<string>();
+    const uniqueRows = rawRows.filter((row) => {
+      const name = Object.entries(mapping).find(([, v]) => v === 'name')?.[0];
+      const league = Object.entries(mapping).find(([, v]) => v === 'league')?.[0];
+      const key = `${(name ? row[name] : '').trim().toLowerCase()}||${(league ? row[league] : '').trim().toLowerCase()}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    return uniqueRows.map((row) => {
       const mapped: Record<string, string> = {};
       Object.entries(mapping).forEach(([csvH, dbK]) => { mapped[dbK] = row[csvH]?.trim() ?? ''; });
 
