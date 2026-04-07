@@ -5,3 +5,5 @@ export * from './season.schema';
 export * from './news.schema';
 
 export * from './training.schema';
+export * from './substitute.schema';
+// training.schema re-exportiert durch direkten Import (Konflikte mit BookingStatus vermeiden)

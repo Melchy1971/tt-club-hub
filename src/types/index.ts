@@ -81,6 +81,19 @@ export type Gender = Enums<'gender'>;
 export type PhaseType = Enums<'phase_type'>;
 
 export * from './member';
+export type { SubstituteRequest, SubstituteRequestUI, SubstituteRequestCreate } from './domain/substitute';
+export type {
+  BookingStatus,
+  TrainingBooking,
+  TrainingBookingUI,
+  TrainingBookingCreate,
+  Weekday,
+  TeamTrainingSlot,
+  TeamTrainingSlotUI,
+  TeamTrainingSlotCreate,
+  TeamTrainingSlotUpdate,
+  WeeklyPatternEntry,
+} from './domain/training';
 
 // === Dashboard ===
 export interface DashboardStats {

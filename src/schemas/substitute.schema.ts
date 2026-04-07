@@ -1,19 +1,30 @@
 import { z } from 'zod';
 
 // ─── Status-Enum ──────────────────────────────────────────────────────────────
+// DB-Enum substitute_status: pending | accepted | rejected
+// 'cancelled' erfordert: ALTER TYPE substitute_status ADD VALUE 'cancelled';
 
-export const SUBSTITUTE_REQUEST_STATUSES = ['pending', 'accepted', 'declined', 'cancelled'] as const;
+export const SUBSTITUTE_REQUEST_STATUSES = [
+  'pending',
+  'accepted',
+  'rejected',
+  'cancelled',
+] as const;
+
 export type SubstituteRequestStatus = (typeof SUBSTITUTE_REQUEST_STATUSES)[number];
 
 export const substituteStatusSchema = z.enum(SUBSTITUTE_REQUEST_STATUSES);
 
 // ─── Erlaubte Status-Übergänge ────────────────────────────────────────────────
-// Spiegelt fn_check_substitute_status_transition() exakt wider.
+//
+//  pending ──┬──► accepted ──► cancelled
+//            ├──► rejected        (terminal)
+//            └──► cancelled       (terminal)
 
 export const VALID_TRANSITIONS: Record<SubstituteRequestStatus, SubstituteRequestStatus[]> = {
-  pending:   ['accepted', 'declined', 'cancelled'],
+  pending:   ['accepted', 'rejected', 'cancelled'],
   accepted:  ['cancelled'],
-  declined:  [],
+  rejected:  [],
   cancelled: [],
 };
 
@@ -25,50 +36,56 @@ export function isValidTransition(
 }
 
 /** Terminale Status – kein weiterer Übergang möglich. */
-export const TERMINAL_STATUSES = new Set<SubstituteRequestStatus>(['declined', 'cancelled']);
+export const TERMINAL_STATUSES = new Set<SubstituteRequestStatus>(['rejected', 'cancelled']);
 
 export function isTerminal(status: SubstituteRequestStatus): boolean {
   return TERMINAL_STATUSES.has(status);
 }
 
-// ─── Wer darf was? ────────────────────────────────────────────────────────────
-// Abgeleitet aus ROLE_PERMISSIONS in types/auth.ts
+// ─── Rollen-Berechtigungen ────────────────────────────────────────────────────
 
 export const ROLES_CAN_REQUEST    = ['admin', 'developer', 'vorstand', 'trainer', 'spieler'] as const;
 export const ROLES_CAN_APPROVE    = ['admin', 'developer', 'vorstand', 'trainer'] as const;
 export const ROLES_CAN_CANCEL_ANY = ['admin', 'developer', 'vorstand', 'trainer'] as const;
 
-// ─── CRUD-Schemas ─────────────────────────────────────────────────────────────
+// ─── Erstell-Schema ───────────────────────────────────────────────────────────
+// created_by wird service-seitig aus dem Auth-Kontext befüllt.
 
 export const substituteRequestCreateSchema = z.object({
   match_id:             z.string().uuid('Ungültige Spiel-ID'),
-  requesting_team_id:   z.string().uuid('Ungültige Mannschafts-ID'),
-  substitute_member_id: z.string().uuid('Ungültige Spieler-ID'),
+  team_id:              z.string().uuid('Ungültige Mannschafts-ID'),
+  requesting_member_id: z.string().uuid('Ungültige Anfragesteller-ID'),
+  substitute_member_id: z.string().uuid('Ungültige Ersatzspieler-ID'),
   note:                 z.string().max(500, 'Notiz max. 500 Zeichen').nullable().optional(),
 });
 
-/** Nur Status + optionale resolution_note änderbar (keine anderen Felder). */
+// ─── Auflösungs-Schema ────────────────────────────────────────────────────────
+// Wird für accept / reject / cancel verwendet.
+
 export const substituteRequestResolveSchema = z.object({
-  status:          substituteStatusSchema.exclude(['pending']),
-  resolution_note: z.string().max(500).nullable().optional(),
-  resolved_by:     z.string().uuid().optional(), // wird service-seitig befüllt
+  /** Zielstatus – pending ist kein gültiger Übergang. */
+  status: substituteStatusSchema.exclude(['pending']),
 });
+
+// ─── Filter-Schema ────────────────────────────────────────────────────────────
 
 export const substituteRequestFilterSchema = z.object({
   match_id:             z.string().uuid().optional(),
-  requesting_team_id:   z.string().uuid().optional(),
+  team_id:              z.string().uuid().optional(),
+  requesting_member_id: z.string().uuid().optional(),
   substitute_member_id: z.string().uuid().optional(),
   status:               substituteStatusSchema.optional(),
-  season_id:            z.string().uuid().optional(),
-  /** Nur offene Anfragen (pending) */
+  /** Filtert über schedule_matches.season_phase_id (erfordert JOIN). */
+  season_phase_id:      z.string().uuid().optional(),
+  /** Nur offene Anfragen (status = pending). */
   open_only:            z.boolean().optional(),
-  /** Anfragen ab diesem Datum (ISO) */
+  /** Anfragen ab diesem Match-Datum (ISO YYYY-MM-DD). */
   from_date:            z.string().date().optional(),
-  /** Anfragen bis zu diesem Datum (ISO) */
+  /** Anfragen bis zu diesem Match-Datum (ISO YYYY-MM-DD). */
   to_date:              z.string().date().optional(),
 });
 
-// ─── Inferred types ───────────────────────────────────────────────────────────
+// ─── Inferred Input-Typen ─────────────────────────────────────────────────────
 
 export type SubstituteRequestCreateInput  = z.infer<typeof substituteRequestCreateSchema>;
 export type SubstituteRequestResolveInput = z.infer<typeof substituteRequestResolveSchema>;
