@@ -234,10 +234,18 @@ export default function TeamSchedule() {
                       )}
                     </TableCell>
                     <TableCell className="font-mono text-xs">
-                      {(match as any).pin || '–'}
+                      {match.pin ? (
+                        <Badge variant="outline" className="font-mono text-xs">{match.pin}</Badge>
+                      ) : (
+                        <span className="text-muted-foreground">–</span>
+                      )}
                     </TableCell>
                     <TableCell className="font-mono text-xs">
-                      {(match as any).code || '–'}
+                      {match.code ? (
+                        <Badge variant="outline" className="font-mono text-xs">{match.code}</Badge>
+                      ) : (
+                        <span className="text-muted-foreground">–</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge variant={STATUS_VARIANTS[match.status] ?? 'outline'}>
