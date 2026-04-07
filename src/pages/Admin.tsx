@@ -211,6 +211,7 @@ function MembersAdminTab() {
   function closeForm() {
     setFormOpen(false);
     setEditingId(null);
+    setEditingUserId(null);
     setForm(emptyMemberForm);
     setErrors({});
   }
