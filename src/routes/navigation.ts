@@ -13,6 +13,8 @@ import {
   UserCircle,
   Calendar,
   Users,
+  Bell,
+  Lock,
 } from 'lucide-react';
 import { MODULE_LABELS_DE } from '@/constants/uiLabels';
 import type { RouteConfig } from '@/types/navigation';
@@ -146,12 +148,30 @@ export const ROUTES: RouteConfig[] = [
     guard: { type: 'module', module: 'import', level: 'READ' },
   },
   {
+    path: '/sicherheit',
+    label: MODULE_LABELS_DE.security,
+    moduleKey: 'security',
+    icon: Lock,
+    group: 'personal',
+    navVisibility: 'sidebar',
+    guard: { type: 'authenticated' },
+  },
+  {
+    path: '/benachrichtigungen',
+    label: MODULE_LABELS_DE.notifications,
+    moduleKey: 'notifications',
+    icon: Bell,
+    group: 'personal',
+    navVisibility: 'sidebar',
+    guard: { type: 'authenticated' },
+  },
+  {
     path: '/info',
     label: MODULE_LABELS_DE.info,
     moduleKey: 'info',
     icon: Info,
-    group: 'system',
-    navVisibility: 'hidden',
+    group: 'personal',
+    navVisibility: 'sidebar',
     guard: { type: 'authenticated' },
   },
   {
@@ -159,7 +179,7 @@ export const ROUTES: RouteConfig[] = [
     label: MODULE_LABELS_DE.profile,
     moduleKey: 'profile',
     icon: UserCircle,
-    group: 'system',
+    group: 'personal',
     navVisibility: 'hidden',
     guard: { type: 'authenticated' },
   },
