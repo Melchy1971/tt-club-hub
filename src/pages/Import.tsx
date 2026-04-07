@@ -903,7 +903,9 @@ function ScheduleImportTab() {
                               <SelectContent>
                                 <SelectItem value="__none__">— Nicht importieren —</SelectItem>
                                 {teams?.map((t) => (
-                                  <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                                  <SelectItem key={t.id} value={t.id}>
+                                    {t.league ? `${t.league} – ${t.name}` : t.name}
+                                  </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
