@@ -134,6 +134,30 @@ export default function Members() {
     },
   });
 
+  const { data: allRoles = [] } = useQuery({
+    queryKey: ['roles_all'],
+    queryFn: async () => {
+      const { data, error } = await (await import('@/integrations/supabase/client')).supabase
+        .from('roles')
+        .select('name, display_name')
+        .order('display_name');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: allTeams = [] } = useQuery({
+    queryKey: ['teams_all_edit'],
+    queryFn: async () => {
+      const { data, error } = await (await import('@/integrations/supabase/client')).supabase
+        .from('teams')
+        .select('id, name, age_group, league, season_phases(name)')
+        .order('name');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['members'] });
 
   const createMut = useMutation({
