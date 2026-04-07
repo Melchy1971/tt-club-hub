@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
-import { Upload, FileText, AlertCircle, CheckCircle2, Download, TableProperties, KeyRound, Trophy, CalendarDays } from 'lucide-react';
+import { Upload, FileText, AlertCircle, CheckCircle2, Download, TableProperties, KeyRound, Trophy, CalendarDays, Shield } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
