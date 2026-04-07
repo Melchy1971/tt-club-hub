@@ -90,7 +90,7 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-3 border-t border-sidebar-border">
         <NavLink
-          to="/einstellungen?tab=sicherheit"
+          to="/profil"
           className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
           activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
         >

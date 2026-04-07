@@ -26,6 +26,7 @@ import Training from './pages/Training';
 import ImportPage from './pages/Import';
 import Seasons from './pages/Seasons';
 import Roles from './pages/Roles';
+import Profile from './pages/Profile';
 
 type AppRouteComponentMap = Record<string, React.ComponentType>;
 
