@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
-import { Upload, FileText, AlertCircle, CheckCircle2, Download, TableProperties, KeyRound, Trophy, CalendarDays } from 'lucide-react';
+import { Upload, FileText, AlertCircle, CheckCircle2, Download, TableProperties, KeyRound, Trophy, CalendarDays, Shield } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -1366,11 +1366,306 @@ function RatingImportTab() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// TAB 5: Mannschaften-Import
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const TEAM_IMPORT_COLS: { key: string; label: string; required?: boolean }[] = [
+  { key: 'name', label: 'Mannschaftsname', required: true },
+  { key: 'league', label: 'Liga', required: true },
+  { key: 'age_group', label: 'Altersgruppe' },
+  { key: 'division', label: 'Spielklasse' },
+];
+
+const TEAM_HEADER_ALIASES: Record<string, string> = {
+  mannschaft: 'name', mannschaftsname: 'name', team: 'name', teamname: 'name',
+  liga: 'league', spielklasse: 'division', klasse: 'division',
+  altersgruppe: 'age_group', altersklasse: 'age_group',
+};
+
+type TeamImportStep = 'upload' | 'mapping' | 'preview' | 'done';
+
+function autoMapTeam(headers: string[]): Record<string, string> {
+  const mapping: Record<string, string> = {};
+  const dbKeys = TEAM_IMPORT_COLS.map((c) => c.key);
+  const used = new Set<string>();
+  headers.forEach((h) => {
+    const norm = normalizeKey(h);
+    if (dbKeys.includes(norm) && !used.has(norm)) { mapping[h] = norm; used.add(norm); return; }
+    const alias = TEAM_HEADER_ALIASES[norm];
+    if (alias && !used.has(alias)) { mapping[h] = alias; used.add(alias); }
+  });
+  return mapping;
+}
+
+function TeamImportTab() {
+  const queryClient = useQueryClient();
+  const [step, setStep] = useState<TeamImportStep>('upload');
+  const [rawRows, setRawRows] = useState<Record<string, string>[]>([]);
+  const [headers, setHeaders] = useState<string[]>([]);
+  const [mapping, setMapping] = useState<Record<string, string>>({});
+  const [fileName, setFileName] = useState('');
+  const [selectedPhaseId, setSelectedPhaseId] = useState('');
+
+  // Fetch active season phases for dropdown
+  const { data: phases = [] } = useQuery({
+    queryKey: ['season-phases-for-team-import'],
+    queryFn: async () => {
+      const { data: sp } = await supabase
+        .from('season_phases')
+        .select('id, name, season_cycle_id, is_active')
+        .eq('is_active', true);
+      if (!sp?.length) return [];
+      const cycleIds = [...new Set(sp.map((p) => p.season_cycle_id))];
+      const { data: cycles } = await supabase.from('season_cycles').select('id, name').in('id', cycleIds);
+      const cycleMap = new Map((cycles ?? []).map((c) => [c.id, c.name]));
+      return sp.map((p) => ({ id: p.id, label: `${cycleMap.get(p.season_cycle_id) ?? '?'} – ${p.name}` }));
+    },
+  });
+
+  // Fetch existing teams for duplicate detection
+  const { data: existingTeams = [] } = useQuery({
+    queryKey: ['existing-teams-for-import'],
+    queryFn: async () => {
+      const { data } = await supabase.from('teams').select('id, name, league, season_phase_id');
+      return data ?? [];
+    },
+  });
+
+  const handleFile = useCallback(async (file: File) => {
+    try {
+      setFileName(file.name);
+      const rows = await parseFileToRows(file);
+      if (rows.length === 0) { toast.error('Leere Datei'); return; }
+      const hdrs = Object.keys(rows[0]);
+      setHeaders(hdrs);
+      setRawRows(rows);
+      setMapping(autoMapTeam(hdrs));
+      setStep('mapping');
+    } catch {
+      toast.error('Fehler beim Lesen der Datei');
+    }
+  }, []);
+
+  const mappedCols = new Set(Object.values(mapping));
+  const missingRequired = TEAM_IMPORT_COLS.filter((c) => c.required && !mappedCols.has(c.key));
+
+  // Build preview rows
+  const previewRows = useMemo(() => {
+    if (step !== 'preview') return [];
+    return rawRows.map((row) => {
+      const mapped: Record<string, string> = {};
+      Object.entries(mapping).forEach(([csvH, dbK]) => { mapped[dbK] = row[csvH]?.trim() ?? ''; });
+
+      const errors: string[] = [];
+      if (!mapped.name) errors.push('Name fehlt');
+      if (!mapped.league) errors.push('Liga fehlt');
+
+      let ageGroup = mapped.age_group?.toLowerCase() || 'herren';
+      if (!VALID_AGE_GROUPS.includes(ageGroup)) { errors.push('Ungültige Altersgruppe'); ageGroup = 'herren'; }
+
+      const isDuplicate = existingTeams.some(
+        (t) => t.name.toLowerCase() === mapped.name?.toLowerCase()
+          && t.league?.toLowerCase() === mapped.league?.toLowerCase()
+          && t.season_phase_id === selectedPhaseId,
+      );
+      if (isDuplicate) errors.push('Duplikat');
+
+      return { name: mapped.name, league: mapped.league, age_group: ageGroup, division: mapped.division || null, errors, isDuplicate };
+    });
+  }, [step, rawRows, mapping, existingTeams, selectedPhaseId]);
+
+  const validRows = previewRows.filter((r) => r.errors.length === 0);
+
+  const importMut = useMutation({
+    mutationFn: async () => {
+      const inserts = validRows.map((r) => ({
+        name: r.name,
+        league: r.league,
+        age_group: r.age_group as any,
+        division: r.division,
+        season_phase_id: selectedPhaseId,
+        is_active: true,
+      }));
+      const { error } = await supabase.from('teams').insert(inserts as any);
+      if (error) throw new Error(error.message);
+      return inserts.length;
+    },
+    onSuccess: (count) => {
+      toast.success(`${count} Mannschaft(en) importiert`);
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      queryClient.invalidateQueries({ queryKey: ['existing-teams-for-import'] });
+      setStep('done');
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const downloadTemplate = () => {
+    const header = 'Mannschaftsname;Liga;Altersgruppe;Spielklasse';
+    const examples = [
+      'Herren 1;Bezirksliga;herren;',
+      'Herren 2;Kreisliga;herren;',
+      'Jungen 18;Bezirksliga;jungen_18;',
+      'Damen;Kreisliga;damen;',
+    ].join('\n');
+    const blob = new Blob(['\uFEFF' + header + '\n' + examples], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'mannschaften_vorlage.csv'; a.click();
+  };
+
+  const reset = () => { setStep('upload'); setRawRows([]); setHeaders([]); setMapping({}); setFileName(''); };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Mannschaften importieren</h2>
+          <p className="text-sm text-muted-foreground">Importiere Mannschaftsbezeichnungen aus CSV oder Excel</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={downloadTemplate}>
+          <Download className="mr-2 h-4 w-4" /> CSV-Vorlage
+        </Button>
+      </div>
+
+      {/* Steps */}
+      <div className="flex gap-2">
+        {(['upload', 'mapping', 'preview', 'done'] as TeamImportStep[]).map((s, i) => {
+          const labels = ['Datei wählen', 'Spalten zuordnen', 'Vorschau & Import', 'Fertig'];
+          const isActive = step === s;
+          const isDone = ['upload', 'mapping', 'preview', 'done'].indexOf(step) > i;
+          return <Badge key={s} variant={isActive ? 'default' : isDone ? 'secondary' : 'outline'} className="text-xs">{i + 1}. {labels[i]}</Badge>;
+        })}
+      </div>
+
+      {step === 'upload' && (
+        <Card><CardContent className="pt-6"><FileDropZone onFile={handleFile} /></CardContent></Card>
+      )}
+
+      {step === 'mapping' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Spalten zuordnen</CardTitle>
+            <CardDescription>Datei: <strong>{fileName}</strong> — {rawRows.length} Zeilen</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-md border max-h-[400px] overflow-auto">
+              <Table>
+                <TableHeader><TableRow><TableHead>CSV-Spalte</TableHead><TableHead>Vorschau</TableHead><TableHead>Zuordnung</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {headers.map((h) => (
+                    <TableRow key={h}>
+                      <TableCell className="font-medium">{h}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm truncate max-w-[200px]">{rawRows[0]?.[h] ?? '–'}</TableCell>
+                      <TableCell>
+                        <Select value={mapping[h] ?? '__skip__'} onValueChange={(v) => setMapping((p) => { const n = { ...p }; if (v === '__skip__') delete n[h]; else n[h] = v; return n; })}>
+                          <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__skip__">— Überspringen —</SelectItem>
+                            {TEAM_IMPORT_COLS.map((c) => <SelectItem key={c.key} value={c.key}>{c.label} {c.required ? '*' : ''}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Season phase selection */}
+            <div className="space-y-2">
+              <Label>Saisonphase zuordnen *</Label>
+              <Select value={selectedPhaseId} onValueChange={setSelectedPhaseId}>
+                <SelectTrigger className="w-[300px]"><SelectValue placeholder="Saisonphase wählen" /></SelectTrigger>
+                <SelectContent>
+                  {phases.map((p) => <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={reset}>Zurück</Button>
+              <Button
+                onClick={() => {
+                  if (missingRequired.length > 0) { toast.error(`Pflichtfelder: ${missingRequired.map((c) => c.label).join(', ')}`); return; }
+                  if (!selectedPhaseId) { toast.error('Bitte Saisonphase auswählen'); return; }
+                  setStep('preview');
+                }}
+              >
+                Vorschau anzeigen
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {step === 'preview' && (
+        <div className="space-y-4">
+          <div className="flex gap-4">
+            <Badge variant="secondary">{validRows.length} importierbar</Badge>
+            {previewRows.filter((r) => r.errors.length > 0).length > 0 && (
+              <Badge variant="destructive">{previewRows.filter((r) => r.errors.length > 0).length} fehlerhaft</Badge>
+            )}
+          </div>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="rounded-md border max-h-[400px] overflow-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Liga</TableHead>
+                      <TableHead>Altersgruppe</TableHead>
+                      <TableHead>Spielklasse</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {previewRows.map((r, i) => (
+                      <TableRow key={i} className={r.errors.length > 0 ? 'bg-destructive/10' : ''}>
+                        <TableCell>{r.name || '–'}</TableCell>
+                        <TableCell>{r.league || '–'}</TableCell>
+                        <TableCell>{r.age_group}</TableCell>
+                        <TableCell>{r.division || '–'}</TableCell>
+                        <TableCell>
+                          {r.errors.length > 0
+                            ? <Badge variant="destructive" className="text-xs">{r.errors.join(', ')}</Badge>
+                            : <Badge variant="secondary" className="text-xs">OK</Badge>
+                          }
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setStep('mapping')}>Zurück</Button>
+            <Button onClick={() => importMut.mutate()} disabled={validRows.length === 0 || importMut.isPending}>
+              {importMut.isPending ? 'Importiere…' : `${validRows.length} Mannschaft(en) importieren`}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {step === 'done' && (
+        <Card><CardContent className="pt-6 text-center space-y-4">
+          <CheckCircle2 className="mx-auto h-16 w-16 text-green-500" />
+          <h2 className="text-xl font-semibold">Import abgeschlossen</h2>
+          <Button variant="outline" onClick={reset}>Neuer Import</Button>
+        </CardContent></Card>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // Main Page
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const TABS = [
   { key: 'mitglieder', label: 'Mitglieder', icon: FileText },
+  { key: 'mannschaften', label: 'Mannschaften', icon: Shield },
   { key: 'spielplan', label: 'Spielplan', icon: TableProperties },
   { key: 'pin-code', label: 'PIN/Code', icon: KeyRound },
   { key: 'ttr', label: 'QTTR/TTR', icon: Trophy },
@@ -1397,6 +1692,7 @@ export default function Import() {
         </TabsList>
 
         <TabsContent value="mitglieder"><MemberImportTab /></TabsContent>
+        <TabsContent value="mannschaften"><TeamImportTab /></TabsContent>
         <TabsContent value="spielplan"><ScheduleImportTab /></TabsContent>
         <TabsContent value="pin-code"><PinCodeImportTab /></TabsContent>
         <TabsContent value="ttr"><RatingImportTab /></TabsContent>
