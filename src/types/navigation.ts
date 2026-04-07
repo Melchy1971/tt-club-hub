@@ -1,7 +1,7 @@
 import type { AppRole, Permission } from '@/types/auth';
 import type { ModuleKey } from '@/constants/permissionsMatrix';
 
-export type NavGroup = 'sport' | 'club' | 'system';
+export type NavGroup = 'personal' | 'sport' | 'club' | 'system';
 
 export type NavVisibility = 'sidebar' | 'hidden' | 'settings';
 
@@ -22,6 +22,8 @@ export type AppModuleKey =
   | 'import'
   | 'info'
   | 'profile'
+  | 'security'
+  | 'notifications'
   | 'auth';
 
 export type RouteGuard =
