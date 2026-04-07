@@ -27,6 +27,9 @@ import ImportPage from './pages/Import';
 import Seasons from './pages/Seasons';
 import Roles from './pages/Roles';
 import Profile from './pages/Profile';
+import SecurityPage from './pages/Security';
+import NotificationsPage from './pages/Notifications';
+import InfoPage from './pages/InfoPage';
 
 type AppRouteComponentMap = Record<string, React.ComponentType>;
 
@@ -48,6 +51,9 @@ const APP_ROUTE_COMPONENTS: AppRouteComponentMap = {
   '/einstellungen': SettingsPage,
   '/saisons': Seasons,
   '/profil': Profile,
+  '/sicherheit': SecurityPage,
+  '/benachrichtigungen': NotificationsPage,
+  '/info': InfoPage,
   '/login': Auth,
 };
 
@@ -106,7 +112,7 @@ const App = () => (
                     </GuardedElement>
                   )}
                 />
-                <Route path="/info" element={<Navigate to="/einstellungen?tab=general" replace />} />
+                
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
