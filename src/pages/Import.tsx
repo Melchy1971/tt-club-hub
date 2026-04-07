@@ -544,7 +544,7 @@ function ScheduleImportTab() {
       if (!seasonPhaseId) return [];
       const { data } = await supabase
         .from('teams')
-        .select('id, name, season_id')
+        .select('id, name, league, season_id')
         .eq('season_phase_id', seasonPhaseId)
         .eq('is_active', true)
         .order('name');
