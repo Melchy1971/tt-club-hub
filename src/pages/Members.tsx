@@ -123,6 +123,17 @@ export default function Members() {
     },
   });
 
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ['team_members_all'],
+    queryFn: async () => {
+      const { data, error } = await (await import('@/integrations/supabase/client')).supabase
+        .from('team_members')
+        .select('member_id, team_id, position, teams(name)');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['members'] });
 
   const createMut = useMutation({
@@ -164,6 +175,15 @@ export default function Members() {
       (statusFilter === 'inactive' && !m.isActive);
     return matchesSearch && matchesStatus;
   });
+
+  function getTeamsForMember(memberId: string) {
+    return teamMembers
+      .filter((tm) => tm.member_id === memberId)
+      .map((tm) => ({
+        name: (tm.teams as any)?.name ?? 'Unbekannt',
+        position: tm.position,
+      }));
+  }
 
   function getRolesForMember(m: MemberUI): string[] {
     if (!m.userId) return [];
@@ -486,6 +506,40 @@ export default function Members() {
                 onCheckedChange={(v) => setField('is_active', v)} />
               <Label htmlFor="is_active">Aktives Mitglied</Label>
             </div>
+
+            {/* Rollen (nur bei Bearbeitung) */}
+            {editingMember && (
+              <div className="space-y-2 pt-2 border-t">
+                <Label>Rollen</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {getRolesForMember(editingMember).length > 0 ? (
+                    getRolesForMember(editingMember).map((r) => (
+                      <Badge key={r} variant="outline">{r}</Badge>
+                    ))
+                  ) : (
+                    <span className="text-sm text-muted-foreground">Keine Rollen zugewiesen</span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Mannschaften (nur bei Bearbeitung) */}
+            {editingMember && (
+              <div className="space-y-2 pt-2 border-t">
+                <Label>Mannschaften</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {getTeamsForMember(editingMember.id).length > 0 ? (
+                    getTeamsForMember(editingMember.id).map((t, i) => (
+                      <Badge key={i} variant="secondary">
+                        {t.name} (Pos. {t.position})
+                      </Badge>
+                    ))
+                  ) : (
+                    <span className="text-sm text-muted-foreground">Keiner Mannschaft zugeordnet</span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeForm}>Abbrechen</Button>
