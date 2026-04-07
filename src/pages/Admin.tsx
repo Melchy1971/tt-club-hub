@@ -445,12 +445,87 @@ function MembersAdminTab() {
               <Label htmlFor="adm_notes">Notizen</Label>
               <Textarea id="adm_notes" value={form.notes} onChange={(e) => setField('notes', e.target.value)}
                 rows={3} placeholder="Optionale Anmerkungen…" />
-            </div>
-            <div className="flex items-center gap-3">
-              <Switch id="adm_is_active" checked={form.is_active}
-                onCheckedChange={(v) => setField('is_active', v)} />
-              <Label htmlFor="adm_is_active">Aktives Mitglied</Label>
-            </div>
+            {/* Rollen & Mannschaften (nur bei Bearbeitung) */}
+            {editingId && (() => {
+              const memberRoles = editingUserId
+                ? userRoles.filter((r) => r.user_id === editingUserId).map((r) => r.role)
+                : [];
+              const memberTeamIds = new Set(
+                teamMembers.filter((tm) => tm.member_id === editingId).map((tm) => tm.team_id)
+              );
+              const erwachseneTeams = allTeams.filter((t) => !JUGEND_GROUPS.has(t.age_group));
+              const jugendTeams = allTeams.filter((t) => JUGEND_GROUPS.has(t.age_group));
+
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
+                  {/* Rollen */}
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-base font-semibold">Rollen</p>
+                      <p className="text-xs text-muted-foreground">Berechtigungen dem Profil zuweisen</p>
+                    </div>
+                    <div className="space-y-2">
+                      {allRoles.map((r) => (
+                        <div key={r.name} className="flex items-center justify-between">
+                          <span className="text-sm">{r.display_name}</span>
+                          <Switch checked={memberRoles.includes(r.name)} disabled />
+                        </div>
+                      ))}
+                      {allRoles.length === 0 && (
+                        <span className="text-sm text-muted-foreground">Keine Rollen definiert</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Mannschaften */}
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-base font-semibold">Mannschaften</p>
+                      <p className="text-xs text-muted-foreground">Mannschaften dem Profil zuweisen</p>
+                    </div>
+
+                    {erwachseneTeams.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-semibold">Erwachsene</p>
+                        {erwachseneTeams.map((t) => (
+                          <div key={t.id} className="flex items-center justify-between">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate">{t.name}</p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {t.age_group ? getAgeGroupLabel(t.age_group) : ''} {t.league ?? ''} {(t.season_phases as any)?.name ?? ''}
+                              </p>
+                            </div>
+                            <Switch checked={memberTeamIds.has(t.id)} disabled className="shrink-0 ml-2" />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {jugendTeams.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-semibold">Jugend</p>
+                        {jugendTeams.map((t) => (
+                          <div key={t.id} className="flex items-center justify-between">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate">{t.name}</p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {t.age_group ? getAgeGroupLabel(t.age_group) : ''} {t.league ?? ''} {(t.season_phases as any)?.name ?? ''}
+                              </p>
+                            </div>
+                            <Switch checked={memberTeamIds.has(t.id)} disabled className="shrink-0 ml-2" />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {allTeams.length === 0 && (
+                      <span className="text-sm text-muted-foreground">Keine Mannschaften angelegt</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeForm}>Abbrechen</Button>
