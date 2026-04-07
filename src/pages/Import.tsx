@@ -1113,7 +1113,7 @@ function PinCodeImportTab() {
         const patch: Record<string, string | null> = {};
         if (r.pin) patch.pin = r.pin;
         if (r.code) patch.code = r.code;
-        const { error } = await supabase.from('schedule_matches').update(patch).eq('id', r.matchId!);
+        const { error } = await supabase.from('schedule_matches').update(patch as any).eq('id', r.matchId!);
         if (error) throw error;
         updated++;
       }
@@ -1280,7 +1280,7 @@ function RatingImportTab() {
         const patch: Record<string, number | null> = {};
         if (r.ttr != null) patch.ttr_rating = r.ttr;
         if (r.qttr != null) patch.qttr_rating = r.qttr;
-        const { error } = await supabase.from('members').update(patch).eq('id', r.memberId!);
+        const { error } = await supabase.from('members').update(patch as any).eq('id', r.memberId!);
         if (error) throw error;
         updated++;
       }

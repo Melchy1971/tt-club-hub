@@ -682,7 +682,7 @@ export const scheduleService = {
       if (parsed.data.code !== undefined) patch.code = parsed.data.code ?? null;
       const { data, error } = await supabase
         .from('schedule_matches')
-        .update(patch)
+        .update(patch as any)
         .eq('id', id)
         .select()
         .single();
@@ -711,7 +711,7 @@ export const scheduleService = {
 
         const { error } = await supabase
           .from('schedule_matches')
-          .update(patch)
+          .update(patch as any)
           .eq('id', entry.id);
 
         if (error) {
