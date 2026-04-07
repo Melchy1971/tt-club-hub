@@ -631,7 +631,7 @@ export type Database = {
           match_time: string | null
           pin: string | null
           report_text: string | null
-          season_id: string
+          season_id: string | null
           season_phase_id: string | null
           status: Database["public"]["Enums"]["match_status"]
           team_id: string
@@ -652,7 +652,7 @@ export type Database = {
           match_time?: string | null
           pin?: string | null
           report_text?: string | null
-          season_id: string
+          season_id?: string | null
           season_phase_id?: string | null
           status?: Database["public"]["Enums"]["match_status"]
           team_id: string
@@ -673,7 +673,7 @@ export type Database = {
           match_time?: string | null
           pin?: string | null
           report_text?: string | null
-          season_id?: string
+          season_id?: string | null
           season_phase_id?: string | null
           status?: Database["public"]["Enums"]["match_status"]
           team_id?: string
