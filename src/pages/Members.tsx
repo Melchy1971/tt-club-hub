@@ -185,6 +185,7 @@ export default function Members() {
       }));
   }
 
+  function getRolesForMember(m: MemberUI): string[] {
     if (!m.userId) return [];
     return userRoles
       .filter((r) => r.user_id === m.userId)
