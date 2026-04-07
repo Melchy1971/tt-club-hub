@@ -30,7 +30,6 @@ import { getSettingsPermissionRule } from './permissions';
 import type { SettingsSubpageDef } from './types';
 
 export const SETTINGS_SUBPAGES: SettingsSubpageDef[] = [
-  { id: 'profile', label: SETTINGS_SUBPAGE_LABELS_DE.profile, icon: UserCircle, component: SettingsProfile, group: 'account' },
   { id: 'security', label: SETTINGS_SUBPAGE_LABELS_DE.security, icon: ShieldAlert, component: SettingsSecurity, group: 'account' },
   { id: 'notifications', label: SETTINGS_SUBPAGE_LABELS_DE.notifications, icon: Bell, component: SettingsNotifications, group: 'account' },
   { id: 'privacy', label: SETTINGS_SUBPAGE_LABELS_DE.privacy, icon: Lock, component: SettingsPrivacy, group: 'account' },
