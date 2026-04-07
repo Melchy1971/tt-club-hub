@@ -2,7 +2,6 @@ import {
   AlertTriangle,
   Building2,
   Palette,
-  Lock,
   Calendar,
   MapPin,
   Users,
