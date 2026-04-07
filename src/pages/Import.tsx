@@ -661,7 +661,7 @@ function ScheduleImportTab() {
       const firstTeamId = Object.values(staffelTeamMap).find(Boolean);
       const firstTeam = teams?.find((t) => t.id === firstTeamId);
       if (!firstTeam) throw new Error('Kein Team gefunden');
-      const seasonId = firstTeam.season_id ?? '';
+      const seasonId = firstTeam.season_id ?? null;
 
       // Build inserts grouped by team
       const inserts: Array<{

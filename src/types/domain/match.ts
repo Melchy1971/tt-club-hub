@@ -10,9 +10,9 @@ export interface Match {
   /** Operative Referenz – primär für Reads/Writes verwenden. */
   season_phase_id: SeasonPhaseId;
   /** Zyklusreferenz (technische Redundanz für Legacy-Kompatibilität). */
-  season_cycle_id: SeasonCycleId;
+  season_cycle_id: SeasonCycleId | null;
   /** @deprecated Alias auf season_cycle_id (DB-Spalte schedule_matches.season_id). */
-  season_id: SeasonCycleId;
+  season_id: SeasonCycleId | null;
   team_id: TeamId;
   match_day: number;
   date: string; // ISO-Datum
