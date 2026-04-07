@@ -1,5 +1,14 @@
 # Zielarchitektur: Services + Contexts (konsistent, UI-datenlogikfrei)
 
+## Ergänzende Zielbilder 2026-04-07
+
+Für die neueren anwendungsweiten Zielbilder siehe zusätzlich:
+
+- `docs/architecture/service-layer-target-architecture-2026-04-02.md`
+- `docs/architecture/mapping-target-architecture-2026-04-07.md`
+- `docs/architecture/technical-quality-framework-2026-04-07.md`
+- `docs/architecture/ui-label-standardization-2026-04-07.md`
+
 ## 1) Zielstruktur
 
 ```text

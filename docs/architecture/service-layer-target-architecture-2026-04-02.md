@@ -16,6 +16,14 @@ Für die eigenständige Venue-/Vereinsdaten-Domain siehe zusätzlich:
 
 - `docs/architecture/venue-club-domain-2026-04-07.md`
 
+Für die vollständige Datenschutz-Domain siehe zusätzlich:
+
+- `docs/architecture/privacy-domain-2026-04-07.md`
+
+Für die durchgängige Zielarchitektur von `DB Row -> DomainModel -> ViewModel` inklusive Mapper-Pattern, Utilities und Refactoring-Prioritäten siehe zusätzlich:
+
+- `docs/architecture/mapping-target-architecture-2026-04-07.md`
+
 Masterplan-Services:
 - `memberService`
 - `teamService`

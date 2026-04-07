@@ -22,21 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-
-const AGE_GROUP_LABELS: Record<string, string> = {
-  herren: 'Herren',
-  damen: 'Damen',
-  jungen_18: 'Jungen U18',
-  maedchen_18: 'Mädchen U18',
-  jungen_15: 'Jungen U15',
-  maedchen_15: 'Mädchen U15',
-  jungen_13: 'Jungen U13',
-  maedchen_13: 'Mädchen U13',
-  jungen_11: 'Jungen U11',
-  maedchen_11: 'Mädchen U11',
-  senioren: 'Senioren',
-  seniorinnen: 'Seniorinnen',
-};
+import { AGE_GROUP_LABELS_DE } from '@/constants/uiLabels';
 
 interface TeamFormData {
   name: string;
@@ -151,7 +137,7 @@ export function TeamEditDialog({ open, onOpenChange, team, onSave, saving }: Tea
               <Select value={form.age_group} onValueChange={(v) => setForm((f) => ({ ...f, age_group: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {Object.entries(AGE_GROUP_LABELS).map(([k, v]) => (
+                  {Object.entries(AGE_GROUP_LABELS_DE).map(([k, v]) => (
                     <SelectItem key={k} value={k}>{v}</SelectItem>
                   ))}
                 </SelectContent>

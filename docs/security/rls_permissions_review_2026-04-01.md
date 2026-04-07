@@ -6,6 +6,8 @@ Analysiert wurden die produktiven Supabase-Migrationen inkl. späterer Härtunge
 - Domänenmigrationen (Board, Training, Substitutes, Season Cycle, Privacy).
 - Nachträgliche Policy-Anpassungen (`20260401083431_...`, `20260401101500_...`, `20260401160000_...`).
 
+Das vollständige tabellenübergreifende Zielbild ist in `docs/security/rls_target_architecture_2026-04-07.md` beschrieben.
+
 Zielbild dieses Reviews:
 1. **Policies auf allen produktiven Tabellen**.
 2. **Deny-by-default** statt breit erlaubender Lesepolicies.

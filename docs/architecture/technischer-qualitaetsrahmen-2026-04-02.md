@@ -1,5 +1,17 @@
 # Technischer Qualitätsrahmen (2026-04-02)
 
+## Update 2026-04-07
+Die aktuelle Zielversion des anwendungsweiten Qualitätsrahmens liegt in:
+
+- `docs/architecture/technical-quality-framework-2026-04-07.md`
+
+Diese Fassung vom 2026-04-02 bleibt als erste konsolidierte Grundlage erhalten. Die Version vom 2026-04-07 konkretisiert zusätzlich:
+
+- die tatsächlichen TS-/ESLint-Lücken aus dem aktuellen Repository,
+- die ErrorBoundary-Strategie entlang der realen Routencluster,
+- verbindliche Architekturregeln für Services, Query Keys und Supabase-Zugriffe,
+- die priorisierte Refactoring- und Testreihenfolge.
+
 ## Zielbild
 Dieser Rahmen definiert ein verbindliches Qualitätsminimum für die nächsten Iterationen mit Fokus auf:
 - vollständige TypeScript-Strictness,

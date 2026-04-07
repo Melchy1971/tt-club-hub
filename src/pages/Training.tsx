@@ -19,6 +19,7 @@ import {
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { TrainingBookingDialog } from '@/components/training/TrainingBookingDialog';
+import { getTrainingBookingStatusLabel } from '@/constants/uiLabels';
 import type { Member } from '@/types';
 
 interface TrainingBooking {
@@ -35,12 +36,6 @@ interface TrainingBooking {
   created_at: string;
   updated_at: string;
 }
-
-const STATUS_LABELS: Record<string, string> = {
-  pending: 'Ausstehend',
-  confirmed: 'Bestätigt',
-  cancelled: 'Abgesagt',
-};
 
 const STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   pending: 'outline',
@@ -227,7 +222,7 @@ export default function Training() {
                       className="cursor-pointer"
                       onClick={() => handleStatusToggle(b)}
                     >
-                      {STATUS_LABELS[b.status]}
+                      {getTrainingBookingStatusLabel(b.status)}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground max-w-[150px] truncate">

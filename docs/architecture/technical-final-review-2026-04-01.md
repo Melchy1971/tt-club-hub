@@ -1,5 +1,10 @@
 # Technischer Abschlussreview (2026-04-01)
 
+## Folgeartefakt
+Die aus diesem Review abgeleitete Zielversion des anwendungsweiten Qualitätsrahmens liegt in:
+
+- `docs/architecture/technical-quality-framework-2026-04-07.md`
+
 ## Methodik / Scope
 - Statische Code-Analyse von Frontend- und Service-Schicht.
 - Prüfung entlang der geforderten Achsen:

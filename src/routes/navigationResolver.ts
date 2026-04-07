@@ -1,7 +1,7 @@
 import { ROUTES } from '@/routes/navigation';
 import { SETTINGS_SUBPAGES } from '@/settings/subpages';
 import { canAccessSettingsPage } from '@/settings/access';
-import { NAV_GROUP_LABELS_DE } from '@/constants/uiLabels';
+import { NAV_GROUP_LABELS_DE, SETTINGS_GROUP_LABELS_DE } from '@/constants/uiLabels';
 import type { NavGroup, RouteConfig } from '@/types/navigation';
 import type { SettingsSubpageDef, SettingsSubpageGroup } from '@/settings/types';
 import type { NavigationGuardContext } from './guardMapping';
@@ -17,12 +17,6 @@ export const resolveSidebarGroups = (ctx: NavigationGuardContext): Record<NavGro
     groups[route.group].push(route);
   }
   return groups;
-};
-
-export const SETTINGS_GROUP_LABELS_DE: Record<SettingsSubpageGroup, string> = {
-  account: 'Konto',
-  club: 'Verein',
-  admin: 'Administration',
 };
 
 export interface SettingsNavigationGroup {

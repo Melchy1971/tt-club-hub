@@ -16,6 +16,11 @@ Leitregeln:
 - **Settings-Komponenten orchestrieren nur Form, Sections und UI.**
 - **Laden, Speichern, Mapping, Dirty-State-Handling und Rechteprüfung laufen über gemeinsame Utilities und Services.**
 
+Ergänzende Zielbilder:
+
+- `docs/architecture/ui-label-standardization-2026-04-07.md`
+- `docs/architecture/mapping-target-architecture-2026-04-07.md`
+
 ---
 
 ## 1. Settings-Struktur
@@ -354,3 +359,7 @@ Noch inkonsistent sind derzeit:
 Für die fachliche Modellierung von `venues` und `club_settings` siehe zusätzlich:
 
 - `docs/architecture/venue-club-domain-2026-04-07.md`
+
+Für die vollständige Datenschutz-Domain aus Consents, Audit und Löschworkflow siehe zusätzlich:
+
+- `docs/architecture/privacy-domain-2026-04-07.md`

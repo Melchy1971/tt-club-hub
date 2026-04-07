@@ -12,13 +12,8 @@ import { UserPlus, Inbox, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { CreateRequestDialog } from '@/components/substitutes/CreateRequestDialog';
 import { SelectPlayerDialog } from '@/components/substitutes/SelectPlayerDialog';
+import { getSubstituteStatusLabel } from '@/constants/uiLabels';
 import type { ScheduleMatch, Member, Team } from '@/types';
-
-const STATUS_LABELS: Record<string, string> = {
-  pending: 'Ausstehend',
-  accepted: 'Angenommen',
-  rejected: 'Abgelehnt',
-};
 
 const STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   pending: 'outline',
@@ -322,7 +317,7 @@ export default function Substitutes() {
                             )}
                           </TableCell>
                           <TableCell>
-                            <Badge variant={STATUS_VARIANTS[req.status]}>{STATUS_LABELS[req.status]}</Badge>
+                            <Badge variant={STATUS_VARIANTS[req.status]}>{getSubstituteStatusLabel(req.status)}</Badge>
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">{req.note ?? '–'}</TableCell>
                           <TableCell>
@@ -381,7 +376,7 @@ export default function Substitutes() {
                         {req.substitute_member_id ? getMemberName(req.substitute_member_id) : '–'}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={STATUS_VARIANTS[req.status]}>{STATUS_LABELS[req.status]}</Badge>
+                        <Badge variant={STATUS_VARIANTS[req.status]}>{getSubstituteStatusLabel(req.status)}</Badge>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">{req.note ?? '–'}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">

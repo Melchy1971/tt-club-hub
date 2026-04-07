@@ -1,5 +1,11 @@
 # Standardisierte Datenversorgung: Profil & Info
 
+## Folgeartefakt 2026-04-07
+
+Die übergreifende Zielarchitektur für `DB Row -> DomainModel -> ViewModel`, inklusive Profil-ViewModel-Entkopplung und zentraler Mapper-Utilities, ist in folgendem Dokument konkretisiert:
+
+- `docs/architecture/mapping-target-architecture-2026-04-07.md`
+
 ## Query-Plan
 
 ### 1) Member-ViewModel (`profileInfoService.getMemberProfileViewModel`)

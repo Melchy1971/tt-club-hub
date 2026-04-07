@@ -7,12 +7,7 @@ import { toast } from 'sonner';
 import { Star, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { seasonCycleService, seasonPhaseService, type SeasonCycleWithPhases } from '@/services/seasonCycleService';
-
-const PHASE_LABELS: Record<string, string> = {
-  first_half: 'Vorrunde',
-  second_half: 'Rückrunde',
-  single_half: 'Halbrunde',
-};
+import { getPhaseTypeLabel } from '@/constants/uiLabels';
 
 export default function SettingsSeasons() {
   const queryClient = useQueryClient();
@@ -79,7 +74,7 @@ export default function SettingsSeasons() {
                     <TableCell className="font-medium">{cycle.name}</TableCell>
                     <TableCell>{phase.name}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{PHASE_LABELS[phase.phase_type] ?? phase.phase_type}</Badge>
+                      <Badge variant="outline">{getPhaseTypeLabel(phase.phase_type)}</Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {format(new Date(phase.start_date), 'dd.MM.yyyy')} – {format(new Date(phase.end_date), 'dd.MM.yyyy')}

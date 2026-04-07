@@ -10,6 +10,12 @@ Die Kommunikations-Domain bündelt News, Dokumente, Listen und Export-Sichten in
 - **Interne und öffentliche Inhalte** werden strikt getrennt (fachlich + RLS).
 - News sind **nach Sichtbarkeit, Veröffentlichungsstatus und Rolle** filterbar.
 
+Ergänzende Zielbilder:
+
+- `docs/architecture/mapping-target-architecture-2026-04-07.md`
+- `docs/architecture/ui-label-standardization-2026-04-07.md`
+- `docs/security/rls_target_architecture_2026-04-07.md`
+
 ---
 
 ## 1) Datenmodell

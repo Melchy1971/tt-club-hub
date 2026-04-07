@@ -2,6 +2,8 @@
 
 ## 1) Datenmodell
 
+Für das vollständige produktionsweite RLS-Zielbild über alle Kern- und Fachtabellen siehe zusätzlich `docs/security/rls_target_architecture_2026-04-07.md`.
+
 > Zielprinzipien: **privacy-by-design**, **deny-by-default**, **Rollenprüfung nur über `user_roles`**, **keine rekursiven Policy-Checks**.
 
 ### 1.1 `member_privacy_consents`

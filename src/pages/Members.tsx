@@ -26,20 +26,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/common/EmptyState';
 import { Constants } from '@/integrations/supabase/types';
+import { getAgeGroupLabel, getGenderLabel } from '@/constants/uiLabels';
 import type { MemberUI, MemberCreateDTO } from '@/types/member';
-
-const AGE_GROUP_LABELS: Record<string, string> = {
-  herren: 'Herren', damen: 'Damen',
-  jungen_18: 'Jungen 18', maedchen_18: 'Mädchen 18',
-  jungen_15: 'Jungen 15', maedchen_15: 'Mädchen 15',
-  jungen_13: 'Jungen 13', maedchen_13: 'Mädchen 13',
-  jungen_11: 'Jungen 11', maedchen_11: 'Mädchen 11',
-  senioren: 'Senioren', seniorinnen: 'Seniorinnen',
-};
-
-const GENDER_LABELS: Record<string, string> = {
-  maennlich: 'Männlich', weiblich: 'Weiblich', divers: 'Divers',
-};
 
 const emptyForm = {
   first_name: '',
@@ -264,7 +252,13 @@ export default function Members() {
             className="pl-9"
           />
           {search && (
-            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2">
+            <button
+              type="button"
+              aria-label="Suche zurücksetzen"
+              title="Suche zurücksetzen"
+              onClick={() => setSearch('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2"
+            >
               <X className="h-4 w-4 text-muted-foreground" />
             </button>
           )}
@@ -386,7 +380,7 @@ export default function Members() {
               <DetailRow label="Telefon" value={viewingMember.phone} />
               <DetailRow label="TTR" value={viewingMember.ttr?.toString()} />
               <DetailRow label="QTTR" value={viewingMember.qttr?.toString()} />
-              <DetailRow label="Altersgruppe" value={viewingMember.ageGroup ? AGE_GROUP_LABELS[viewingMember.ageGroup] : null} />
+              <DetailRow label="Altersgruppe" value={viewingMember.ageGroup ? getAgeGroupLabel(viewingMember.ageGroup) : null} />
               <DetailRow label="Straße" value={viewingMember.street} />
               <DetailRow label="PLZ / Ort" value={[viewingMember.zipCode, viewingMember.city].filter(Boolean).join(' ') || null} />
               <DetailRow label="Eintrittsdatum" value={viewingMember.entryDate} />
@@ -437,7 +431,7 @@ export default function Members() {
                   <SelectTrigger id="gender"><SelectValue placeholder="Auswählen" /></SelectTrigger>
                   <SelectContent>
                     {Constants.public.Enums.gender.map((g) => (
-                      <SelectItem key={g} value={g}>{GENDER_LABELS[g] ?? g}</SelectItem>
+                      <SelectItem key={g} value={g}>{getGenderLabel(g)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -462,7 +456,7 @@ export default function Members() {
                   <SelectTrigger id="age_group"><SelectValue placeholder="Auswählen" /></SelectTrigger>
                   <SelectContent>
                     {Constants.public.Enums.age_group.map((ag) => (
-                      <SelectItem key={ag} value={ag}>{AGE_GROUP_LABELS[ag] ?? ag}</SelectItem>
+                      <SelectItem key={ag} value={ag}>{getAgeGroupLabel(ag)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

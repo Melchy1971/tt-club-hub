@@ -14,15 +14,8 @@ import { EditMatchDialog } from '@/components/schedule/EditMatchDialog';
 import { BulkPinCodeDialog } from '@/components/schedule/BulkPinCodeDialog';
 import { AvailabilityDialog } from '@/components/schedule/AvailabilityDialog';
 import { LineupDialog } from '@/components/schedule/LineupDialog';
+import { getMatchStatusLabel } from '@/constants/uiLabels';
 import type { ScheduleMatch, ScheduleMatchUpdate } from '@/types';
-
-const STATUS_LABELS: Record<string, string> = {
-  geplant: 'Geplant',
-  laufend: 'Laufend',
-  beendet: 'Beendet',
-  verschoben: 'Verschoben',
-  abgesagt: 'Abgesagt',
-};
 
 const STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   geplant: 'outline',
@@ -248,7 +241,7 @@ export default function TeamSchedule() {
                     </TableCell>
                     <TableCell>
                       <Badge variant={STATUS_VARIANTS[match.status] ?? 'outline'}>
-                        {STATUS_LABELS[match.status] ?? match.status}
+                        {getMatchStatusLabel(match.status)}
                       </Badge>
                     </TableCell>
                     <TableCell>

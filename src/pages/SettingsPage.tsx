@@ -16,7 +16,7 @@ export default function SettingsPage() {
     [navigationGroups],
   );
 
-  const activePageId = (searchParams.get('tab') as SettingsSubpageId | null) ?? visiblePages[0]?.id ?? 'general';
+  const activePageId = (searchParams.get('tab') as SettingsSubpageId | null) ?? visiblePages[0]?.id ?? 'profile';
   const activePage = visiblePages.find((page) => page.id === activePageId) ?? visiblePages[0];
 
   const setPage = (id: SettingsSubpageId) => setSearchParams({ tab: id });

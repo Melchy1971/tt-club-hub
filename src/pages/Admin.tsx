@@ -396,14 +396,6 @@ function ScheduleAdminTab() {
     },
   });
 
-  const STATUS_LABELS: Record<string, string> = {
-    geplant: 'Geplant',
-    laufend: 'Laufend',
-    beendet: 'Beendet',
-    verschoben: 'Verschoben',
-    abgesagt: 'Abgesagt',
-  };
-
   const filtered = useMemo(() => {
     if (!matches) return [];
     return matches.filter((m: any) => {
@@ -428,7 +420,7 @@ function ScheduleAdminTab() {
         </div>
         <div className="flex gap-1 flex-wrap">
           <Button size="sm" variant={statusFilter === 'all' ? 'default' : 'outline'} onClick={() => setStatusFilter('all')}>Alle</Button>
-          {Object.entries(STATUS_LABELS).map(([k, v]) => (
+          {Object.entries(MATCH_STATUS_LABELS_DE).map(([k, v]) => (
             <Button key={k} size="sm" variant={statusFilter === k ? 'default' : 'outline'} onClick={() => setStatusFilter(k)}>{v}</Button>
           ))}
         </div>
@@ -463,7 +455,7 @@ function ScheduleAdminTab() {
                   </TableCell>
                   <TableCell>
                     <Badge variant={m.status === 'beendet' ? 'default' : m.status === 'abgesagt' ? 'destructive' : 'secondary'}>
-                      {STATUS_LABELS[m.status] ?? m.status}
+                      {getMatchStatusLabel(m.status)}
                     </Badge>
                   </TableCell>
                 </TableRow>

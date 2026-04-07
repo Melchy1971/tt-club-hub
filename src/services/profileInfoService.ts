@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { ROLE_LABELS_DE } from '@/constants/uiLabels';
 import type { AppRole } from '@/types/auth';
 import type {
   MemberProfilePermissionViewModel,
@@ -7,14 +8,7 @@ import type {
   PublicClubInfoViewModel,
 } from '@/types/viewModels';
 
-const ROLE_LABELS: Record<AppRole, string> = {
-  admin: 'Admin',
-  vorstand: 'Vorstand',
-  trainer: 'Trainer',
-  spieler: 'Spieler',
-  mitglied: 'Mitglied',
-  developer: 'Developer',
-};
+const ROLE_LABELS: Record<AppRole, string> = ROLE_LABELS_DE;
 
 const PROFILE_QUERY_PLAN = {
   member: 'members: by user_id (exactly one row)',

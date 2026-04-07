@@ -21,6 +21,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from 'sonner';
 import { Save, Pencil, X, KeyRound, Shield, Users, User, Trophy, Star, CalendarIcon } from 'lucide-react';
+import { getAgeGroupLabel } from '@/constants/uiLabels';
 import { cn } from '@/lib/utils';
 import type { MemberProfileViewModel } from '@/types/viewModels';
 
@@ -65,13 +66,6 @@ type ProfileForm = z.infer<typeof profileSchema>;
 type PasswordForm = z.infer<typeof passwordSchema>;
 
 const SYSTEM_ROLES = new Set(['admin', 'vorstand', 'trainer', 'spieler', 'mitglied', 'developer']);
-
-const AGE_GROUP_LABELS: Record<string, string> = {
-  herren: 'Herren', damen: 'Damen', senioren: 'Senioren', seniorinnen: 'Seniorinnen',
-  jungen_18: 'Jungen U18', maedchen_18: 'Mädchen U18', jungen_15: 'Jungen U15',
-  maedchen_15: 'Mädchen U15', jungen_13: 'Jungen U13', maedchen_13: 'Mädchen U13',
-  jungen_11: 'Jungen U11', maedchen_11: 'Mädchen U11',
-};
 
 function DisplayField({ label, value }: { label: string; value: string | null | undefined }) {
   return (
@@ -476,14 +470,14 @@ function TabTeams({ profileVM }: { profileVM: MemberProfileViewModel | null | un
                         <div>{t.name}</div>
                         {index === 0 && (
                           <p className="text-xs text-muted-foreground">
-                            Gruppe: {group.ageGroup ? (AGE_GROUP_LABELS[group.ageGroup] ?? group.ageGroup) : '–'} · {group.seasonPhaseName ?? 'ohne Phase'}
+                            Gruppe: {group.ageGroup ? getAgeGroupLabel(group.ageGroup) : '–'} · {group.seasonPhaseName ?? 'ohne Phase'}
                           </p>
                         )}
                       </div>
                     </div>
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
-                    {t.ageGroup ? (AGE_GROUP_LABELS[t.ageGroup] ?? t.ageGroup) : '–'}
+                    {t.ageGroup ? getAgeGroupLabel(t.ageGroup) : '–'}
                   </TableCell>
                   <TableCell className="hidden md:table-cell">{t.seasonPhaseName ?? '–'}</TableCell>
                   <TableCell className="hidden sm:table-cell">{t.league ?? '–'}</TableCell>

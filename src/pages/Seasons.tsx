@@ -30,22 +30,8 @@ import {
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/common/EmptyState';
 import { Constants } from '@/integrations/supabase/types';
+import { getAgeGroupLabel, getPhaseTypeLabel } from '@/constants/uiLabels';
 import type { SeasonCycleInsert, SeasonPhaseInsert, SeasonPhase } from '@/types';
-
-const AGE_GROUP_LABELS: Record<string, string> = {
-  herren: 'Herren', damen: 'Damen',
-  jungen_18: 'Jungen 18', maedchen_18: 'Mädchen 18',
-  jungen_15: 'Jungen 15', maedchen_15: 'Mädchen 15',
-  jungen_13: 'Jungen 13', maedchen_13: 'Mädchen 13',
-  jungen_11: 'Jungen 11', maedchen_11: 'Mädchen 11',
-  senioren: 'Senioren', seniorinnen: 'Seniorinnen',
-};
-
-const PHASE_LABELS: Record<string, string> = {
-  first_half: 'Vorrunde',
-  second_half: 'Rückrunde',
-  single_half: 'Halbrunde',
-};
 
 const ADULT_GROUPS = ['herren', 'damen', 'senioren', 'seniorinnen'];
 
@@ -304,7 +290,7 @@ export default function Seasons() {
               }
               <CardTitle className="text-base truncate">{cycle.name}</CardTitle>
               <Badge variant="outline" className="shrink-0">
-                {AGE_GROUP_LABELS[cycle.age_group] ?? cycle.age_group}
+                {getAgeGroupLabel(cycle.age_group)}
               </Badge>
               <span className="text-sm text-muted-foreground shrink-0">
                 {cycle.start_year}/{cycle.end_year}
@@ -346,7 +332,7 @@ export default function Seasons() {
                       <Trophy className="h-4 w-4 text-muted-foreground shrink-0" />
                       <span className="font-medium truncate">{phase.name}</span>
                       <Badge variant="secondary" className="shrink-0">
-                        {PHASE_LABELS[phase.phase_type] ?? phase.phase_type}
+                        {getPhaseTypeLabel(phase.phase_type)}
                       </Badge>
                       <span className="text-sm text-muted-foreground shrink-0">
                         {phase.start_date} – {phase.end_date}
@@ -472,7 +458,7 @@ export default function Seasons() {
                 <SelectContent>
                   {Constants.public.Enums.age_group.map((ag) => (
                     <SelectItem key={ag} value={ag}>
-                      {AGE_GROUP_LABELS[ag] ?? ag}
+                      {getAgeGroupLabel(ag)}
                     </SelectItem>
                   ))}
                 </SelectContent>

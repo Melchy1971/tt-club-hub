@@ -1,5 +1,14 @@
 # Board-Domain (Vorstand) – Architektur, APIs, Berechtigungen, Risiken
 
+## Ergänzende Zielbilder 2026-04-07
+
+Für die aktuellen Zielbilder zu Mapping, Labels und Qualitätsregeln siehe zusätzlich:
+
+- `docs/architecture/mapping-target-architecture-2026-04-07.md`
+- `docs/architecture/ui-label-standardization-2026-04-07.md`
+- `docs/architecture/technical-quality-framework-2026-04-07.md`
+- `docs/security/rls_target_architecture_2026-04-07.md`
+
 ## Zielbild
 
 Die Board-Domain kapselt folgende Bereiche:
