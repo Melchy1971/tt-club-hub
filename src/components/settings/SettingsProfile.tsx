@@ -587,16 +587,6 @@ export default function SettingsProfile() {
     onError: () => toast.error('Fehler beim Ändern des Passworts'),
   });
 
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-10 w-64" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
-  }
-
   const deactivateMut = useMutation({
     mutationFn: async () => {
       if (!member) throw new Error('Kein Profil');
@@ -612,6 +602,16 @@ export default function SettingsProfile() {
     },
     onError: () => toast.error('Fehler'),
   });
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-10 w-64" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
