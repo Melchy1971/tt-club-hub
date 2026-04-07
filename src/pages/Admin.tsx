@@ -225,6 +225,7 @@ function MembersAdminTab() {
 
   function openEdit(m: any) {
     setEditingId(m.id);
+    setEditingUserId(m.user_id ?? null);
     setForm({
       first_name: m.first_name ?? '',
       last_name: m.last_name ?? '',
