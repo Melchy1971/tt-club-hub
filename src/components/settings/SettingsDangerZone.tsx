@@ -51,6 +51,111 @@ export default function SettingsDangerZone() {
             Alle Daten unwiderruflich löschen
           </Button>
         </div>
+
+        {/* Alle Mitglieder löschen */}
+        <div className="rounded-lg border border-destructive/30 p-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <Trash2 className="h-5 w-5 text-destructive" />
+            <div>
+              <p className="text-sm font-medium">Alle Mitglieder löschen</p>
+              <p className="text-xs text-muted-foreground">
+                Löscht alle Mitgliederdaten. Diese Aktion kann nicht rückgängig gemacht werden.
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => toast.info('Diese Funktion ist noch nicht implementiert.')}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Alle Mitglieder löschen
+          </Button>
+        </div>
+
+        {/* Alle Teams inkl. Spielplan löschen */}
+        <div className="rounded-lg border border-destructive/30 p-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <Trash2 className="h-5 w-5 text-destructive" />
+            <div>
+              <p className="text-sm font-medium">Alle Teams inkl. Spielplan löschen</p>
+              <p className="text-xs text-muted-foreground">
+                Löscht alle Teams sowie den zugehörigen Spielplan. Diese Aktion kann nicht rückgängig gemacht werden.
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => toast.info('Diese Funktion ist noch nicht implementiert.')}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Alle Teams inkl. Spielplan löschen
+          </Button>
+        </div>
+
+        {/* Spielplan löschen */}
+        <div className="rounded-lg border border-destructive/30 p-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <Trash2 className="h-5 w-5 text-destructive" />
+            <div>
+              <p className="text-sm font-medium">Spielplan löschen</p>
+              <p className="text-xs text-muted-foreground">
+                Löscht den gesamten Spielplan. Diese Aktion kann nicht rückgängig gemacht werden.
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => toast.info('Diese Funktion ist noch nicht implementiert.')}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Spielplan löschen
+          </Button>
+        </div>
+
+        {/* Pins löschen */}
+        <div className="rounded-lg border border-destructive/30 p-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <Trash2 className="h-5 w-5 text-destructive" />
+            <div>
+              <p className="text-sm font-medium">Pins löschen</p>
+              <p className="text-xs text-muted-foreground">
+                Löscht alle gespeicherten Pins. Diese Aktion kann nicht rückgängig gemacht werden.
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => toast.info('Diese Funktion ist noch nicht implementiert.')}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Pins löschen
+          </Button>
+        </div>
+
+        {/* QTTR/TTR löschen */}
+        <div className="rounded-lg border border-destructive/30 p-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <Trash2 className="h-5 w-5 text-destructive" />
+            <div>
+              <p className="text-sm font-medium">QTTR/TTR löschen</p>
+              <p className="text-xs text-muted-foreground">
+                Löscht alle QTTR/TTR-Werte der Mitglieder. Diese Aktion kann nicht rückgängig gemacht werden.
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => toast.info('Diese Funktion ist noch nicht implementiert.')}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            QTTR/TTR löschen
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
