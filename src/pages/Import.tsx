@@ -1515,10 +1515,10 @@ function TeamImportTab() {
   const downloadTemplate = () => {
     const header = 'Mannschaftsname;Liga;Altersgruppe;Spielklasse';
     const examples = [
-      'Herren 1;Bezirksliga;herren;',
-      'Herren 2;Kreisliga;herren;',
-      'Jungen 18;Bezirksliga;jungen_18;',
-      'Damen;Kreisliga;damen;',
+      'TTC Zaberfeld;Bezirksliga;herren;',
+      'TTC Zaberfeld II;Kreisliga A Gr. 2;herren;',
+      'TTC Zaberfeld;Bezirksliga VR;jungen_18;',
+      'TTC Zaberfeld;Bezirksliga;damen;',
     ].join('\n');
     const blob = new Blob(['\uFEFF' + header + '\n' + examples], { type: 'text/csv;charset=utf-8' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'mannschaften_vorlage.csv'; a.click();
