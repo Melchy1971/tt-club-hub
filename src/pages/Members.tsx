@@ -176,7 +176,15 @@ export default function Members() {
     return matchesSearch && matchesStatus;
   });
 
-  function getRolesForMember(m: MemberUI): string[] {
+  function getTeamsForMember(memberId: string) {
+    return teamMembers
+      .filter((tm) => tm.member_id === memberId)
+      .map((tm) => ({
+        name: (tm.teams as any)?.name ?? 'Unbekannt',
+        position: tm.position,
+      }));
+  }
+
     if (!m.userId) return [];
     return userRoles
       .filter((r) => r.user_id === m.userId)
