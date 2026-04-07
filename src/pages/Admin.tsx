@@ -8,6 +8,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from '@/components/ui/dialog';
+import { Constants } from '@/integrations/supabase/types';
+import { getAgeGroupLabel, getGenderLabel } from '@/constants/uiLabels';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TeamEditDialog } from '@/components/admin/TeamEditDialog';
 import { TeamRosterDialog } from '@/components/admin/TeamRosterDialog';
