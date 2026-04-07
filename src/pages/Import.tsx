@@ -1378,7 +1378,8 @@ const TEAM_IMPORT_COLS: { key: string; label: string; required?: boolean }[] = [
 
 const TEAM_HEADER_ALIASES: Record<string, string> = {
   mannschaft: 'name', mannschaftsname: 'name', team: 'name', teamname: 'name',
-  liga: 'league', spielklasse: 'division', klasse: 'division',
+  heimmannschaft: 'name',
+  liga: 'league', staffel: 'league', spielklasse: 'division', klasse: 'division',
   altersgruppe: 'age_group', altersklasse: 'age_group',
 };
 
