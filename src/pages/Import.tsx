@@ -1378,7 +1378,8 @@ const TEAM_IMPORT_COLS: { key: string; label: string; required?: boolean }[] = [
 
 const TEAM_HEADER_ALIASES: Record<string, string> = {
   mannschaft: 'name', mannschaftsname: 'name', team: 'name', teamname: 'name',
-  liga: 'league', spielklasse: 'division', klasse: 'division',
+  heimmannschaft: 'name',
+  liga: 'league', staffel: 'league', spielklasse: 'division', klasse: 'division',
   altersgruppe: 'age_group', altersklasse: 'age_group',
 };
 
@@ -1452,7 +1453,19 @@ function TeamImportTab() {
   // Build preview rows
   const previewRows = useMemo(() => {
     if (step !== 'preview') return [];
-    return rawRows.map((row) => {
+
+    // Deduplicate input rows by name+league combination
+    const seen = new Set<string>();
+    const uniqueRows = rawRows.filter((row) => {
+      const name = Object.entries(mapping).find(([, v]) => v === 'name')?.[0];
+      const league = Object.entries(mapping).find(([, v]) => v === 'league')?.[0];
+      const key = `${(name ? row[name] : '').trim().toLowerCase()}||${(league ? row[league] : '').trim().toLowerCase()}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    return uniqueRows.map((row) => {
       const mapped: Record<string, string> = {};
       Object.entries(mapping).forEach(([csvH, dbK]) => { mapped[dbK] = row[csvH]?.trim() ?? ''; });
 
@@ -1502,10 +1515,10 @@ function TeamImportTab() {
   const downloadTemplate = () => {
     const header = 'Mannschaftsname;Liga;Altersgruppe;Spielklasse';
     const examples = [
-      'Herren 1;Bezirksliga;herren;',
-      'Herren 2;Kreisliga;herren;',
-      'Jungen 18;Bezirksliga;jungen_18;',
-      'Damen;Kreisliga;damen;',
+      'TTC Zaberfeld;Bezirksliga;herren;',
+      'TTC Zaberfeld II;Kreisliga A Gr. 2;herren;',
+      'TTC Zaberfeld;Bezirksliga VR;jungen_18;',
+      'TTC Zaberfeld;Bezirksliga;damen;',
     ].join('\n');
     const blob = new Blob(['\uFEFF' + header + '\n' + examples], { type: 'text/csv;charset=utf-8' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'mannschaften_vorlage.csv'; a.click();
