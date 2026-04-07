@@ -7,12 +7,18 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/common/EmptyState';
 import { useSeason } from '@/contexts/SeasonContext';
+import type { Enums } from '@/integrations/supabase/types';
+
+type AgeGroup = Enums<'age_group'>;
+
+const ADULT_AGE_GROUPS: AgeGroup[] = ['herren', 'damen', 'senioren', 'seniorinnen'];
 
 interface TeamWithMatchCount {
   id: string;
   name: string;
   league: string | null;
   division: string | null;
+  age_group: AgeGroup;
   matchCount: number;
   nextMatch: string | null;
 }
@@ -27,7 +33,7 @@ export default function Schedule() {
 
       const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
-        .select('id, name, league, division')
+        .select('id, name, league, division, age_group')
         .eq('season_phase_id', currentSeason.id)
         .eq('is_active', true)
         .order('name');
@@ -61,6 +67,9 @@ export default function Schedule() {
     enabled: !!currentSeason?.id,
   });
 
+  const adultTeams = teams?.filter((t) => ADULT_AGE_GROUPS.includes(t.age_group)) ?? [];
+  const youthTeams = teams?.filter((t) => !ADULT_AGE_GROUPS.includes(t.age_group)) ?? [];
+
   if (isLoading) {
     return (
       <div className="space-y-6 animate-fade-in">
@@ -91,32 +100,48 @@ export default function Schedule() {
           description="Es gibt noch keine aktiven Mannschaften in der aktuellen Saison."
         />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {teams.map((team) => (
-            <Link key={team.id} to={`/spielplan/team/${team.id}`}>
-              <Card className="hover:border-primary/50 transition-colors cursor-pointer">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">{team.name}</CardTitle>
-                  {team.league && (
-                    <p className="text-sm text-muted-foreground">
-                      {team.league}
-                      {team.division ? ` · ${team.division}` : ''}
-                    </p>
-                  )}
-                </CardHeader>
-                <CardContent className="flex items-center justify-between">
-                  <Badge variant="secondary">{team.matchCount} Spiele</Badge>
-                  {team.nextMatch && (
-                    <span className="text-sm text-muted-foreground">
-                      Nächstes: {formatGermanDate(team.nextMatch)}
-                    </span>
-                  )}
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+        <div className="space-y-8">
+          {adultTeams.length > 0 && (
+            <TeamSection title="Erwachsene" teams={adultTeams} />
+          )}
+          {youthTeams.length > 0 && (
+            <TeamSection title="Jugend" teams={youthTeams} />
+          )}
         </div>
       )}
+    </div>
+  );
+}
+
+function TeamSection({ title, teams }: { title: string; teams: TeamWithMatchCount[] }) {
+  return (
+    <div className="space-y-3">
+      <h2 className="text-lg font-semibold tracking-tight text-foreground">{title}</h2>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {teams.map((team) => (
+          <Link key={team.id} to={`/spielplan/team/${team.id}`}>
+            <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">{team.name}</CardTitle>
+                {team.league && (
+                  <p className="text-sm text-muted-foreground">
+                    {team.league}
+                    {team.division ? ` · ${team.division}` : ''}
+                  </p>
+                )}
+              </CardHeader>
+              <CardContent className="flex items-center justify-between">
+                <Badge variant="secondary">{team.matchCount} Spiele</Badge>
+                {team.nextMatch && (
+                  <span className="text-sm text-muted-foreground">
+                    Nächstes: {formatGermanDate(team.nextMatch)}
+                  </span>
+                )}
+              </CardContent>
+            </Card>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }
