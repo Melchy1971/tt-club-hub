@@ -544,7 +544,7 @@ function ScheduleImportTab() {
       if (!seasonPhaseId) return [];
       const { data } = await supabase
         .from('teams')
-        .select('id, name, season_id')
+        .select('id, name, league, season_id')
         .eq('season_phase_id', seasonPhaseId)
         .eq('is_active', true)
         .order('name');
@@ -903,7 +903,9 @@ function ScheduleImportTab() {
                               <SelectContent>
                                 <SelectItem value="__none__">— Nicht importieren —</SelectItem>
                                 {teams?.map((t) => (
-                                  <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                                  <SelectItem key={t.id} value={t.id}>
+                                    {t.league ? `${t.league} – ${t.name}` : t.name}
+                                  </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
