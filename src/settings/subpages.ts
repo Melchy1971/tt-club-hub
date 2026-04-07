@@ -2,7 +2,6 @@ import {
   AlertTriangle,
   Building2,
   Palette,
-  Lock,
   Calendar,
   MapPin,
   Users,
@@ -15,7 +14,7 @@ import SettingsClub from '@/components/settings/SettingsClub';
 import SettingsSeasons from '@/components/settings/SettingsSeasons';
 import SettingsVenues from '@/components/settings/SettingsVenues';
 import SettingsAppearance from '@/components/settings/SettingsAppearance';
-import SettingsPrivacy from '@/components/settings/SettingsPrivacy';
+
 import SettingsBackup from '@/components/settings/SettingsBackup';
 import SettingsDangerZone from '@/components/settings/SettingsDangerZone';
 import { SETTINGS_SUBPAGE_LABELS_DE } from '@/constants/uiLabels';
@@ -23,7 +22,6 @@ import { getSettingsPermissionRule } from './permissions';
 import type { SettingsSubpageDef } from './types';
 
 export const SETTINGS_SUBPAGES: SettingsSubpageDef[] = [
-  { id: 'privacy', label: SETTINGS_SUBPAGE_LABELS_DE.privacy, icon: Lock, component: SettingsPrivacy, group: 'account' },
   { id: 'appearance', label: SETTINGS_SUBPAGE_LABELS_DE.appearance, icon: Palette, component: SettingsAppearance, group: 'account' },
 
   {

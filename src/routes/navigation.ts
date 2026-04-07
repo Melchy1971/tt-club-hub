@@ -166,6 +166,15 @@ export const ROUTES: RouteConfig[] = [
     guard: { type: 'authenticated' },
   },
   {
+    path: '/datenschutz',
+    label: MODULE_LABELS_DE.privacy,
+    moduleKey: 'privacy',
+    icon: Lock,
+    group: 'personal',
+    navVisibility: 'sidebar',
+    guard: { type: 'authenticated' },
+  },
+  {
     path: '/info',
     label: MODULE_LABELS_DE.info,
     moduleKey: 'info',

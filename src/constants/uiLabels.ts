@@ -46,6 +46,7 @@ export const MODULE_LABELS_DE: Record<AppModuleKey, string> = {
   profile: 'Profil',
   security: 'Sicherheit',
   notifications: 'Benachrichtigungen',
+  privacy: 'Datenschutz',
   auth: 'Anmeldung',
 };
 

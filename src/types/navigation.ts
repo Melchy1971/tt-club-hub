@@ -24,6 +24,7 @@ export type AppModuleKey =
   | 'profile'
   | 'security'
   | 'notifications'
+  | 'privacy'
   | 'auth';
 
 export type RouteGuard =
