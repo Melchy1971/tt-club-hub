@@ -431,91 +431,132 @@ function TabSecurity({ profileVM }: { profileVM: MemberProfileViewModel | null |
   );
 }
 
-function TabTeams({ profileVM }: { profileVM: MemberProfileViewModel | null | undefined }) {
-  if (!profileVM?.teams?.length) {
+function TabTeams({ profileVM, memberId }: { profileVM: MemberProfileViewModel | null | undefined; memberId: string | undefined }) {
+  const { data: allTeams = [], isLoading: teamsLoading } = useQuery({
+    queryKey: ['all_teams_profile'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('teams')
+        .select('id, name, age_group, league, is_active, season_phase_id, season_phases(name)')
+        .order('name');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: memberTeamIds = [], isLoading: memberTeamsLoading } = useQuery({
+    queryKey: ['member_team_ids', memberId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('team_members')
+        .select('team_id')
+        .eq('member_id', memberId!);
+      if (error) throw error;
+      return (data ?? []).map((r) => r.team_id);
+    },
+    enabled: !!memberId,
+  });
+
+  const assignedTeams = profileVM?.teams ?? [];
+
+  if (teamsLoading || memberTeamsLoading) {
+    return (
+      <Card>
+        <CardContent className="py-10 text-center text-muted-foreground">Laden…</CardContent>
+      </Card>
+    );
+  }
+
+  if (allTeams.length === 0) {
     return (
       <Card>
         <CardContent className="py-10 text-center text-muted-foreground">
-          Keiner Mannschaft zugeordnet.
+          Keine Mannschaften angelegt.
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Mannschaften</CardTitle>
-        <CardDescription>Deine aktuellen Teamzuordnungen</CardDescription>
-      </CardHeader>
-      <CardContent className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Mannschaft</TableHead>
-              <TableHead className="hidden sm:table-cell">Altersgruppe</TableHead>
-              <TableHead className="hidden md:table-cell">Saisonphase</TableHead>
-              <TableHead className="hidden sm:table-cell">Liga</TableHead>
-              <TableHead>Position</TableHead>
-              <TableHead className="hidden md:table-cell">Kapitän</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {profileVM.teamGroups.flatMap((group) => (
-              group.teams.map((t, index) => (
-                <TableRow key={t.teamId}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <div>
-                        <div>{t.name}</div>
-                        {index === 0 && (
-                          <p className="text-xs text-muted-foreground">
-                            Gruppe: {group.ageGroup ? getAgeGroupLabel(group.ageGroup) : '–'} · {group.seasonPhaseName ?? 'ohne Phase'}
-                          </p>
-                        )}
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Alle Mannschaften</CardTitle>
+          <CardDescription>Übersicht aller angelegten Mannschaften – aktive Zuordnungen sind markiert</CardDescription>
+        </CardHeader>
+        <CardContent className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Mannschaft</TableHead>
+                <TableHead className="hidden sm:table-cell">Altersgruppe</TableHead>
+                <TableHead className="hidden md:table-cell">Saisonphase</TableHead>
+                <TableHead className="hidden sm:table-cell">Liga</TableHead>
+                <TableHead className="hidden sm:table-cell">Team aktiv</TableHead>
+                <TableHead>Zugeordnet</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {allTeams.map((team) => {
+                const isMember = memberTeamIds.includes(team.id);
+                const phaseName = (team.season_phases as any)?.name ?? '–';
+                return (
+                  <TableRow key={team.id} className={isMember ? '' : 'opacity-60'}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <span>{team.name}</span>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell">
-                    {t.ageGroup ? getAgeGroupLabel(t.ageGroup) : '–'}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">{t.seasonPhaseName ?? '–'}</TableCell>
-                  <TableCell className="hidden sm:table-cell">{t.league ?? '–'}</TableCell>
-                  <TableCell>{t.position || '–'}</TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {t.isCaptain ? (
-                      <Badge variant="default" className="gap-1">
-                        <Star className="h-3 w-3" /> Ja
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                      {team.age_group ? getAgeGroupLabel(team.age_group) : '–'}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">{phaseName}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{team.league ?? '–'}</TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                      <Badge variant={team.is_active ? 'default' : 'secondary'}>
+                        {team.is_active ? 'Aktiv' : 'Inaktiv'}
                       </Badge>
-                    ) : '–'}
-                  </TableCell>
-                </TableRow>
-              ))
+                    </TableCell>
+                    <TableCell>
+                      <Switch checked={isMember} disabled aria-label={`Zuordnung ${team.name}`} />
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Trainingszeiten der zugeordneten Teams */}
+      {assignedTeams.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Trainingszeiten</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {assignedTeams.map((team) => (
+              <div key={`${team.teamId}-training`} className="space-y-1">
+                <h4 className="text-sm font-medium">{team.name}</h4>
+                {team.trainingTimes.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Keine geplanten Trainingszeiten.</p>
+                ) : (
+                  <ul className="text-sm text-muted-foreground list-disc pl-5">
+                    {team.trainingTimes.map((slot) => (
+                      <li key={slot.id}>
+                        {slot.bookingDate} · {slot.startTime.slice(0, 5)}
+                        {slot.endTime ? `-${slot.endTime.slice(0, 5)}` : ''} · {slot.location ?? 'Ort offen'} ({slot.status})
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             ))}
-          </TableBody>
-        </Table>
-        <div className="mt-5 space-y-4">
-          {profileVM.teams.map((team) => (
-            <div key={`${team.teamId}-training`} className="space-y-1">
-              <h4 className="text-sm font-medium">{team.name} – Trainingszeiten</h4>
-              {team.trainingTimes.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Keine geplanten Trainingszeiten.</p>
-              ) : (
-                <ul className="text-sm text-muted-foreground list-disc pl-5">
-                  {team.trainingTimes.map((slot) => (
-                    <li key={slot.id}>
-                      {slot.bookingDate} · {slot.startTime.slice(0, 5)}
-                      {slot.endTime ? `-${slot.endTime.slice(0, 5)}` : ''} · {slot.location ?? 'Ort offen'} ({slot.status})
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }
 
