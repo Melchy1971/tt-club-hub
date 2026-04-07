@@ -67,8 +67,14 @@ export default function Schedule() {
     enabled: !!currentSeason?.id,
   });
 
-  const adultTeams = teams?.filter((t) => ADULT_AGE_GROUPS.includes(t.age_group)) ?? [];
-  const youthTeams = teams?.filter((t) => !ADULT_AGE_GROUPS.includes(t.age_group)) ?? [];
+  const isYouthLeague = (league: string | null) => {
+    if (!league) return false;
+    const lower = league.toLowerCase();
+    return lower.includes('jugend') || lower.includes('mädchen') || lower.includes('maedchen');
+  };
+
+  const adultTeams = teams?.filter((t) => !isYouthLeague(t.league)) ?? [];
+  const youthTeams = teams?.filter((t) => isYouthLeague(t.league)) ?? [];
 
   if (isLoading) {
     return (
