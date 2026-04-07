@@ -192,6 +192,12 @@ export function parseInteger(raw: string | null | undefined): number | null {
   return isNaN(n) ? null : n;
 }
 
+/** Normalisiert Telefonnummern (beibehaltend, aber ohne Format-Rauschen). */
+export function normalizePhone(raw: string | null | undefined): string | null {
+  if (!raw || raw.trim() === '' || raw.trim() === '-') return null;
+  return raw.trim().replace(/\s+/g, ' ');
+}
+
 // ── click-TT Ergebnis ─────────────────────────────────────────
 
 /**
@@ -285,7 +291,8 @@ export function normalizeFields(
     if (mapped.first_name   != null) out.first_name   = mapped.first_name.trim();
     if (mapped.last_name    != null) out.last_name    = mapped.last_name.trim();
     if (mapped.email        != null) out.email        = mapped.email.trim().toLowerCase();
-    if (mapped.phone        != null) out.phone        = mapped.phone.trim() || null;
+    if (mapped.phone        != null) out.phone        = normalizePhone(mapped.phone);
+    if (mapped.mobile       != null) out.mobile       = normalizePhone(mapped.mobile);
     if (mapped.date_of_birth) out.date_of_birth = parseDate(mapped.date_of_birth);
     if (mapped.gender       != null) out.gender        = parseGender(mapped.gender);
     if (mapped.is_active    != null) out.is_active     = parseBoolean(mapped.is_active) ?? true;

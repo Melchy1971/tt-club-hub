@@ -43,6 +43,7 @@ export type {
   ImportRow,
   ImportRowResult,
   ImportReport,
+  ImportPreviewRow,
   ImportOptions,
   ParsedResult,
 } from './types';
@@ -62,6 +63,7 @@ export {
   parseGender,
   parseBoolean,
   parseInteger,
+  normalizePhone,
   parseMatchResult,
   normalizeTeamName,
   normalizeRow,
@@ -83,7 +85,20 @@ export type {
   MatchSnapshot,
   DeduplicateMembersOptions,
   DeduplicateMatchesOptions,
+  MemberDuplicateRule,
 } from './deduplicate';
+
+// ── Datei-Parser + Preview ───────────────────────────────────
+export {
+  parseCsvText,
+  parseExcelBuffer,
+  parseImportBuffer,
+  buildImportPreview,
+} from './parser';
+
+export type {
+  ParsedImportFile,
+} from './parser';
 
 // ── Orchestrator ──────────────────────────────────────────────
 export {

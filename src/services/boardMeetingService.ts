@@ -1,6 +1,6 @@
 /**
  * boardMeetingService – Vorstandssitzungen verwalten.
- * Nutzt die existierende `meetings`-Tabelle.
+ * Nutzt die bestehende Tabelle `meetings` mit Board-spezifischen Feldern.
  */
 
 import { supabase } from '@/integrations/supabase/client';
@@ -8,13 +8,13 @@ import { ok, err, tryCatch } from '@/lib/api';
 import { fromSupabaseError, errors } from '@/lib/error';
 import { boardAccessPolicy } from '@/services/boardAccessPolicy';
 import type { ApiResult } from '@/types/api';
-import type { BoardActorRole, BoardMeetingFilter } from '@/types/domain/board';
-
-// ── Typen ─────────────────────────────────────────────────────
+import type { BoardActorRole, BoardMeetingFilter, BoardMeetingStatus } from '@/types/domain/board';
 
 export interface BoardMeetingUI {
   id: string;
   title: string;
+  topic: string;
+  status: BoardMeetingStatus;
   meetingDate: string;
   meetingTime: string | null;
   location: string | null;
@@ -27,6 +27,8 @@ export interface BoardMeetingUI {
 
 export interface BoardMeetingCreateDTO {
   title: string;
+  topic?: string;
+  status?: BoardMeetingStatus;
   meeting_date: string;
   meeting_time?: string | null;
   location?: string | null;
@@ -36,17 +38,19 @@ export interface BoardMeetingCreateDTO {
 
 export interface BoardMeetingUpdateDTO {
   title?: string;
+  topic?: string;
+  status?: BoardMeetingStatus;
   meeting_date?: string;
   meeting_time?: string | null;
   location?: string | null;
   description?: string | null;
 }
 
-// ── Mapping ───────────────────────────────────────────────────
-
 type MeetingRow = {
   id: string;
   title: string;
+  topic: string | null;
+  status: BoardMeetingStatus | null;
   meeting_date: string;
   meeting_time: string | null;
   location: string | null;
@@ -60,6 +64,8 @@ function mapToUI(row: MeetingRow): BoardMeetingUI {
   return {
     id: row.id,
     title: row.title,
+    topic: row.topic ?? row.title,
+    status: row.status ?? 'planned',
     meetingDate: row.meeting_date,
     meetingTime: row.meeting_time,
     location: row.location,
@@ -75,8 +81,6 @@ function guard(role: BoardActorRole, action: 'read' | 'write' | 'delete'): ApiRe
   return boardAccessPolicy.authorize(role, { channel: 'meetings', visibility: 'internal' }, action);
 }
 
-// ── Service ───────────────────────────────────────────────────
-
 export const boardMeetingService = {
   async list(filter: BoardMeetingFilter = {}): Promise<ApiResult<BoardMeetingUI[]>> {
     if (filter.visibility && filter.visibility !== 'internal') {
@@ -84,13 +88,14 @@ export const boardMeetingService = {
     }
 
     return tryCatch(async () => {
-      let query = supabase
+      let query = (supabase as any)
         .from('meetings')
         .select('*')
         .order('meeting_date', { ascending: false });
 
       if (filter.from) query = query.gte('meeting_date', filter.from);
       if (filter.to) query = query.lte('meeting_date', filter.to);
+      if (filter.status) query = query.eq('status', filter.status);
 
       const limit = filter.limit ?? 100;
       if (filter.offset != null) {
@@ -105,10 +110,6 @@ export const boardMeetingService = {
     }, fromSupabaseError);
   },
 
-  async listAll(): Promise<ApiResult<BoardMeetingUI[]>> {
-    return boardMeetingService.list({ visibility: 'internal' });
-  },
-
   async listForActor(role: BoardActorRole, filter: BoardMeetingFilter = {}): Promise<ApiResult<BoardMeetingUI[]>> {
     const auth = guard(role, 'read');
     if (!auth.success) return auth as ApiResult<BoardMeetingUI[]>;
@@ -116,7 +117,7 @@ export const boardMeetingService = {
   },
 
   async getById(id: string): Promise<ApiResult<BoardMeetingUI>> {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('meetings')
       .select('*')
       .eq('id', id)
@@ -128,10 +129,12 @@ export const boardMeetingService = {
 
   async create(payload: BoardMeetingCreateDTO): Promise<ApiResult<BoardMeetingUI>> {
     return tryCatch(async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('meetings')
         .insert({
           title: payload.title,
+          topic: payload.topic ?? payload.title,
+          status: payload.status ?? 'planned',
           meeting_date: payload.meeting_date,
           meeting_time: payload.meeting_time ?? null,
           location: payload.location ?? null,
@@ -153,7 +156,7 @@ export const boardMeetingService = {
 
   async update(id: string, payload: BoardMeetingUpdateDTO): Promise<ApiResult<BoardMeetingUI>> {
     return tryCatch(async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('meetings')
         .update(payload)
         .eq('id', id)
