@@ -159,7 +159,7 @@ export const availabilityService = {
 
   async remove(matchId: string, memberId: string): Promise<void> {
     const { error } = await supabase
-      .from('match_player_availability' as never)
+      .from('match_availability')
       .delete()
       .eq('match_id', matchId)
       .eq('member_id', memberId);

@@ -251,7 +251,9 @@ export type Database = {
           member_id: string
           note: string | null
           status: string
+          team_id: string | null
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
           created_at?: string
@@ -260,7 +262,9 @@ export type Database = {
           member_id: string
           note?: string | null
           status?: string
+          team_id?: string | null
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           created_at?: string
@@ -269,7 +273,9 @@ export type Database = {
           member_id?: string
           note?: string | null
           status?: string
+          team_id?: string | null
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -292,23 +298,32 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_substitute: boolean
           match_id: string
           member_id: string
           position: number
+          team_id: string | null
+          updated_at: string
         }
         Insert: {
           created_at?: string
           id?: string
+          is_substitute?: boolean
           match_id: string
           member_id: string
           position?: number
+          team_id?: string | null
+          updated_at?: string
         }
         Update: {
           created_at?: string
           id?: string
+          is_substitute?: boolean
           match_id?: string
           member_id?: string
           position?: number
+          team_id?: string | null
+          updated_at?: string
         }
         Relationships: [
           {

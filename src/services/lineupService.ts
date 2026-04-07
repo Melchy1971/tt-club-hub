@@ -103,7 +103,7 @@ export const lineupService = {
 
   async getForMatch(matchId: string): Promise<MatchLineup[]> {
     const { data, error } = await supabase
-      .from('match_lineups' as never)
+      .from('match_lineup')
       .select('*')
       .eq('match_id', matchId)
       .order('position', { ascending: true });
@@ -143,7 +143,7 @@ export const lineupService = {
 
   async removePlayer(matchId: string, memberId: string): Promise<void> {
     const { error } = await supabase
-      .from('match_lineups' as never)
+      .from('match_lineup')
       .delete()
       .eq('match_id', matchId)
       .eq('member_id', memberId);
