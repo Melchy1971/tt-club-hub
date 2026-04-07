@@ -30,6 +30,7 @@ import Profile from './pages/Profile';
 import SecurityPage from './pages/Security';
 import NotificationsPage from './pages/Notifications';
 import InfoPage from './pages/InfoPage';
+import PrivacyPage from './pages/Privacy';
 
 type AppRouteComponentMap = Record<string, React.ComponentType>;
 
@@ -54,6 +55,7 @@ const APP_ROUTE_COMPONENTS: AppRouteComponentMap = {
   '/sicherheit': SecurityPage,
   '/benachrichtigungen': NotificationsPage,
   '/info': InfoPage,
+  '/datenschutz': PrivacyPage,
   '/login': Auth,
 };
 
