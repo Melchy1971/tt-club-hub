@@ -89,7 +89,18 @@ function findConflicts(incoming: Record<string, unknown>, existing: Record<strin
 export interface DeduplicateMembersOptions {
   existing:          MemberSnapshot[];
   conflictStrategy:  ConflictStrategy;
+  /**
+   * Konfigurierbare Match-Reihenfolge für Duplikaterkennung.
+   * Default: ['email', 'member_number', 'name_birthdate', 'fuzzy_name']
+   */
+  rules?: MemberDuplicateRule[];
 }
+
+export type MemberDuplicateRule =
+  | 'email'
+  | 'member_number'
+  | 'name_birthdate'
+  | 'fuzzy_name';
 
 /**
  * Vergleicht normalisierte Import-Zeilen gegen bestehende Mitglieder.
@@ -104,7 +115,11 @@ export function deduplicateMembers(
   rows: ValidatedRow[],
   opts: DeduplicateMembersOptions,
 ): ImportRow[] {
-  const { existing, conflictStrategy } = opts;
+  const {
+    existing,
+    conflictStrategy,
+    rules = ['email', 'member_number', 'name_birthdate', 'fuzzy_name'],
+  } = opts;
 
   // Lookup-Indizes für schnelle O(1)-Suche
   const byEmail = new Map<string, MemberSnapshot>();
@@ -130,39 +145,40 @@ export function deduplicateMembers(
     let matched: MemberSnapshot | null = null;
     let matchedBy: string | null = null;
 
-    // Strategie 1: E-Mail
     const email = typeof d.email === 'string' ? d.email.toLowerCase() : null;
-    if (!matched && email) {
-      const m = byEmail.get(email);
-      if (m) { matched = m; matchedBy = 'email'; }
-    }
-
-    // Strategie 2: Mitgliedsnummer
     const memberNr = typeof d.member_number === 'string' ? d.member_number.trim() : null;
-    if (!matched && memberNr) {
-      const m = byMemberNr.get(memberNr);
-      if (m) { matched = m; matchedBy = 'member_number'; }
-    }
-
-    // Strategie 3: Nachname + Geburtsdatum (beide Felder müssen vorhanden sein)
-    const lastName  = typeof d.last_name === 'string' ? d.last_name.toLowerCase().trim() : null;
-    const dob       = typeof d.date_of_birth === 'string' ? d.date_of_birth : null;
-    if (!matched && lastName && dob) {
-      const m = existing.find(
-        (e) => e.last_name.toLowerCase().trim() === lastName && e.date_of_birth === dob,
-      );
-      if (m) { matched = m; matchedBy = 'last_name+date_of_birth'; }
-    }
-
-    // Strategie 4: Fuzzy Name (Vorname + Nachname, Levenshtein ≤ 1)
+    const lastName = typeof d.last_name === 'string' ? d.last_name.toLowerCase().trim() : null;
+    const dob = typeof d.date_of_birth === 'string' ? d.date_of_birth : null;
     const firstName = typeof d.first_name === 'string' ? d.first_name : null;
-    if (!matched && firstName && lastName) {
-      const m = existing.find(
-        (e) =>
-          fuzzyNameMatch(e.first_name, firstName) &&
-          fuzzyNameMatch(e.last_name, typeof d.last_name === 'string' ? d.last_name : ''),
-      );
-      if (m) { matched = m; matchedBy = 'fuzzy_name'; }
+
+    for (const rule of rules) {
+      if (matched) break;
+
+      if (rule === 'email' && email) {
+        const m = byEmail.get(email);
+        if (m) { matched = m; matchedBy = 'email'; }
+      }
+
+      if (rule === 'member_number' && memberNr) {
+        const m = byMemberNr.get(memberNr);
+        if (m) { matched = m; matchedBy = 'member_number'; }
+      }
+
+      if (rule === 'name_birthdate' && lastName && dob) {
+        const m = existing.find(
+          (e) => e.last_name.toLowerCase().trim() === lastName && e.date_of_birth === dob,
+        );
+        if (m) { matched = m; matchedBy = 'last_name+date_of_birth'; }
+      }
+
+      if (rule === 'fuzzy_name' && firstName && lastName) {
+        const m = existing.find(
+          (e) =>
+            fuzzyNameMatch(e.first_name, firstName) &&
+            fuzzyNameMatch(e.last_name, typeof d.last_name === 'string' ? d.last_name : ''),
+        );
+        if (m) { matched = m; matchedBy = 'fuzzy_name'; }
+      }
     }
 
     if (!matched) {
@@ -297,7 +313,13 @@ export function findInternalDuplicates(
 export function memberDuplicateKey(data: Record<string, unknown>): string | null {
   const email = typeof data.email === 'string' ? data.email.toLowerCase() : null;
   const mnr   = typeof data.member_number === 'string' ? data.member_number.trim() : null;
-  return email ?? mnr;
+  const first = typeof data.first_name === 'string' ? data.first_name.trim().toLowerCase() : null;
+  const last = typeof data.last_name === 'string' ? data.last_name.trim().toLowerCase() : null;
+  const dob = typeof data.date_of_birth === 'string' ? data.date_of_birth : null;
+  if (email) return `email:${email}`;
+  if (mnr) return `member_number:${mnr}`;
+  if (first && last && dob) return `name_birthdate:${first}|${last}|${dob}`;
+  return null;
 }
 
 /** Key-Funktion für Spielplan-interne Duplikate (Spieltag + Teams oder Datum + Teams). */
