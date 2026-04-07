@@ -1,34 +1,13 @@
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { AlertTriangle, Trash2, UserX } from 'lucide-react';
+import { AlertTriangle, Trash2 } from 'lucide-react';
 
 export default function SettingsDangerZone() {
-  const { user, member, signOut } = useAuth();
   const [confirmText, setConfirmText] = useState('');
-
-  const deactivateMut = useMutation({
-    mutationFn: async () => {
-      if (!member) throw new Error('Kein Profil');
-      const { error } = await supabase
-        .from('members')
-        .update({ is_active: false, exit_date: new Date().toISOString().split('T')[0] })
-        .eq('id', member.id);
-      if (error) throw error;
-    },
-    onSuccess: async () => {
-      toast.success('Konto deaktiviert');
-      await signOut();
-    },
-    onError: () => toast.error('Fehler'),
-  });
 
   return (
     <Card className="border-destructive/50">
@@ -40,45 +19,6 @@ export default function SettingsDangerZone() {
         <CardDescription>Irreversible Aktionen – bitte mit Vorsicht verwenden</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Deactivate own account */}
-        <div className="rounded-lg border border-destructive/30 p-4 space-y-3">
-          <div className="flex items-center gap-3">
-            <UserX className="h-5 w-5 text-destructive" />
-            <div>
-              <p className="text-sm font-medium">Eigenes Konto deaktivieren</p>
-              <p className="text-xs text-muted-foreground">
-                Dein Mitgliedsprofil wird als inaktiv markiert. Du kannst dich danach nicht mehr anmelden.
-              </p>
-            </div>
-          </div>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="sm">
-                <UserX className="mr-2 h-4 w-4" />
-                Konto deaktivieren
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Konto wirklich deaktivieren?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Diese Aktion markiert dein Profil als inaktiv und setzt ein Austrittsdatum.
-                  Um dies rückgängig zu machen, wende dich an einen Administrator.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                <AlertDialogAction
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  onClick={() => deactivateMut.mutate()}
-                >
-                  Deaktivieren
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-
         {/* Reset all data (admin only) */}
         <div className="rounded-lg border border-destructive/30 p-4 space-y-3">
           <div className="flex items-center gap-3">
