@@ -134,6 +134,30 @@ export default function Members() {
     },
   });
 
+  const { data: allRoles = [] } = useQuery({
+    queryKey: ['roles_all'],
+    queryFn: async () => {
+      const { data, error } = await (await import('@/integrations/supabase/client')).supabase
+        .from('roles')
+        .select('name, display_name')
+        .order('display_name');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: allTeams = [] } = useQuery({
+    queryKey: ['teams_all_edit'],
+    queryFn: async () => {
+      const { data, error } = await (await import('@/integrations/supabase/client')).supabase
+        .from('teams')
+        .select('id, name, age_group, league, season_phases(name)')
+        .order('name');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['members'] });
 
   const createMut = useMutation({
@@ -507,39 +531,85 @@ export default function Members() {
               <Label htmlFor="is_active">Aktives Mitglied</Label>
             </div>
 
-            {/* Rollen (nur bei Bearbeitung) */}
-            {editingMember && (
-              <div className="space-y-2 pt-2 border-t">
-                <Label>Rollen</Label>
-                <div className="flex flex-wrap gap-1.5">
-                  {getRolesForMember(editingMember).length > 0 ? (
-                    getRolesForMember(editingMember).map((r) => (
-                      <Badge key={r} variant="outline">{r}</Badge>
-                    ))
-                  ) : (
-                    <span className="text-sm text-muted-foreground">Keine Rollen zugewiesen</span>
-                  )}
-                </div>
-              </div>
-            )}
+            {/* Rollen & Mannschaften (nur bei Bearbeitung) */}
+            {editingMember && (() => {
+              const JUGEND_GROUPS = new Set(['jungen_18','maedchen_18','jungen_15','maedchen_15','jungen_13','maedchen_13','jungen_11','maedchen_11']);
+              const memberRoles = getRolesForMember(editingMember);
+              const memberTeamIds = new Set(
+                teamMembers.filter((tm) => tm.member_id === editingMember.id).map((tm) => tm.team_id)
+              );
+              const erwachseneTeams = allTeams.filter((t) => !JUGEND_GROUPS.has(t.age_group));
+              const jugendTeams = allTeams.filter((t) => JUGEND_GROUPS.has(t.age_group));
 
-            {/* Mannschaften (nur bei Bearbeitung) */}
-            {editingMember && (
-              <div className="space-y-2 pt-2 border-t">
-                <Label>Mannschaften</Label>
-                <div className="flex flex-wrap gap-1.5">
-                  {getTeamsForMember(editingMember.id).length > 0 ? (
-                    getTeamsForMember(editingMember.id).map((t, i) => (
-                      <Badge key={i} variant="secondary">
-                        {t.name} (Pos. {t.position})
-                      </Badge>
-                    ))
-                  ) : (
-                    <span className="text-sm text-muted-foreground">Keiner Mannschaft zugeordnet</span>
-                  )}
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
+                  {/* Rollen */}
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-base font-semibold">Rollen</p>
+                      <p className="text-xs text-muted-foreground">Berechtigungen dem Profil zuweisen</p>
+                    </div>
+                    <div className="space-y-2">
+                      {allRoles.map((r) => (
+                        <div key={r.name} className="flex items-center justify-between">
+                          <span className="text-sm">{r.display_name}</span>
+                          <Switch checked={memberRoles.includes(r.name)} disabled />
+                        </div>
+                      ))}
+                      {allRoles.length === 0 && (
+                        <span className="text-sm text-muted-foreground">Keine Rollen definiert</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Mannschaften */}
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-base font-semibold">Mannschaften</p>
+                      <p className="text-xs text-muted-foreground">Mannschaften dem Profil zuweisen</p>
+                    </div>
+
+                    {erwachseneTeams.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-semibold">Erwachsene</p>
+                        {erwachseneTeams.map((t) => (
+                          <div key={t.id} className="flex items-center justify-between">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate">{t.name}</p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {t.age_group ? getAgeGroupLabel(t.age_group) : ''} {t.league ?? ''} {(t.season_phases as any)?.name ? (t.season_phases as any).name : ''}
+                              </p>
+                            </div>
+                            <Switch checked={memberTeamIds.has(t.id)} disabled className="shrink-0 ml-2" />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {jugendTeams.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-semibold">Jugend</p>
+                        {jugendTeams.map((t) => (
+                          <div key={t.id} className="flex items-center justify-between">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate">{t.name}</p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {t.age_group ? getAgeGroupLabel(t.age_group) : ''} {t.league ?? ''} {(t.season_phases as any)?.name ? (t.season_phases as any).name : ''}
+                              </p>
+                            </div>
+                            <Switch checked={memberTeamIds.has(t.id)} disabled className="shrink-0 ml-2" />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {allTeams.length === 0 && (
+                      <span className="text-sm text-muted-foreground">Keine Mannschaften angelegt</span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeForm}>Abbrechen</Button>
