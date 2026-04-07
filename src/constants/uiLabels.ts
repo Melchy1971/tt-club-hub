@@ -44,6 +44,8 @@ export const MODULE_LABELS_DE: Record<AppModuleKey, string> = {
   import: 'Import',
   info: 'Info',
   profile: 'Profil',
+  security: 'Sicherheit',
+  notifications: 'Benachrichtigungen',
   auth: 'Anmeldung',
 };
 
@@ -187,6 +189,7 @@ export const GENDER_LABELS_DE = {
 export type GenderLabelKey = keyof typeof GENDER_LABELS_DE;
 
 export const NAV_GROUP_LABELS_DE: Record<NavGroup, string> = {
+  personal: 'Mein Bereich',
   sport: 'Sportbetrieb',
   club: 'Vereinsführung',
   system: 'System',

@@ -83,6 +83,7 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="gap-0">
+        {renderGroup(NAV_GROUP_LABELS_DE.personal, navGroups.personal)}
         {renderGroup(NAV_GROUP_LABELS_DE.sport, navGroups.sport)}
         {renderGroup(NAV_GROUP_LABELS_DE.club, navGroups.club)}
         {renderGroup(NAV_GROUP_LABELS_DE.system, navGroups.system)}

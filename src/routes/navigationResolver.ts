@@ -11,7 +11,7 @@ export const resolveAllowedRoutes = (ctx: NavigationGuardContext): RouteConfig[]
   ROUTES.filter((route) => isGuardAllowed(ctx, route.guard));
 
 export const resolveSidebarGroups = (ctx: NavigationGuardContext): Record<NavGroup, RouteConfig[]> => {
-  const groups: Record<NavGroup, RouteConfig[]> = { sport: [], club: [], system: [] };
+  const groups: Record<NavGroup, RouteConfig[]> = { personal: [], sport: [], club: [], system: [] };
   for (const route of resolveAllowedRoutes(ctx)) {
     if (route.navVisibility !== 'sidebar') continue;
     groups[route.group].push(route);
