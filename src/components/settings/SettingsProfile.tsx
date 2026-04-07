@@ -597,6 +597,22 @@ export default function SettingsProfile() {
     );
   }
 
+  const deactivateMut = useMutation({
+    mutationFn: async () => {
+      if (!member) throw new Error('Kein Profil');
+      const { error } = await supabase
+        .from('members')
+        .update({ is_active: false, exit_date: new Date().toISOString().split('T')[0] })
+        .eq('id', member.id);
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      toast.success('Konto deaktiviert');
+      await signOut();
+    },
+    onError: () => toast.error('Fehler'),
+  });
+
   return (
     <div className="space-y-6">
       <ProfileHeader member={member} profileVM={profileVM} user={user} />
@@ -633,6 +649,48 @@ export default function SettingsProfile() {
           <TabTeams profileVM={profileVM} />
         </TabsContent>
       </Tabs>
+
+      {/* Konto deaktivieren */}
+      <Card className="border-destructive/50">
+        <CardHeader>
+          <CardTitle className="text-destructive flex items-center gap-2 text-base">
+            <AlertTriangle className="h-5 w-5" />
+            Konto deaktivieren
+          </CardTitle>
+          <CardDescription>
+            Dein Mitgliedsprofil wird als inaktiv markiert. Du kannst dich danach nicht mehr anmelden.
+            Um dies rückgängig zu machen, wende dich an einen Administrator.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm">
+                <UserX className="mr-2 h-4 w-4" />
+                Konto deaktivieren
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Konto wirklich deaktivieren?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Diese Aktion markiert dein Profil als inaktiv und setzt ein Austrittsdatum.
+                  Um dies rückgängig zu machen, wende dich an einen Administrator.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={() => deactivateMut.mutate()}
+                >
+                  Deaktivieren
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </CardContent>
+      </Card>
     </div>
   );
 }
