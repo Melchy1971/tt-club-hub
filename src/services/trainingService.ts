@@ -401,4 +401,4 @@ export const trainingService = {
 // Verwende stattdessen TrainingBookingUI aus '@/types/domain/training'.
 
 /** @deprecated Nutze TrainingBookingUI aus '@/types/domain/training'. */
-export type TrainingBookingRow = Tables<'training_bookings'>;
+export type TrainingBookingRow = TrainingBooking;
