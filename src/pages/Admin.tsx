@@ -217,7 +217,7 @@ function TeamsAdminTab() {
           league: data.league || null,
           division: data.division || null,
           age_group: data.age_group,
-          season_id: data.season_id,
+          season_phase_id: data.season_phase_id || null,
           is_active: data.is_active,
         }).eq('id', id);
         if (error) throw error;
@@ -227,9 +227,9 @@ function TeamsAdminTab() {
           league: data.league || null,
           division: data.division || null,
           age_group: data.age_group,
-          season_id: data.season_id,
+          season_phase_id: data.season_phase_id || null,
           is_active: data.is_active,
-        });
+        } as any);
         if (error) throw error;
       }
     },
