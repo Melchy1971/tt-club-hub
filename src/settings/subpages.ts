@@ -14,7 +14,7 @@ import SettingsClub from '@/components/settings/SettingsClub';
 import SettingsSeasons from '@/components/settings/SettingsSeasons';
 import SettingsVenues from '@/components/settings/SettingsVenues';
 import SettingsAppearance from '@/components/settings/SettingsAppearance';
-import SettingsPrivacy from '@/components/settings/SettingsPrivacy';
+
 import SettingsBackup from '@/components/settings/SettingsBackup';
 import SettingsDangerZone from '@/components/settings/SettingsDangerZone';
 import { SETTINGS_SUBPAGE_LABELS_DE } from '@/constants/uiLabels';
