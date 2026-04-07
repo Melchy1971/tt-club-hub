@@ -20,7 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from 'sonner';
-import { Save, Pencil, X, KeyRound, Shield, Users, User, Trophy, Star, CalendarIcon } from 'lucide-react';
+import { Save, Pencil, X, KeyRound, Shield, Users, User, Trophy, Star, CalendarIcon, UserX, AlertTriangle } from 'lucide-react';
 import { getAgeGroupLabel } from '@/constants/uiLabels';
 import { cn } from '@/lib/utils';
 import type { MemberProfileViewModel } from '@/types/viewModels';
