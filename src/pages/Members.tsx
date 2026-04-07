@@ -123,6 +123,17 @@ export default function Members() {
     },
   });
 
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ['team_members_all'],
+    queryFn: async () => {
+      const { data, error } = await (await import('@/integrations/supabase/client')).supabase
+        .from('team_members')
+        .select('member_id, team_id, position, teams(name)');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['members'] });
 
   const createMut = useMutation({
