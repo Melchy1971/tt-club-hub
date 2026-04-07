@@ -1035,7 +1035,7 @@ function ScheduleImportTab() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 interface PinCodeRow {
-  matchDay?: number;
+  date?: string;
   homeTeam?: string;
   awayTeam?: string;
   pin?: string;
@@ -1050,57 +1050,71 @@ function PinCodeImportTab() {
   const [step, setStep] = useState<'upload' | 'preview' | 'done'>('upload');
   const [rows, setRows] = useState<PinCodeRow[]>([]);
   const [teamId, setTeamId] = useState('');
-  const [seasonId, setSeasonId] = useState('');
+  const [fileName, setFileName] = useState('');
 
   const { data: teams } = useQuery({
     queryKey: ['teams-pin'],
-    queryFn: async () => { const { data } = await supabase.from('teams').select('id, name').eq('is_active', true).order('name'); return data ?? []; },
-  });
-
-  const { data: seasons } = useQuery({
-    queryKey: ['seasons-pin'],
-    queryFn: async () => { const { data } = await supabase.from('seasons').select('id, name').order('start_date', { ascending: false }); return data ?? []; },
+    queryFn: async () => {
+      const { data } = await supabase.from('teams').select('id, name, league').eq('is_active', true).order('name');
+      return data ?? [];
+    },
   });
 
   const handleFile = async (file: File) => {
-    if (!teamId || !seasonId) { toast.error('Mannschaft und Saison wählen'); return; }
-
     try {
+      setFileName(file.name);
       const raw = await parseFileToRows(file);
-      // Load matches for matching
-      const { data: matches } = await supabase
-        .from('schedule_matches')
-        .select('id, match_day, home_team, away_team')
-        .eq('team_id', teamId)
-        .eq('season_id', seasonId);
-
-      const matchList = matches ?? [];
+      if (raw.length === 0) { toast.error('Leere Datei'); return; }
 
       const parsed: PinCodeRow[] = raw.map((r) => {
-        const matchDay = parseInt(r['Spieltag'] || r['match_day'] || r['Nr'] || '0', 10);
-        const homeTeam = (r['Heim'] || r['home_team'] || r['Heimmannschaft'] || '').trim();
-        const awayTeam = (r['Gast'] || r['away_team'] || r['Gastmannschaft'] || '').trim();
-        const pin = (r['PIN'] || r['pin'] || r['Pin'] || '').trim() || undefined;
-        const code = (r['Code'] || r['code'] || '').trim() || undefined;
+        const dateRaw = (r['Datum'] || r['datum'] || r['date'] || '').toString().trim();
+        const date = parseDate(dateRaw) ?? dateRaw;
+        const homeTeam = (r['Heimmannschaft'] || r['Heim'] || r['home_team'] || '').toString().trim();
+        const awayTeam = (r['Gastmannschaft'] || r['Gast'] || r['away_team'] || '').toString().trim();
+        const pin = (r['Spielpin'] || r['PIN'] || r['pin'] || r['Pin'] || '').toString().trim() || undefined;
+        const code = (r['Spielcode'] || r['Code'] || r['code'] || '').toString().trim() || undefined;
 
-        // Auto-match
-        let matched = false;
-        let matchId: string | undefined;
-        const match = matchList.find((m) =>
-          (matchDay && m.match_day === matchDay) ||
-          (homeTeam && m.home_team.toLowerCase().includes(homeTeam.toLowerCase()) && awayTeam && m.away_team.toLowerCase().includes(awayTeam.toLowerCase()))
-        );
-        if (match) { matched = true; matchId = match.id; }
-
-        return { matchDay, homeTeam, awayTeam, pin, code, matchId, matched, error: !pin && !code ? 'Kein PIN/Code' : undefined };
-      });
+        return { date, homeTeam, awayTeam, pin, code, matched: false, error: !pin && !code ? 'Kein PIN/Code' : undefined };
+      }).filter((r) => r.homeTeam || r.awayTeam);
 
       setRows(parsed);
       setStep('preview');
     } catch {
-      toast.error('Fehler beim Lesen');
+      toast.error('Fehler beim Lesen der Datei');
     }
   };
+
+  // Load matches for selected team
+  const { data: matchOptions } = useQuery({
+    queryKey: ['matches-for-pin', teamId],
+    queryFn: async () => {
+      if (!teamId) return [];
+      const { data } = await supabase
+        .from('schedule_matches')
+        .select('id, match_day, match_date, home_team, away_team')
+        .eq('team_id', teamId)
+        .order('match_date');
+      return data ?? [];
+    },
+    enabled: !!teamId,
+  });
+
+  // Auto-match when team changes
+  useEffect(() => {
+    if (!matchOptions || matchOptions.length === 0 || rows.length === 0) return;
+
+    setRows((prev) => prev.map((r) => {
+      // Try matching by date + team names
+      const match = matchOptions.find((m) => {
+        const dateMatch = r.date && m.match_date === r.date;
+        const homeMatch = r.homeTeam && m.home_team.toLowerCase().includes(r.homeTeam.toLowerCase());
+        const awayMatch = r.awayTeam && m.away_team.toLowerCase().includes(r.awayTeam.toLowerCase());
+        return (dateMatch && homeMatch) || (dateMatch && awayMatch) || (homeMatch && awayMatch);
+      });
+      if (match) return { ...r, matchId: match.id, matched: true };
+      return { ...r, matchId: undefined, matched: false };
+    }));
+  }, [matchOptions]);
 
   const setManualMatch = (idx: number, matchId: string) => {
     setRows((prev) => prev.map((r, i) => i === idx ? { ...r, matchId, matched: true } : r));
@@ -1125,34 +1139,30 @@ function PinCodeImportTab() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const { data: matchOptions } = useQuery({
-    queryKey: ['matches-for-pin', teamId, seasonId],
-    queryFn: async () => {
-      if (!teamId || !seasonId) return [];
-      const { data } = await supabase.from('schedule_matches').select('id, match_day, home_team, away_team').eq('team_id', teamId).eq('season_id', seasonId).order('match_date');
-      return data ?? [];
-    },
-    enabled: !!teamId && !!seasonId,
-  });
+  const reset = () => { setStep('upload'); setRows([]); setTeamId(''); setFileName(''); };
+
+  const downloadTemplate = () => {
+    const a = document.createElement('a');
+    a.href = '/templates/pins_import_vorlage.xlsx';
+    a.download = 'pins_import_vorlage.xlsx';
+    a.click();
+  };
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-semibold">PIN/Code-Import</h2>
-      <p className="text-sm text-muted-foreground">Importiere PINs und Codes und ordne sie automatisch den Spielen zu</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">PIN/Code-Import</h2>
+          <p className="text-sm text-muted-foreground">Importiere PINs und Codes und ordne sie automatisch den Spielen zu</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={downloadTemplate}>
+          <Download className="mr-2 h-4 w-4" /> Excel-Vorlage
+        </Button>
+      </div>
 
       {step === 'upload' && (
         <Card>
           <CardContent className="pt-6 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Saison</Label>
-                <Select value={seasonId} onValueChange={setSeasonId}><SelectTrigger><SelectValue placeholder="Wählen" /></SelectTrigger><SelectContent>{seasons?.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent></Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Mannschaft</Label>
-                <Select value={teamId} onValueChange={setTeamId}><SelectTrigger><SelectValue placeholder="Wählen" /></SelectTrigger><SelectContent>{teams?.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent></Select>
-              </div>
-            </div>
             <FileDropZone onFile={handleFile} />
           </CardContent>
         </Card>
@@ -1160,44 +1170,85 @@ function PinCodeImportTab() {
 
       {step === 'preview' && (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Card><CardContent className="pt-6 flex items-center gap-3"><CheckCircle2 className="h-8 w-8 text-green-500" /><div><p className="text-2xl font-bold">{matchedRows.length}</p><p className="text-sm text-muted-foreground">Zugeordnet</p></div></CardContent></Card>
-            <Card><CardContent className="pt-6 flex items-center gap-3"><AlertCircle className="h-8 w-8 text-amber-500" /><div><p className="text-2xl font-bold">{rows.filter((r) => !r.matched).length}</p><p className="text-sm text-muted-foreground">Nicht zugeordnet</p></div></CardContent></Card>
-          </div>
-
           <Card>
-            <CardHeader><CardTitle className="text-base">Zuordnung</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="text-base">Mannschaft zuordnen</CardTitle>
+              <CardDescription>Datei: <strong>{fileName}</strong> — {rows.length} Zeilen geladen. Wähle die Mannschaft, um die Spiele automatisch zuzuordnen.</CardDescription>
+            </CardHeader>
             <CardContent>
-              <div className="rounded-md border max-h-[400px] overflow-auto">
-                <Table>
-                  <TableHeader><TableRow><TableHead>Spieltag</TableHead><TableHead>Heim</TableHead><TableHead>Gast</TableHead><TableHead>PIN</TableHead><TableHead>Code</TableHead><TableHead>Zuordnung</TableHead></TableRow></TableHeader>
-                  <TableBody>
-                    {rows.map((r, i) => (
-                      <TableRow key={i} className={cn(!r.matched && 'bg-amber-500/5')}>
-                        <TableCell>{r.matchDay || '–'}</TableCell>
-                        <TableCell>{r.homeTeam || '–'}</TableCell>
-                        <TableCell>{r.awayTeam || '–'}</TableCell>
-                        <TableCell className="font-mono">{r.pin || '–'}</TableCell>
-                        <TableCell className="font-mono">{r.code || '–'}</TableCell>
-                        <TableCell>
-                          {r.matched ? <Badge variant="secondary" className="text-xs">✓ Zugeordnet</Badge> : (
-                            <Select value={r.matchId ?? ''} onValueChange={(v) => setManualMatch(i, v)}>
-                              <SelectTrigger className="w-[250px]"><SelectValue placeholder="Manuell zuordnen" /></SelectTrigger>
-                              <SelectContent>{matchOptions?.map((m) => <SelectItem key={m.id} value={m.id}>ST{m.match_day}: {m.home_team} – {m.away_team}</SelectItem>)}</SelectContent>
-                            </Select>
-                          )}
-                        </TableCell>
-                      </TableRow>
+              <div className="max-w-md space-y-2">
+                <Label>Mannschaft</Label>
+                <Select value={teamId} onValueChange={setTeamId}>
+                  <SelectTrigger><SelectValue placeholder="Mannschaft wählen" /></SelectTrigger>
+                  <SelectContent>
+                    {teams?.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.league ? `${t.league} – ${t.name}` : t.name}
+                      </SelectItem>
                     ))}
-                  </TableBody>
-                </Table>
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>
 
+          {teamId && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <Card><CardContent className="pt-6 flex items-center gap-3"><CheckCircle2 className="h-8 w-8 text-green-500" /><div><p className="text-2xl font-bold">{matchedRows.length}</p><p className="text-sm text-muted-foreground">Zugeordnet</p></div></CardContent></Card>
+                <Card><CardContent className="pt-6 flex items-center gap-3"><AlertCircle className="h-8 w-8 text-amber-500" /><div><p className="text-2xl font-bold">{rows.filter((r) => !r.matched).length}</p><p className="text-sm text-muted-foreground">Nicht zugeordnet</p></div></CardContent></Card>
+              </div>
+
+              <Card>
+                <CardHeader><CardTitle className="text-base">Zuordnung</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="rounded-md border max-h-[400px] overflow-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Datum</TableHead>
+                          <TableHead>Heimmannschaft</TableHead>
+                          <TableHead>Gastmannschaft</TableHead>
+                          <TableHead>PIN</TableHead>
+                          <TableHead>Code</TableHead>
+                          <TableHead>Zuordnung</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {rows.map((r, i) => (
+                          <TableRow key={i} className={cn(!r.matched && 'bg-amber-500/5')}>
+                            <TableCell>{r.date ? fmtDate(r.date) : '–'}</TableCell>
+                            <TableCell>{r.homeTeam || '–'}</TableCell>
+                            <TableCell>{r.awayTeam || '–'}</TableCell>
+                            <TableCell className="font-mono">{r.pin || '–'}</TableCell>
+                            <TableCell className="font-mono">{r.code || '–'}</TableCell>
+                            <TableCell>
+                              {r.matched ? <Badge variant="secondary" className="text-xs">✓ Zugeordnet</Badge> : (
+                                <Select value={r.matchId ?? ''} onValueChange={(v) => setManualMatch(i, v)}>
+                                  <SelectTrigger className="w-[280px]"><SelectValue placeholder="Manuell zuordnen" /></SelectTrigger>
+                                  <SelectContent>
+                                    {matchOptions?.map((m) => (
+                                      <SelectItem key={m.id} value={m.id}>
+                                        {fmtDate(m.match_date)}: {m.home_team} – {m.away_team}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => { setStep('upload'); setRows([]); }}>Zurück</Button>
-            <Button onClick={() => importMut.mutate()} disabled={matchedRows.length === 0 || importMut.isPending}>
+            <Button variant="outline" onClick={reset}>Zurück</Button>
+            <Button onClick={() => importMut.mutate()} disabled={matchedRows.length === 0 || importMut.isPending || !teamId}>
               {importMut.isPending ? 'Importiere…' : `${matchedRows.length} PINs/Codes importieren`}
             </Button>
           </div>
@@ -1208,7 +1259,7 @@ function PinCodeImportTab() {
         <Card><CardContent className="pt-6 text-center space-y-4">
           <CheckCircle2 className="mx-auto h-16 w-16 text-green-500" />
           <h2 className="text-xl font-semibold">Import abgeschlossen</h2>
-          <Button variant="outline" onClick={() => { setStep('upload'); setRows([]); }}>Neuer Import</Button>
+          <Button variant="outline" onClick={reset}>Neuer Import</Button>
         </CardContent></Card>
       )}
     </div>
