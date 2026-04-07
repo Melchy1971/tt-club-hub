@@ -8,6 +8,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from '@/components/ui/dialog';
+import { Constants } from '@/integrations/supabase/types';
+import { getAgeGroupLabel, getGenderLabel } from '@/constants/uiLabels';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TeamEditDialog } from '@/components/admin/TeamEditDialog';
 import { TeamRosterDialog } from '@/components/admin/TeamRosterDialog';
@@ -71,12 +82,39 @@ const TABS = [
 ] as const;
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TAB 1: Mitglieder
+// TAB 1: Mitglieder (CRUD)
 // ═══════════════════════════════════════════════════════════════════════════════
+
+const emptyMemberForm = {
+  first_name: '',
+  last_name: '',
+  email: '',
+  phone: '',
+  date_of_birth: '',
+  gender: '' as string,
+  street: '',
+  zip_code: '',
+  city: '',
+  member_number: '',
+  age_group: '' as string,
+  ttr_rating: '',
+  qttr_rating: '',
+  entry_date: new Date().toISOString().slice(0, 10),
+  notes: '',
+  is_active: true,
+};
+
+type MemberFormState = typeof emptyMemberForm;
 
 function MembersAdminTab() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [form, setForm] = useState<MemberFormState>(emptyMemberForm);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const queryClient = useQueryClient();
 
   const { data: members, isLoading } = useQuery({
     queryKey: ['admin-members'],
@@ -88,6 +126,33 @@ function MembersAdminTab() {
       if (error) throw error;
       return data ?? [];
     },
+  });
+
+  const createMut = useMutation({
+    mutationFn: async (payload: Record<string, any>) => {
+      const { error } = await supabase.from('members').insert(payload as any);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success('Mitglied erstellt'); queryClient.invalidateQueries({ queryKey: ['admin-members'] }); closeForm(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const updateMut = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Record<string, any> }) => {
+      const { error } = await supabase.from('members').update(data).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success('Mitglied aktualisiert'); queryClient.invalidateQueries({ queryKey: ['admin-members'] }); closeForm(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('members').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success('Mitglied gelöscht'); queryClient.invalidateQueries({ queryKey: ['admin-members'] }); },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const filtered = useMemo(() => {
@@ -103,6 +168,87 @@ function MembersAdminTab() {
       return true;
     });
   }, [members, search, statusFilter]);
+
+  function closeForm() {
+    setFormOpen(false);
+    setEditingId(null);
+    setForm(emptyMemberForm);
+    setErrors({});
+  }
+
+  function openCreate() {
+    setEditingId(null);
+    setForm(emptyMemberForm);
+    setErrors({});
+    setFormOpen(true);
+  }
+
+  function openEdit(m: any) {
+    setEditingId(m.id);
+    setForm({
+      first_name: m.first_name ?? '',
+      last_name: m.last_name ?? '',
+      email: m.email ?? '',
+      phone: m.phone ?? '',
+      date_of_birth: m.date_of_birth ?? '',
+      gender: m.gender ?? '',
+      street: m.street ?? '',
+      zip_code: m.zip_code ?? '',
+      city: m.city ?? '',
+      member_number: m.member_number ?? '',
+      age_group: m.age_group ?? '',
+      ttr_rating: m.ttr_rating?.toString() ?? '',
+      qttr_rating: m.qttr_rating?.toString() ?? '',
+      entry_date: m.entry_date ?? new Date().toISOString().slice(0, 10),
+      notes: m.notes ?? '',
+      is_active: m.is_active,
+    });
+    setErrors({});
+    setFormOpen(true);
+  }
+
+  function setField(field: keyof MemberFormState, value: string | boolean) {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function validate(): boolean {
+    const e: Record<string, string> = {};
+    if (!form.first_name.trim()) e.first_name = 'Vorname ist erforderlich';
+    if (!form.last_name.trim()) e.last_name = 'Nachname ist erforderlich';
+    if (!form.entry_date) e.entry_date = 'Eintrittsdatum ist erforderlich';
+    if (form.ttr_rating && isNaN(parseInt(form.ttr_rating, 10))) e.ttr_rating = 'Ungültige Zahl';
+    if (form.qttr_rating && isNaN(parseInt(form.qttr_rating, 10))) e.qttr_rating = 'Ungültige Zahl';
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Ungültige E-Mail';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
+  function handleSubmit() {
+    if (!validate()) return;
+    const payload: Record<string, any> = {
+      first_name: form.first_name.trim(),
+      last_name: form.last_name.trim(),
+      email: form.email.trim() || null,
+      phone: form.phone.trim() || null,
+      date_of_birth: form.date_of_birth || null,
+      gender: form.gender || null,
+      street: form.street.trim() || null,
+      zip_code: form.zip_code.trim() || null,
+      city: form.city.trim() || null,
+      member_number: form.member_number.trim() || null,
+      age_group: form.age_group || null,
+      ttr_rating: form.ttr_rating ? parseInt(form.ttr_rating, 10) : null,
+      qttr_rating: form.qttr_rating ? parseInt(form.qttr_rating, 10) : null,
+      entry_date: form.entry_date,
+      notes: form.notes.trim() || null,
+      is_active: form.is_active,
+    };
+    if (editingId) {
+      updateMut.mutate({ id: editingId, data: payload });
+    } else {
+      createMut.mutate(payload);
+    }
+  }
 
   if (isLoading) return <LoadingSkeleton />;
 
@@ -130,6 +276,9 @@ function MembersAdminTab() {
             </Button>
           ))}
         </div>
+        <Button onClick={openCreate}>
+          <UserPlus className="mr-2 h-4 w-4" /> Mitglied hinzufügen
+        </Button>
       </div>
 
       <div className="text-sm text-muted-foreground">
@@ -150,6 +299,7 @@ function MembersAdminTab() {
                 <TableHead>TTR</TableHead>
                 <TableHead>QTTR</TableHead>
                 <TableHead>Eintritt</TableHead>
+                <TableHead className="text-right">Aktionen</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -166,12 +316,142 @@ function MembersAdminTab() {
                   <TableCell className="text-sm">{m.ttr_rating ?? '–'}</TableCell>
                   <TableCell className="text-sm">{m.qttr_rating ?? '–'}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{fmtDate(m.entry_date)}</TableCell>
+                  <TableCell className="text-right space-x-1">
+                    <Button variant="ghost" size="icon" onClick={() => openEdit(m)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => setDeleteId(m.id)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </div>
       )}
+
+      {/* Create / Edit Form Dialog */}
+      <Dialog open={formOpen} onOpenChange={(o) => !o && closeForm()}>
+        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingId ? 'Mitglied bearbeiten' : 'Neues Mitglied'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-4">
+              <AdminFormField label="Vorname *" id="adm_first_name" value={form.first_name} error={errors.first_name}
+                onChange={(v) => setField('first_name', v)} />
+              <AdminFormField label="Nachname *" id="adm_last_name" value={form.last_name} error={errors.last_name}
+                onChange={(v) => setField('last_name', v)} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <AdminFormField label="E-Mail" id="adm_email" value={form.email} error={errors.email} type="email"
+                onChange={(v) => setField('email', v)} />
+              <AdminFormField label="Telefon" id="adm_phone" value={form.phone}
+                onChange={(v) => setField('phone', v)} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <AdminFormField label="Geburtsdatum" id="adm_dob" value={form.date_of_birth} type="date"
+                onChange={(v) => setField('date_of_birth', v)} />
+              <div className="space-y-1.5">
+                <Label htmlFor="adm_gender">Geschlecht</Label>
+                <Select value={form.gender} onValueChange={(v) => setField('gender', v)}>
+                  <SelectTrigger id="adm_gender"><SelectValue placeholder="Auswählen" /></SelectTrigger>
+                  <SelectContent>
+                    {Constants.public.Enums.gender.map((g) => (
+                      <SelectItem key={g} value={g}>{getGenderLabel(g)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <AdminFormField label="Straße" id="adm_street" value={form.street}
+              onChange={(v) => setField('street', v)} />
+            <div className="grid grid-cols-3 gap-4">
+              <AdminFormField label="PLZ" id="adm_zip" value={form.zip_code}
+                onChange={(v) => setField('zip_code', v)} />
+              <div className="col-span-2">
+                <AdminFormField label="Ort" id="adm_city" value={form.city}
+                  onChange={(v) => setField('city', v)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <AdminFormField label="Mitgliedsnummer" id="adm_member_nr" value={form.member_number}
+                onChange={(v) => setField('member_number', v)} />
+              <div className="space-y-1.5">
+                <Label htmlFor="adm_age_group">Altersgruppe</Label>
+                <Select value={form.age_group} onValueChange={(v) => setField('age_group', v)}>
+                  <SelectTrigger id="adm_age_group"><SelectValue placeholder="Auswählen" /></SelectTrigger>
+                  <SelectContent>
+                    {Constants.public.Enums.age_group.map((ag) => (
+                      <SelectItem key={ag} value={ag}>{getAgeGroupLabel(ag)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <AdminFormField label="TTR-Wert" id="adm_ttr" value={form.ttr_rating} error={errors.ttr_rating}
+                type="number" onChange={(v) => setField('ttr_rating', v)} />
+              <AdminFormField label="QTTR-Wert" id="adm_qttr" value={form.qttr_rating} error={errors.qttr_rating}
+                type="number" onChange={(v) => setField('qttr_rating', v)} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <AdminFormField label="Eintrittsdatum *" id="adm_entry" value={form.entry_date} error={errors.entry_date}
+                type="date" onChange={(v) => setField('entry_date', v)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="adm_notes">Notizen</Label>
+              <Textarea id="adm_notes" value={form.notes} onChange={(e) => setField('notes', e.target.value)}
+                rows={3} placeholder="Optionale Anmerkungen…" />
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch id="adm_is_active" checked={form.is_active}
+                onCheckedChange={(v) => setField('is_active', v)} />
+              <Label htmlFor="adm_is_active">Aktives Mitglied</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeForm}>Abbrechen</Button>
+            <Button onClick={handleSubmit} disabled={createMut.isPending || updateMut.isPending}>
+              {editingId ? 'Speichern' : 'Erstellen'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mitglied löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Das Mitglied wird unwiderruflich entfernt.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { if (deleteId) deleteMut.mutate(deleteId); setDeleteId(null); }}>
+              Löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+function AdminFormField({
+  label, id, value, error, type = 'text', onChange,
+}: {
+  label: string; id: string; value: string; error?: string; type?: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      <Input id={id} type={type} value={value} onChange={(e) => onChange(e.target.value)} />
+      {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );
 }
