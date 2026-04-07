@@ -97,8 +97,8 @@ function toUI(row: ScheduleMatch): ScheduleMatchUI {
 
   return {
     id: row.id,
-    seasonCycleId: row.season_id,
-    seasonId: row.season_id,
+    seasonCycleId: (row.season_id ?? null) as any,
+    seasonId: (row.season_id ?? null) as any,
     seasonPhaseId: row.season_phase_id,
     teamId: row.team_id,
     matchDate: row.match_date,

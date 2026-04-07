@@ -1,0 +1,1 @@
+ALTER TABLE public.schedule_matches ALTER COLUMN season_id DROP NOT NULL;
