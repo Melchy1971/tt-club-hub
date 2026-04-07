@@ -63,12 +63,7 @@ export type Role = Tables<'roles'>;
 export type UserRole = Tables<'user_roles'>;
 export type ClubSettings = Tables<'club_settings'>;
 
-// === Training ===
-export type TrainingBooking = Tables<'training_bookings'>;
-export type TrainingBookingInsert = TablesInsert<'training_bookings'>;
-export type TrainingBookingUpdate = TablesUpdate<'training_bookings'>;
-
-export type BookingStatus = 'pending' | 'confirmed' | 'cancelled';
+// Training types are re-exported from domain/training below
 
 // === News ===
 export type { NewsRow, NewsCreateDTO, NewsUpdateDTO, NewsFilter } from './domain/news';

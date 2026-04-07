@@ -41,6 +41,7 @@ import {
 import { toast } from 'sonner';
 import { csvAdapter } from '@/lib/export/csvAdapter';
 import type { ExportDocument } from '@/lib/export/types';
+import { MATCH_STATUS_LABELS_DE, getMatchStatusLabel } from '@/constants/uiLabels';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
