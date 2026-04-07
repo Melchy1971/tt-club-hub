@@ -82,7 +82,7 @@ export const newsService = {
       }
       const { data, error } = await supabase
         .from('news')
-        .update(updateData)
+        .update(updateData as any)
         .eq('id', id)
         .select()
         .single();

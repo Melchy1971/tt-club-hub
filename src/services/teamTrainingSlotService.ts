@@ -387,7 +387,7 @@ export const teamTrainingSlotService = {
    * Bevorzugt gegenüber hartem Löschen – erhält die Historik.
    */
   async deactivateSlot(id: string): Promise<ApiResult<TeamTrainingSlotUI>> {
-    return this.updateSlot(id, { is_active: false });
+    return this.updateSlot(id, { is_active: false, valid_from: null, valid_to: null });
   },
 
   /** Löscht einen Slot hart. Nur für irrtümlich erstellte Einträge empfohlen. */

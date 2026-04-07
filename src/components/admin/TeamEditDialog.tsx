@@ -29,7 +29,7 @@ interface TeamFormData {
   league: string;
   division: string;
   age_group: string;
-  season_id: string;
+  season_phase_id: string;
   is_active: boolean;
 }
 
@@ -47,19 +47,20 @@ export function TeamEditDialog({ open, onOpenChange, team, onSave, saving }: Tea
     league: '',
     division: '',
     age_group: 'herren',
-    season_id: '',
+    season_phase_id: '',
     is_active: true,
   });
 
-  const { data: seasons } = useQuery({
-    queryKey: ['seasons-for-team-dialog'],
+  const { data: phases } = useQuery({
+    queryKey: ['season-phases-for-team-dialog'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('seasons')
-        .select('id, name, is_current')
+        .from('season_phases')
+        .select('id, name, is_active, season_cycle_id, season_cycles(id, name, is_active)')
         .order('start_date', { ascending: false });
       if (error) throw error;
-      return data ?? [];
+      // Only show phases from active cycles
+      return (data ?? []).filter((p: any) => p.season_cycles?.is_active);
     },
     enabled: open,
   });
@@ -71,28 +72,28 @@ export function TeamEditDialog({ open, onOpenChange, team, onSave, saving }: Tea
         league: team.league ?? '',
         division: team.division ?? '',
         age_group: team.age_group ?? 'herren',
-        season_id: team.season_id ?? '',
+        season_phase_id: team.season_phase_id ?? '',
         is_active: team.is_active ?? true,
       });
     } else {
-      const currentSeason = seasons?.find((s) => s.is_current);
+      const activePhase = phases?.find((p) => p.is_active);
       setForm({
         name: '',
         league: '',
         division: '',
         age_group: 'herren',
-        season_id: currentSeason?.id ?? seasons?.[0]?.id ?? '',
+        season_phase_id: activePhase?.id ?? phases?.[0]?.id ?? '',
         is_active: true,
       });
     }
-  }, [team, open, seasons]);
+  }, [team, open, phases]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave(form, team?.id);
   };
 
-  const isValid = form.name.trim() && form.league.trim() && form.season_id;
+  const isValid = form.name.trim() && form.league.trim() && form.season_phase_id;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -145,13 +146,13 @@ export function TeamEditDialog({ open, onOpenChange, team, onSave, saving }: Tea
             </div>
 
             <div className="space-y-2">
-              <Label>Saison</Label>
-              <Select value={form.season_id} onValueChange={(v) => setForm((f) => ({ ...f, season_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Saison wählen" /></SelectTrigger>
+              <Label>Saisonphase</Label>
+              <Select value={form.season_phase_id} onValueChange={(v) => setForm((f) => ({ ...f, season_phase_id: v }))}>
+                <SelectTrigger><SelectValue placeholder="Saisonphase wählen" /></SelectTrigger>
                 <SelectContent>
-                  {(seasons ?? []).map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name} {s.is_current ? '(aktuell)' : ''}
+                  {(phases ?? []).map((p: any) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.season_cycles?.name} – {p.name} {p.is_active ? '(aktiv)' : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>

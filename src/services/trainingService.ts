@@ -401,9 +401,4 @@ export const trainingService = {
 // Verwende stattdessen TrainingBookingUI aus '@/types/domain/training'.
 
 /** @deprecated Nutze TrainingBookingUI aus '@/types/domain/training'. */
-export type TrainingBookingRow = Omit<TrainingBooking, never>;
-
-/** @deprecated Nutze TrainingBookingUI aus '@/types/domain/training'. */
-export type { TrainingBookingUI } from '@/types/domain/training';
-
-import type { TrainingBooking } from '@/types/domain/training';
+export type TrainingBookingRow = TrainingBooking;

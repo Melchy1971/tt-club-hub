@@ -1,0 +1,1 @@
+ALTER TABLE public.teams ALTER COLUMN season_id DROP NOT NULL;

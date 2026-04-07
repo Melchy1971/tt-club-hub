@@ -941,7 +941,7 @@ export type Database = {
           is_active: boolean
           league: string | null
           name: string
-          season_id: string
+          season_id: string | null
           season_phase_id: string | null
           updated_at: string
         }
@@ -954,7 +954,7 @@ export type Database = {
           is_active?: boolean
           league?: string | null
           name: string
-          season_id: string
+          season_id?: string | null
           season_phase_id?: string | null
           updated_at?: string
         }
@@ -967,7 +967,7 @@ export type Database = {
           is_active?: boolean
           league?: string | null
           name?: string
-          season_id?: string
+          season_id?: string | null
           season_phase_id?: string | null
           updated_at?: string
         }

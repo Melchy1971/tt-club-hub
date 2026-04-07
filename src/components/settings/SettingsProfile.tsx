@@ -570,7 +570,7 @@ export default function SettingsProfile() {
       for (const key of ['phone', 'mobile', 'street', 'zip_code', 'city'] as const) {
         if (payload[key] === '') payload[key] = null;
       }
-      const { error } = await supabase.from('members').update(payload).eq('id', member.id);
+      const { error } = await supabase.from('members').update(payload as any).eq('id', member.id);
       if (error) throw error;
     },
     onSuccess: () => { toast.success('Profil aktualisiert'); setEditing(false); refresh(); },

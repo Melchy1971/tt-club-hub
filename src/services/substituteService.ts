@@ -125,7 +125,7 @@ export const substituteService = {
       if (requesting_member_id) q = q.eq('requesting_member_id', requesting_member_id);
       if (substitute_member_id) q = q.eq('substitute_member_id', substitute_member_id);
       if (open_only)            q = q.eq('status', 'pending');
-      else if (status)          q = q.eq('status', status);
+      else if (status)          q = q.eq('status', status as any);
       if (matchIds !== null)    q = q.in('match_id', matchIds);
 
       const { data, error } = await q;
