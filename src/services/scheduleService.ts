@@ -604,7 +604,7 @@ export const scheduleService = {
       delete patch.season_cycle_id;
       const { data, error } = await supabase
         .from('schedule_matches')
-        .update(patch)
+        .update(patch as any)
         .eq('id', id)
         .select()
         .single();
