@@ -35,7 +35,7 @@ export const ROUTES: RouteConfig[] = [
     label: MODULE_LABELS_DE.members,
     moduleKey: 'members',
     icon: Users,
-    group: 'sport',
+    group: 'club',
     navVisibility: 'sidebar',
     guard: { type: 'permission', permission: 'member:read' },
   },
