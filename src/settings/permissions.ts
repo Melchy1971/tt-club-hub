@@ -1,24 +1,24 @@
 import type { Permission } from '@/types/auth';
-import type { SettingsSubpageId } from './types';
+import type { SettingsAccessRule, SettingsSubpageId } from './types';
 
 export interface SettingsPermissionRule {
-  read?: Permission;
-  write?: Permission;
+  read?: SettingsAccessRule;
+  write?: SettingsAccessRule;
 }
 
 export const SETTINGS_PERMISSION_MODEL: Record<SettingsSubpageId, SettingsPermissionRule> = {
-  general: {},
-  roles: { read: 'admin:all', write: 'admin:all' },
+  roles: { read: { permissions: ['admin:all'] }, write: { permissions: ['admin:all'] } },
+  permissions: { read: { permissions: ['admin:all'] }, write: { permissions: ['admin:all'] } },
   profile: {},
-  club: { read: 'settings:read', write: 'settings:write' },
-  season: { read: 'settings:read', write: 'settings:write' },
-  venues: { read: 'settings:read', write: 'settings:write' },
+  club: { read: { permissions: ['settings:read'] }, write: { permissions: ['settings:write'] } },
+  season: { read: { permissions: ['settings:read'] }, write: { permissions: ['settings:write'] } },
+  venues: { read: { permissions: ['settings:read'] }, write: { permissions: ['settings:write'] } },
   appearance: {},
   notifications: {},
   privacy: {},
   security: {},
-  backup: { read: 'admin:all', write: 'admin:all' },
-  danger: { read: 'admin:all', write: 'admin:all' },
+  backup: { read: { permissions: ['admin:all'] }, write: { permissions: ['admin:all'] } },
+  danger: { read: { permissions: ['admin:all'] }, write: { permissions: ['admin:all'] } },
 };
 
 export function getSettingsPermissionRule(id: SettingsSubpageId): SettingsPermissionRule {

@@ -13,6 +13,7 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import SettingsRoles from '@/components/settings/SettingsRoles';
+import SettingsPermissions from '@/components/settings/SettingsPermissions';
 import SettingsProfile from '@/components/settings/SettingsProfile';
 import SettingsClub from '@/components/settings/SettingsClub';
 import SettingsSeasons from '@/components/settings/SettingsSeasons';
@@ -29,7 +30,6 @@ import { getSettingsPermissionRule } from './permissions';
 import type { SettingsSubpageDef } from './types';
 
 export const SETTINGS_SUBPAGES: SettingsSubpageDef[] = [
-  { id: 'general', label: SETTINGS_SUBPAGE_LABELS_DE.general, icon: SlidersHorizontal, component: SettingsInfo, group: 'account' },
   { id: 'profile', label: SETTINGS_SUBPAGE_LABELS_DE.profile, icon: UserCircle, component: SettingsProfile, group: 'account' },
   { id: 'security', label: SETTINGS_SUBPAGE_LABELS_DE.security, icon: ShieldAlert, component: SettingsSecurity, group: 'account' },
   { id: 'notifications', label: SETTINGS_SUBPAGE_LABELS_DE.notifications, icon: Bell, component: SettingsNotifications, group: 'account' },
@@ -42,8 +42,8 @@ export const SETTINGS_SUBPAGES: SettingsSubpageDef[] = [
     icon: Building2,
     component: SettingsClub,
     group: 'club',
-    requiredPermission: getSettingsPermissionRule('club').read,
-    writePermission: getSettingsPermissionRule('club').write,
+    readAccess: getSettingsPermissionRule('club').read,
+    writeAccess: getSettingsPermissionRule('club').write,
   },
   {
     id: 'season',
@@ -51,8 +51,8 @@ export const SETTINGS_SUBPAGES: SettingsSubpageDef[] = [
     icon: Calendar,
     component: SettingsSeasons,
     group: 'club',
-    requiredPermission: getSettingsPermissionRule('season').read,
-    writePermission: getSettingsPermissionRule('season').write,
+    readAccess: getSettingsPermissionRule('season').read,
+    writeAccess: getSettingsPermissionRule('season').write,
   },
   {
     id: 'venues',
@@ -60,8 +60,8 @@ export const SETTINGS_SUBPAGES: SettingsSubpageDef[] = [
     icon: MapPin,
     component: SettingsVenues,
     group: 'club',
-    requiredPermission: getSettingsPermissionRule('venues').read,
-    writePermission: getSettingsPermissionRule('venues').write,
+    readAccess: getSettingsPermissionRule('venues').read,
+    writeAccess: getSettingsPermissionRule('venues').write,
   },
 
   {
@@ -70,8 +70,17 @@ export const SETTINGS_SUBPAGES: SettingsSubpageDef[] = [
     icon: Users,
     component: SettingsRoles,
     group: 'admin',
-    requiredPermission: getSettingsPermissionRule('roles').read,
-    writePermission: getSettingsPermissionRule('roles').write,
+    readAccess: getSettingsPermissionRule('roles').read,
+    writeAccess: getSettingsPermissionRule('roles').write,
+  },
+  {
+    id: 'permissions',
+    label: SETTINGS_SUBPAGE_LABELS_DE.permissions,
+    icon: SlidersHorizontal,
+    component: SettingsPermissions,
+    group: 'admin',
+    readAccess: getSettingsPermissionRule('permissions').read,
+    writeAccess: getSettingsPermissionRule('permissions').write,
   },
   {
     id: 'backup',
@@ -79,8 +88,8 @@ export const SETTINGS_SUBPAGES: SettingsSubpageDef[] = [
     icon: Database,
     component: SettingsBackup,
     group: 'admin',
-    requiredPermission: getSettingsPermissionRule('backup').read,
-    writePermission: getSettingsPermissionRule('backup').write,
+    readAccess: getSettingsPermissionRule('backup').read,
+    writeAccess: getSettingsPermissionRule('backup').write,
   },
   {
     id: 'danger',
@@ -88,7 +97,7 @@ export const SETTINGS_SUBPAGES: SettingsSubpageDef[] = [
     icon: AlertTriangle,
     component: SettingsDangerZone,
     group: 'admin',
-    requiredPermission: getSettingsPermissionRule('danger').read,
-    writePermission: getSettingsPermissionRule('danger').write,
+    readAccess: getSettingsPermissionRule('danger').read,
+    writeAccess: getSettingsPermissionRule('danger').write,
   },
 ];

@@ -1,8 +1,8 @@
 import type { Permission } from '@/types/auth';
 
 export type SettingsSubpageId =
-  | 'general'
   | 'roles'
+  | 'permissions'
   | 'profile'
   | 'club'
   | 'season'
@@ -16,22 +16,22 @@ export type SettingsSubpageId =
 
 export type SettingsSubpageGroup = 'account' | 'club' | 'admin';
 
+export interface SettingsAccessRule {
+  permissions?: Permission[];
+  mode?: 'any' | 'all';
+}
+
 export interface SettingsSubpageDef {
   id: SettingsSubpageId;
   label: string;
   icon: React.ElementType;
   component: React.ComponentType;
   group: SettingsSubpageGroup;
-  /**
-   * Read-level access check for page visibility.
-   */
-  requiredPermission?: Permission;
-  /**
-   * Optional stronger write permission used by forms/actions.
-   */
-  writePermission?: Permission;
+  readAccess?: SettingsAccessRule;
+  writeAccess?: SettingsAccessRule;
 }
 
 export interface SettingsAccessContext {
   role: string | null | undefined;
+  permissions?: Permission[];
 }

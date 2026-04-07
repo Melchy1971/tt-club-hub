@@ -4,6 +4,18 @@
 
 Diese Zielarchitektur standardisiert den kompletten Datenzugriff über Services und eliminiert direkte `supabase.from(...)`-Zugriffe aus UI-Komponenten/Pages.
 
+Für die fachliche Orchestrierung der Admin-Domain über Mitglieder, Mannschaften, Spielplan und Löschanfragen siehe zusätzlich:
+
+- `docs/architecture/admin-domain-target-architecture-2026-04-07.md`
+
+Für die Trennung zwischen operativem Export, Admin-Export und Backup siehe zusätzlich:
+
+- `docs/architecture/backup-export-strategy-2026-04-07.md`
+
+Für die eigenständige Venue-/Vereinsdaten-Domain siehe zusätzlich:
+
+- `docs/architecture/venue-club-domain-2026-04-07.md`
+
 Masterplan-Services:
 - `memberService`
 - `teamService`

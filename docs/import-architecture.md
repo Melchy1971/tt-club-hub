@@ -193,3 +193,11 @@ Normalisierung:
 4. MatcherEngine (members -> teams -> matches).
 5. ReportBuilder + UI-Anzeige.
 6. click-TT Adapter ergänzen und mit echten Exporten testen.
+
+---
+
+## 8) Vertiefende Fachlogik
+
+Für die fachliche Trennung zwischen member-basiertem QTTR/TTR-Update und match-basiertem Pin/Code-Update siehe:
+
+- `docs/architecture/import-update-strategy-pin-code-qttr-ttr-2026-04-07.md`

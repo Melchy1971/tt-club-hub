@@ -25,7 +25,8 @@ export const MODULE_LABELS_DE: Record<AppModuleKey, string> = {
 };
 
 export const SETTINGS_SUBPAGE_LABELS_DE: Record<SettingsSubpageId, string> = {
-  general: 'Allgemein',
+  roles: 'Rollen',
+  permissions: 'Rollen & Rechte',
   profile: 'Mein Profil',
   security: 'Sicherheit',
   notifications: 'Benachrichtigungen',
@@ -34,7 +35,6 @@ export const SETTINGS_SUBPAGE_LABELS_DE: Record<SettingsSubpageId, string> = {
   club: 'Vereinsdaten',
   season: 'Saisonverwaltung',
   venues: 'Spiellokale',
-  roles: 'Rollen',
   backup: 'Backup',
   danger: 'Gefahrenzone',
 };

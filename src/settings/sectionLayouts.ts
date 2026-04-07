@@ -8,11 +8,18 @@ export interface SettingsSectionLayoutDef {
 }
 
 export const SETTINGS_SECTION_LAYOUTS: Partial<Record<SettingsSubpageId, SettingsSectionLayoutDef[]>> = {
-  general: [
+  roles: [
     {
-      id: 'overview',
-      title: 'Konfiguration',
-      description: 'Systemweite Hinweise und Metadaten.',
+      id: 'assignments',
+      title: 'Rollen',
+      description: 'Benutzerrollen und deren Zuweisungen.',
+    },
+  ],
+  permissions: [
+    {
+      id: 'matrix',
+      title: 'Rollen & Rechte',
+      description: 'Feingranulare Modulrechte pro Rolle.',
     },
   ],
   profile: [
@@ -74,8 +81,8 @@ export const SETTINGS_SECTION_LAYOUTS: Partial<Record<SettingsSubpageId, Setting
   backup: [
     {
       id: 'snapshots',
-      title: 'Sicherung',
-      description: 'Export und Wiederherstellung administrativer Daten.',
+      title: 'Backup',
+      description: 'Sicherung, Export und Wiederherstellung administrativer Daten.',
     },
   ],
   danger: [
