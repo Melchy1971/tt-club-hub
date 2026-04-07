@@ -57,10 +57,14 @@ const MEMBER_ALIASES: Record<string, string> = {
 
   telefon:            'phone',
   tel:                'phone',
-  handy:              'phone',
-  mobilnummer:        'phone',
   phone:              'phone',
   'telefonnummer':    'phone',
+  handy:              'mobile',
+  mobil:              'mobile',
+  mobiltelefon:       'mobile',
+  mobilnummer:        'mobile',
+  mobile:             'mobile',
+  cell:               'mobile',
 
   // Mitgliedschaft
   mitgliedsnummer:    'member_number',
@@ -70,6 +74,9 @@ const MEMBER_ALIASES: Record<string, string> = {
   mitgliedsnr:        'member_number',
 
   eintrittsdatum:     'entry_date',
+  'mitglied seit':    'entry_date',
+  'member since':     'entry_date',
+  membersince:        'entry_date',
   eintritt:           'entry_date',
   beitrittsdatum:     'entry_date',
   'entry date':       'entry_date',
@@ -84,6 +91,7 @@ const MEMBER_ALIASES: Record<string, string> = {
 
   // Stammdaten
   geburtsdatum:       'date_of_birth',
+  birthdate:          'date_of_birth',
   geburtstag:         'date_of_birth',
   dob:                'date_of_birth',
   'date of birth':    'date_of_birth',

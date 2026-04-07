@@ -56,9 +56,11 @@ export interface NormalizedRow {
 export type IssueSeverity = 'error' | 'warning';
 
 export interface RowIssue {
+  code?: string;
   field: string;
   message: string;
   severity: IssueSeverity;
+  stage?: 'parse' | 'mapping' | 'normalize' | 'validate' | 'deduplicate' | 'execute';
 }
 
 export type RowStatus = 'valid' | 'warning' | 'error';
@@ -114,6 +116,15 @@ export interface ImportReport {
   /** Zeilenübergreifende Warnungen (z. B. niedrige Schema-Konfidenz). */
   globalWarnings: string[];
   dryRun: boolean;
+}
+
+/** Kompakte Vorschau-Zeile für UI-Tabellen. */
+export interface ImportPreviewRow {
+  rowIndex: number;
+  status: RowStatus;
+  issues: RowIssue[];
+  action: ImportAction;
+  data: Record<string, unknown>;
 }
 
 // ── Import-Optionen ───────────────────────────────────────────

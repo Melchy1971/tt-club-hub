@@ -52,6 +52,8 @@ const memberImportSchema = z.object({
   last_name:     z.string().min(1, 'Nachname fehlt'),
   email:         z.string().email('Ungültige E-Mail-Adresse').optional().nullable(),
   member_number: z.string().optional().nullable(),
+  phone:         z.string().optional().nullable(),
+  mobile:        z.string().optional().nullable(),
   date_of_birth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Datum muss ISO-Format haben (YYYY-MM-DD)').optional().nullable(),
   entry_date:    z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Eintrittsdatum muss ISO-Format haben').optional().nullable(),
   gender:        z.enum(['maennlich', 'weiblich', 'divers']).optional().nullable(),
