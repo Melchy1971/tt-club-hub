@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import {
   MODULE_KEYS,
+  type ModuleKey,
   type PermissionLevel,
 } from '@/constants/permissionsMatrix';
 import {
@@ -13,37 +14,76 @@ import {
   getModuleLabel,
   PERMISSION_LEVEL_LABELS,
 } from '@/constants/permissionLabels';
-import {
-  assertRoleMutable,
-  resolveRolePermissions,
-  validateRolePermissionsPayload,
-  type RolePermissionsMap,
-} from '@/lib/auth/permissionsResolver';
+import type { Enums } from '@/integrations/supabase/types';
+
+type DbPermissionLevel = Enums<'permission_level'>; // 'none' | 'read' | 'write'
+type DbAppRole = Enums<'app_role'>;
+
+const toDbLevel = (level: PermissionLevel): DbPermissionLevel =>
+  level.toLowerCase() as DbPermissionLevel;
+
+const fromDbLevel = (level: DbPermissionLevel): PermissionLevel =>
+  level.toUpperCase() as PermissionLevel;
 
 export default function SettingsPermissions() {
   const queryClient = useQueryClient();
 
   const { data: roles = [] } = useQuery({
-    queryKey: ['role-module-permissions'],
+    queryKey: ['roles-list'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('roles').select('id, name, display_name, description').order('name');
+      const { data, error } = await supabase
+        .from('roles')
+        .select('id, name, display_name')
+        .order('name');
       if (error) throw error;
-      return (data ?? []) as Array<{ id: string; name: string; display_name: string; description: string | null }>;
+      return data ?? [];
     },
   });
 
-  const updateMut = useMutation({
-    mutationFn: async ({ roleId, nextPermissions }: { roleId: string; nextPermissions: RolePermissionsMap }) => {
-      const validation = validateRolePermissionsPayload(nextPermissions);
-      if (!validation.valid) {
-        throw new Error(validation.errors.join(', '));
-      }
-
-      const { error } = await supabase
-        .from('roles')
-        .update({ permissions: nextPermissions } as never)
-        .eq('id', roleId);
+  const { data: permissions = [] } = useQuery({
+    queryKey: ['role-module-permissions'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('role_module_permissions')
+        .select('id, role, module, level');
       if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const getLevel = (roleName: string, mod: ModuleKey): PermissionLevel => {
+    const entry = permissions.find(
+      (p) => p.role === roleName && p.module === mod,
+    );
+    return entry ? fromDbLevel(entry.level) : 'NONE';
+  };
+
+  const updateMut = useMutation({
+    mutationFn: async ({
+      role,
+      module,
+      level,
+    }: {
+      role: DbAppRole;
+      module: string;
+      level: DbPermissionLevel;
+    }) => {
+      const existing = permissions.find(
+        (p) => p.role === role && p.module === module,
+      );
+
+      if (existing) {
+        const { error } = await supabase
+          .from('role_module_permissions')
+          .update({ level })
+          .eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('role_module_permissions')
+          .insert({ role, module, level });
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['role-module-permissions'] });
@@ -74,32 +114,34 @@ export default function SettingsPermissions() {
             <TableBody>
               {MODULE_KEYS.map((mod) => (
                 <TableRow key={mod}>
-                  <TableCell className="sticky left-0 bg-card z-10 font-medium">{getModuleLabel(mod)}</TableCell>
+                  <TableCell className="sticky left-0 bg-card z-10 font-medium">
+                    {getModuleLabel(mod)}
+                  </TableCell>
                   {roles.map((role) => {
-                    const roleWithPerms = { id: role.id, name: role.name as any } as import('@/lib/auth/permissionsResolver').RoleWithPermissions;
-                    const matrix = resolveRolePermissions(roleWithPerms);
-                    const level = matrix[mod];
-                    const mutability = assertRoleMutable(roleWithPerms);
-
+                    const level = getLevel(role.name, mod);
                     return (
                       <TableCell key={role.id} className="text-center">
                         <Select
                           value={level}
                           onValueChange={(value) => {
-                            const nextPermissions: RolePermissionsMap = { ...matrix, [mod]: value as PermissionLevel };
-                            const validation = validateRolePermissionsPayload(nextPermissions);
-                            if (!validation.valid || !mutability.mutable) return;
-                            updateMut.mutate({ roleId: role.id, nextPermissions });
+                            updateMut.mutate({
+                              role: role.name,
+                              module: mod,
+                              level: toDbLevel(value as PermissionLevel),
+                            });
                           }}
-                          disabled={!mutability.mutable}
                         >
                           <SelectTrigger className="h-8 w-24 mx-auto text-xs">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {(Object.entries(PERMISSION_LEVEL_LABELS) as [PermissionLevel, string][]).map(([value, label]) => (
-                              <SelectItem key={value} value={value}>{label}</SelectItem>
-                            ))}
+                            {(Object.entries(PERMISSION_LEVEL_LABELS) as [PermissionLevel, string][]).map(
+                              ([value, label]) => (
+                                <SelectItem key={value} value={value}>
+                                  {label}
+                                </SelectItem>
+                              ),
+                            )}
                           </SelectContent>
                         </Select>
                       </TableCell>
