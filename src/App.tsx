@@ -47,6 +47,7 @@ const APP_ROUTE_COMPONENTS: AppRouteComponentMap = {
   '/rollen': Roles,
   '/einstellungen': SettingsPage,
   '/saisons': Seasons,
+  '/profil': Profile,
   '/login': Auth,
 };
 
@@ -105,7 +106,6 @@ const App = () => (
                     </GuardedElement>
                   )}
                 />
-                <Route path="/profil" element={<Navigate to="/einstellungen?tab=profil" replace />} />
                 <Route path="/info" element={<Navigate to="/einstellungen?tab=general" replace />} />
               </Route>
               <Route path="*" element={<NotFound />} />
