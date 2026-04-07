@@ -520,7 +520,7 @@ function TabTeams({ profileVM }: { profileVM: MemberProfileViewModel | null | un
 }
 
 export default function SettingsProfile() {
-  const { user, member, refresh } = useAuth();
+  const { user, member, refresh, signOut } = useAuth();
   const [editing, setEditing] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
 
