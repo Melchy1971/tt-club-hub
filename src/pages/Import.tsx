@@ -666,7 +666,7 @@ function ScheduleImportTab() {
       // Build inserts grouped by team
       const inserts: Array<{
         team_id: string;
-        season_id: string;
+        season_id: string | null;
         season_phase_id: string;
         match_day: null;
         match_date: string;
