@@ -1369,12 +1369,12 @@ function RatingImportTab() {
 // TAB 5: Mannschaften-Import
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const TEAM_IMPORT_COLS = [
+const TEAM_IMPORT_COLS: { key: string; label: string; required?: boolean }[] = [
   { key: 'name', label: 'Mannschaftsname', required: true },
   { key: 'league', label: 'Liga', required: true },
   { key: 'age_group', label: 'Altersgruppe' },
   { key: 'division', label: 'Spielklasse' },
-] as const;
+];
 
 const TEAM_HEADER_ALIASES: Record<string, string> = {
   mannschaft: 'name', mannschaftsname: 'name', team: 'name', teamname: 'name',
