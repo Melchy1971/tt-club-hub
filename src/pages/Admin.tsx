@@ -131,7 +131,43 @@ function MembersAdminTab() {
     },
   });
 
-  const createMut = useMutation({
+  const { data: userRoles = [] } = useQuery({
+    queryKey: ['admin-user-roles'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('user_roles').select('user_id, role');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ['admin-team-members'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('team_members').select('member_id, team_id');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: allRoles = [] } = useQuery({
+    queryKey: ['admin-roles-list'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('roles').select('name, display_name').order('display_name');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: allTeams = [] } = useQuery({
+    queryKey: ['admin-teams-list'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('teams').select('id, name, age_group, league, season_phases(name)').order('name');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+
     mutationFn: async (payload: Record<string, any>) => {
       const { error } = await supabase.from('members').insert(payload as any);
       if (error) throw error;
