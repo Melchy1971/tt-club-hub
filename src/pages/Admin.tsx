@@ -109,6 +109,8 @@ type MemberFormState = typeof emptyMemberForm;
 const JUGEND_GROUPS = new Set(['jungen_18','maedchen_18','jungen_15','maedchen_15','jungen_13','maedchen_13','jungen_11','maedchen_11']);
 
 function MembersAdminTab() {
+  const { role: currentRole } = useAuth();
+  const canEditAssignments = currentRole === 'admin' || currentRole === 'developer' || currentRole === 'vorstand';
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [formOpen, setFormOpen] = useState(false);
@@ -191,6 +193,34 @@ function MembersAdminTab() {
       if (error) throw error;
     },
     onSuccess: () => { toast.success('Mitglied gelöscht'); queryClient.invalidateQueries({ queryKey: ['admin-members'] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const toggleRoleMut = useMutation({
+    mutationFn: async ({ userId, roleName, active }: { userId: string; roleName: string; active: boolean }) => {
+      if (active) {
+        const { error } = await supabase.from('user_roles').insert({ user_id: userId, role: roleName as any });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('user_roles').delete().eq('user_id', userId).eq('role', roleName as any);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => { toast.success('Rolle aktualisiert'); queryClient.invalidateQueries({ queryKey: ['admin-user-roles'] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const toggleTeamMut = useMutation({
+    mutationFn: async ({ memberId, teamId, active }: { memberId: string; teamId: string; active: boolean }) => {
+      if (active) {
+        const { error } = await supabase.from('team_members').insert({ member_id: memberId, team_id: teamId });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('team_members').delete().eq('member_id', memberId).eq('team_id', teamId);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => { toast.success('Mannschaftszuordnung aktualisiert'); queryClient.invalidateQueries({ queryKey: ['admin-team-members'] }); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -468,7 +498,7 @@ function MembersAdminTab() {
                       {allRoles.map((r) => (
                         <div key={r.name} className="flex items-center justify-between">
                           <span className="text-sm">{r.display_name}</span>
-                          <Switch checked={memberRoles.includes(r.name)} disabled />
+                          <Switch checked={memberRoles.includes(r.name)} disabled={!canEditAssignments || !editingUserId} onCheckedChange={(checked) => { if (editingUserId) toggleRoleMut.mutate({ userId: editingUserId, roleName: r.name, active: checked }); }} />
                         </div>
                       ))}
                       {allRoles.length === 0 && (
@@ -495,7 +525,7 @@ function MembersAdminTab() {
                                 {t.age_group ? getAgeGroupLabel(t.age_group) : ''} {t.league ?? ''} {(t.season_phases as any)?.name ?? ''}
                               </p>
                             </div>
-                            <Switch checked={memberTeamIds.has(t.id)} disabled className="shrink-0 ml-2" />
+                            <Switch checked={memberTeamIds.has(t.id)} disabled={!canEditAssignments} onCheckedChange={(checked) => { if (editingId) toggleTeamMut.mutate({ memberId: editingId, teamId: t.id, active: checked }); }} className="shrink-0 ml-2" />
                           </div>
                         ))}
                       </div>
@@ -512,7 +542,7 @@ function MembersAdminTab() {
                                 {t.age_group ? getAgeGroupLabel(t.age_group) : ''} {t.league ?? ''} {(t.season_phases as any)?.name ?? ''}
                               </p>
                             </div>
-                            <Switch checked={memberTeamIds.has(t.id)} disabled className="shrink-0 ml-2" />
+                            <Switch checked={memberTeamIds.has(t.id)} disabled={!canEditAssignments} onCheckedChange={(checked) => { if (editingId) toggleTeamMut.mutate({ memberId: editingId, teamId: t.id, active: checked }); }} className="shrink-0 ml-2" />
                           </div>
                         ))}
                       </div>
