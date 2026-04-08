@@ -94,15 +94,6 @@ export const ROUTES: RouteConfig[] = [
     guard: { type: 'module', module: 'board', level: 'READ' },
   },
   {
-    path: '/rollen',
-    label: MODULE_LABELS_DE.roles,
-    moduleKey: 'roles',
-    icon: Shield,
-    group: 'system',
-    navVisibility: 'sidebar',
-    guard: { type: 'roles', roles: ['admin', 'developer', 'vorstand'] },
-  },
-  {
     path: '/admin',
     label: MODULE_LABELS_DE.admin,
     moduleKey: 'admin',
