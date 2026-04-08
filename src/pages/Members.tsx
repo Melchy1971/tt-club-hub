@@ -186,6 +186,38 @@ export default function Members() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const canEditAssignments = role === 'admin' || role === 'developer' || role === 'vorstand';
+
+  const toggleRoleMut = useMutation({
+    mutationFn: async ({ userId, roleName, active }: { userId: string; roleName: string; active: boolean }) => {
+      const { supabase } = await import('@/integrations/supabase/client');
+      if (active) {
+        const { error } = await supabase.from('user_roles').insert({ user_id: userId, role: roleName as any });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('user_roles').delete().eq('user_id', userId).eq('role', roleName as any);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => { toast.success('Rolle aktualisiert'); queryClient.invalidateQueries({ queryKey: ['user_roles_all'] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const toggleTeamMut = useMutation({
+    mutationFn: async ({ memberId, teamId, active }: { memberId: string; teamId: string; active: boolean }) => {
+      const { supabase } = await import('@/integrations/supabase/client');
+      if (active) {
+        const { error } = await supabase.from('team_members').insert({ member_id: memberId, team_id: teamId });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('team_members').delete().eq('member_id', memberId).eq('team_id', teamId);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => { toast.success('Mannschaftszuordnung aktualisiert'); queryClient.invalidateQueries({ queryKey: ['team_members_all'] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const filtered = members.filter((m: MemberUI) => {
     const q = search.toLowerCase();
     const matchesSearch = !q ||
