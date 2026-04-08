@@ -11,7 +11,6 @@ import { isGuardAllowed } from '@/routes/guardMapping';
 import Dashboard from './pages/Dashboard';
 import Members from './pages/Members';
 import Teams from './pages/Teams';
-import Matches from './pages/Matches';
 import Schedule from './pages/Schedule';
 import TeamSchedule from './pages/TeamSchedule';
 import Substitutes from './pages/Substitutes';
@@ -40,7 +39,6 @@ const APP_ROUTE_COMPONENTS: AppRouteComponentMap = {
   '/': Dashboard,
   '/mitglieder': Members,
   '/mannschaften': Teams,
-  '/spielbetrieb': Matches,
   '/spielplan': Schedule,
   '/ersatzstellung': Substitutes,
   '/training': Training,

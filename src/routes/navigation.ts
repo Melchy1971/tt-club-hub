@@ -49,15 +49,6 @@ export const ROUTES: RouteConfig[] = [
     guard: { type: 'module', module: 'teams', level: 'READ' },
   },
   {
-    path: '/spielbetrieb',
-    label: MODULE_LABELS_DE.matches,
-    moduleKey: 'matches',
-    icon: CalendarDays,
-    group: 'sport',
-    navVisibility: 'sidebar',
-    guard: { type: 'permission', permission: 'match:read' },
-  },
-  {
     path: '/spielplan',
     label: MODULE_LABELS_DE.schedule,
     moduleKey: 'schedule',
