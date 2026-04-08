@@ -43,6 +43,8 @@ import {
   Upload,
   Image,
   Download,
+  LayoutDashboard,
+  Phone,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Member } from '@/types';
@@ -1093,16 +1095,297 @@ function ListsTab() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// TAB 0: Übersicht
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function OverviewTab() {
+  const { role } = useAuth();
+  const queryClient = useQueryClient();
+  const canEdit = role === 'admin' || role === 'developer' || role === 'vorstand';
+
+  const { data: members = [], isLoading } = useQuery({
+    queryKey: ['board-overview'],
+    queryFn: async () => {
+      const result = await (await import('@/services/boardMemberService')).boardMemberService.listActive();
+      if (!result.success) throw new Error('Fehler beim Laden');
+      return result.data;
+    },
+  });
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editing, setEditing] = useState<(typeof members)[0] | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
+  // Add form state
+  const [addForm, setAddForm] = useState({ userId: '', position: '', termStart: '', termEnd: '', notes: '' });
+  const [editForm, setEditForm] = useState({ position: '', termStart: '', termEnd: '', notes: '' });
+
+  const { data: allMembers = [] } = useQuery({
+    queryKey: ['members-with-user'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('members')
+        .select('id, user_id, first_name, last_name')
+        .not('user_id', 'is', null)
+        .eq('is_active', true)
+        .order('last_name');
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: addOpen,
+  });
+
+  const addMut = useMutation({
+    mutationFn: async () => {
+      const { boardMemberService: svc } = await import('@/services/boardMemberService');
+      const result = await svc.createForActor(role as any, {
+        user_id: addForm.userId,
+        position: addForm.position,
+        term_start: addForm.termStart || null,
+        term_end: addForm.termEnd || null,
+        notes: addForm.notes || null,
+      });
+      if (!result.success) throw new Error(result.error.message);
+    },
+    onSuccess: () => {
+      toast.success('Vorstandsmitglied hinzugefügt');
+      setAddOpen(false);
+      setAddForm({ userId: '', position: '', termStart: '', termEnd: '', notes: '' });
+      queryClient.invalidateQueries({ queryKey: ['board-overview'] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const editMut = useMutation({
+    mutationFn: async () => {
+      if (!editing) return;
+      const { boardMemberService: svc } = await import('@/services/boardMemberService');
+      const result = await svc.updateForActor(role as any, editing.id, {
+        position: editForm.position,
+        term_start: editForm.termStart || null,
+        term_end: editForm.termEnd || null,
+        notes: editForm.notes || null,
+      });
+      if (!result.success) throw new Error(result.error.message);
+    },
+    onSuccess: () => {
+      toast.success('Gespeichert');
+      setEditOpen(false);
+      setEditing(null);
+      queryClient.invalidateQueries({ queryKey: ['board-overview'] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { boardMemberService: svc } = await import('@/services/boardMemberService');
+      const result = await svc.removeForActor(role as any, id);
+      if (!result.success) throw new Error(result.error.message);
+    },
+    onSuccess: () => {
+      toast.success('Entfernt');
+      setDeleteTarget(null);
+      queryClient.invalidateQueries({ queryKey: ['board-overview'] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  function openEdit(m: (typeof members)[0]) {
+    setEditing(m);
+    setEditForm({
+      position: m.position,
+      termStart: m.termStart ?? '',
+      termEnd: m.termEnd ?? '',
+      notes: m.notes ?? '',
+    });
+    setEditOpen(true);
+  }
+
+  const initials = (m: (typeof members)[0]) =>
+    `${(m.firstName?.[0] ?? '').toUpperCase()}${(m.lastName?.[0] ?? '').toUpperCase()}`;
+
+  if (isLoading) return <LoadingSkeleton />;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Vorstand</h2>
+          <p className="text-sm text-muted-foreground">Ihre Ansprechpartner im Verein.</p>
+        </div>
+        {canEdit && (
+          <Button size="sm" variant="outline" onClick={() => setAddOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Hinzufügen
+          </Button>
+        )}
+      </div>
+
+      {members.length === 0 ? (
+        <EmptyState icon={Users} title="Keine Vorstandsmitglieder" description="Noch keine aktiven Einträge vorhanden." />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {members.map((m) => (
+            <div key={m.id} className="rounded-lg border p-4 space-y-3 relative group">
+              {canEdit && (
+                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(m)}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget(m.id)}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              )}
+              <p className="text-sm font-semibold text-primary">{m.position}</p>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-semibold">
+                  {initials(m)}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{m.firstName} {m.lastName}</p>
+                  {m.termStart && (
+                    <p className="text-xs text-muted-foreground">
+                      seit {fmtDate(m.termStart)}{m.termEnd ? ` – ${fmtDate(m.termEnd)}` : ''}
+                    </p>
+                  )}
+                </div>
+              </div>
+              {(m.email || m.role) && (
+                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                  {m.email && (
+                    <a href={`mailto:${m.email}`} className="flex items-center gap-1 hover:text-foreground">
+                      <Mail className="h-3.5 w-3.5" /> E-Mail
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add dialog */}
+      <Dialog open={addOpen} onOpenChange={(o) => !o && setAddOpen(false)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>Vorstandsmitglied hinzufügen</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Mitglied <span className="text-destructive">*</span></Label>
+              <select
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={addForm.userId}
+                onChange={(e) => setAddForm((f) => ({ ...f, userId: e.target.value }))}
+              >
+                <option value="">Mitglied auswählen…</option>
+                {allMembers.map((m) => (
+                  <option key={m.user_id!} value={m.user_id!}>
+                    {m.last_name}, {m.first_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Position <span className="text-destructive">*</span></Label>
+              <Input value={addForm.position} onChange={(e) => setAddForm((f) => ({ ...f, position: e.target.value }))} placeholder="z. B. Kassenwart" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Amtsantritt</Label>
+                <Input type="date" value={addForm.termStart} onChange={(e) => setAddForm((f) => ({ ...f, termStart: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Amtsende</Label>
+                <Input type="date" value={addForm.termEnd} onChange={(e) => setAddForm((f) => ({ ...f, termEnd: e.target.value }))} />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Notizen</Label>
+              <Textarea rows={2} value={addForm.notes} onChange={(e) => setAddForm((f) => ({ ...f, notes: e.target.value }))} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>Abbrechen</Button>
+            <Button
+              onClick={() => {
+                if (!addForm.userId || !addForm.position.trim()) { toast.error('Mitglied und Position sind Pflichtfelder'); return; }
+                addMut.mutate();
+              }}
+              disabled={addMut.isPending}
+            >Hinzufügen</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit dialog */}
+      <Dialog open={editOpen} onOpenChange={(o) => !o && setEditOpen(false)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>Eintrag bearbeiten</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Position <span className="text-destructive">*</span></Label>
+              <Input value={editForm.position} onChange={(e) => setEditForm((f) => ({ ...f, position: e.target.value }))} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Amtsantritt</Label>
+                <Input type="date" value={editForm.termStart} onChange={(e) => setEditForm((f) => ({ ...f, termStart: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Amtsende</Label>
+                <Input type="date" value={editForm.termEnd} onChange={(e) => setEditForm((f) => ({ ...f, termEnd: e.target.value }))} />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Notizen</Label>
+              <Textarea rows={2} value={editForm.notes} onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>Abbrechen</Button>
+            <Button
+              onClick={() => {
+                if (!editForm.position.trim()) { toast.error('Position ist ein Pflichtfeld'); return; }
+                editMut.mutate();
+              }}
+              disabled={editMut.isPending}
+            >Speichern</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eintrag entfernen</AlertDialogTitle>
+            <AlertDialogDescription>Soll dieses Vorstandsmitglied wirklich entfernt werden?</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteTarget && deleteMut.mutate(deleteTarget)}
+            >Entfernen</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // MAIN PAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const VALID_TABS = ['mitglieder', 'news', 'dokumente', 'sitzungen', 'email', 'listen'] as const;
+const VALID_TABS = ['uebersicht', 'mitglieder', 'news', 'dokumente', 'sitzungen', 'email', 'listen'] as const;
 type TabValue = typeof VALID_TABS[number];
 
 export default function Board() {
   const [searchParams, setSearchParams] = useSearchParams();
   const rawTab = searchParams.get('tab') as TabValue | null;
-  const activeTab: TabValue = rawTab && VALID_TABS.includes(rawTab) ? rawTab : 'mitglieder';
+  const activeTab: TabValue = rawTab && VALID_TABS.includes(rawTab) ? rawTab : 'uebersicht';
 
   const handleTabChange = (value: string) => {
     setSearchParams({ tab: value }, { replace: true });
@@ -1117,6 +1400,7 @@ export default function Board() {
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="flex-wrap h-auto gap-1">
+          <TabsTrigger value="uebersicht"><LayoutDashboard className="mr-1.5 h-3.5 w-3.5" />Übersicht</TabsTrigger>
           <TabsTrigger value="mitglieder"><Users className="mr-1.5 h-3.5 w-3.5" />Mitglieder</TabsTrigger>
           <TabsTrigger value="news"><Newspaper className="mr-1.5 h-3.5 w-3.5" />News</TabsTrigger>
           <TabsTrigger value="dokumente"><FileText className="mr-1.5 h-3.5 w-3.5" />Dokumente</TabsTrigger>
@@ -1125,6 +1409,7 @@ export default function Board() {
           <TabsTrigger value="listen"><ListChecks className="mr-1.5 h-3.5 w-3.5" />Listen</TabsTrigger>
         </TabsList>
 
+        <TabsContent value="uebersicht"><OverviewTab /></TabsContent>
         <TabsContent value="mitglieder"><BoardMembersTab /></TabsContent>
         <TabsContent value="news"><NewsEditorTab /></TabsContent>
         <TabsContent value="dokumente"><DocumentsTab /></TabsContent>
