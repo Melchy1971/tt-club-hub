@@ -122,12 +122,12 @@ export function EditMatchDialog({ match, venues, open, onOpenChange, onSave }: P
 
           <div className="space-y-2">
             <Label>Spiellokal</Label>
-            <Select value={venueId} onValueChange={setVenueId}>
+            <Select value={venueId || '__none__'} onValueChange={(v) => setVenueId(v === '__none__' ? '' : v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Kein Spiellokal" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Kein Spiellokal</SelectItem>
+                <SelectItem value="__none__">Kein Spiellokal</SelectItem>
                 {venues.map((v) => (
                   <SelectItem key={v.id} value={v.id}>
                     {v.name}
