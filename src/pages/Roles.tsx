@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ShieldCheck, UserPlus, Save } from 'lucide-react';
+import { ShieldCheck, UserPlus, Save, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { isAdmin } from '@/lib/permissions';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
@@ -15,6 +17,10 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
@@ -34,6 +40,7 @@ import {
   assertRoleMutable,
   resolveRolePermissions,
   validateRolePermissionsPayload,
+  EMPTY_ROLE_PERMISSIONS,
   type RolePermissionsMap,
   type RoleWithPermissions,
 } from '@/lib/auth/permissionsResolver';
@@ -54,6 +61,14 @@ interface RoleModulePerm {
   isSystem: boolean;
 }
 
+interface FullRoleRow {
+  id: string;
+  name: string;
+  display_name: string;
+  description: string | null;
+  is_system: boolean;
+}
+
 interface UserRoleRow {
   id: string;
   user_id: string;
@@ -66,6 +81,15 @@ interface MemberRow {
   first_name: string;
   last_name: string;
   email: string | null;
+}
+
+async function fetchAllRoles(): Promise<FullRoleRow[]> {
+  const { data, error } = await supabase
+    .from('roles')
+    .select('id, name, display_name, description, is_system')
+    .order('display_name');
+  if (error) throw error;
+  return (data ?? []) as unknown as FullRoleRow[];
 }
 
 async function fetchPermissions(): Promise<RoleModulePerm[]> {
@@ -111,11 +135,16 @@ export default function Roles() {
   const { data: perms = [] } = useQuery({ queryKey: ['role_perms'], queryFn: fetchPermissions });
   const { data: userRoles = [] } = useQuery({ queryKey: ['user_roles'], queryFn: fetchUserRoles });
   const { data: members = [] } = useQuery({ queryKey: ['members_linked'], queryFn: fetchMembers });
+  const { data: allRoles = [] } = useQuery({ queryKey: ['all_roles'], queryFn: fetchAllRoles });
 
   const [editedPerms, setEditedPerms] = useState<Record<string, PermLevel>>({});
   const [assignOpen, setAssignOpen] = useState(false);
   const [assignUserId, setAssignUserId] = useState('');
   const [assignRole, setAssignRole] = useState<AppRole | ''>('');
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createDisplayName, setCreateDisplayName] = useState('');
+  const [createDescription, setCreateDescription] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<FullRoleRow | null>(null);
 
   const permLookup = (role: AppRole, module: ModuleKey): PermLevel => {
     const key = `${role}:${module}`;
@@ -197,6 +226,39 @@ export default function Roles() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const createRoleMut = useMutation({
+    mutationFn: async ({ displayName, description }: { displayName: string; description: string }) => {
+      const slug = displayName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+      const { error } = await supabase
+        .from('roles')
+        .insert({ display_name: displayName, description: description || null, name: slug as AppRole, is_system: false, permissions: EMPTY_ROLE_PERMISSIONS } as never);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Rolle angelegt');
+      setCreateOpen(false);
+      setCreateDisplayName('');
+      setCreateDescription('');
+      queryClient.invalidateQueries({ queryKey: ['all_roles'] });
+      queryClient.invalidateQueries({ queryKey: ['role_perms'] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteRoleMut = useMutation({
+    mutationFn: async (roleId: string) => {
+      const { error } = await supabase.from('roles').delete().eq('id', roleId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Rolle gelöscht');
+      setDeleteTarget(null);
+      queryClient.invalidateQueries({ queryKey: ['all_roles'] });
+      queryClient.invalidateQueries({ queryKey: ['role_perms'] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   function setPermLevel(role: AppRole, module: ModuleKey, level: PermLevel) {
     setEditedPerms((prev) => ({ ...prev, [`${role}:${module}`]: level }));
   }
@@ -217,6 +279,9 @@ export default function Roles() {
         </div>
         {admin && (
           <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setCreateOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" /> Neue Rolle
+            </Button>
             <Button variant="outline" onClick={() => setAssignOpen(true)}>
               <UserPlus className="mr-2 h-4 w-4" /> Rolle zuweisen
             </Button>
@@ -334,25 +399,47 @@ export default function Roles() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Rolle</TableHead>
+                  <TableHead>Beschreibung</TableHead>
                   <TableHead>Typ</TableHead>
                   <TableHead>Zugewiesene Nutzer</TableHead>
+                  {admin && <TableHead className="text-right">Aktion</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {SYSTEM_APP_ROLES.map((r) => {
-                  const count = userRoles.filter((ur) => ur.role === r).length;
+                {allRoles.map((r) => {
+                  const count = userRoles.filter((ur) => ur.role === (r.name as AppRole)).length;
+                  const label = (APP_ROLE_LABELS as Record<string, string>)[r.name] ?? r.display_name;
                   return (
-                    <TableRow key={r}>
+                    <TableRow key={r.id}>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
                           <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-                          {APP_ROLE_LABELS[r] ?? r}
+                          {label}
                         </div>
                       </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {r.description ?? '–'}
+                      </TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className="text-xs">Systemrolle</Badge>
+                        {r.is_system
+                          ? <Badge variant="secondary" className="text-xs">Systemrolle</Badge>
+                          : <Badge variant="outline" className="text-xs">Benutzerdefiniert</Badge>}
                       </TableCell>
                       <TableCell>{count}</TableCell>
+                      {admin && (
+                        <TableCell className="text-right">
+                          {!r.is_system && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive"
+                              onClick={() => setDeleteTarget(r)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </TableCell>
+                      )}
                     </TableRow>
                   );
                 })}
@@ -361,6 +448,71 @@ export default function Roles() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Create role dialog */}
+      <Dialog open={createOpen} onOpenChange={(o) => !o && setCreateOpen(false)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Neue Rolle anlegen</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Anzeigename <span className="text-destructive">*</span></Label>
+              <Input
+                value={createDisplayName}
+                onChange={(e) => setCreateDisplayName(e.target.value)}
+                placeholder="z. B. Kassenwart"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Beschreibung</Label>
+              <Textarea
+                value={createDescription}
+                onChange={(e) => setCreateDescription(e.target.value)}
+                placeholder="Kurze Beschreibung der Rolle …"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>Abbrechen</Button>
+            <Button
+              onClick={() => {
+                if (!createDisplayName.trim()) {
+                  toast.error('Bitte einen Anzeigenamen eingeben');
+                  return;
+                }
+                createRoleMut.mutate({ displayName: createDisplayName.trim(), description: createDescription.trim() });
+              }}
+              disabled={createRoleMut.isPending}
+            >
+              Anlegen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete role confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rolle löschen</AlertDialogTitle>
+            <AlertDialogDescription>
+              Soll die Rolle <strong>{deleteTarget?.display_name}</strong> unwiderruflich gelöscht werden?
+              Alle zugewiesenen Nutzer verlieren diese Rolle.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteTarget && deleteRoleMut.mutate(deleteTarget.id)}
+            >
+              Löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={assignOpen} onOpenChange={(o) => !o && setAssignOpen(false)}>
         <DialogContent className="sm:max-w-md">
