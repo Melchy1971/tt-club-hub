@@ -498,7 +498,7 @@ function MembersAdminTab() {
                       {allRoles.map((r) => (
                         <div key={r.name} className="flex items-center justify-between">
                           <span className="text-sm">{r.display_name}</span>
-                          <Switch checked={memberRoles.includes(r.name)} disabled />
+                          <Switch checked={memberRoles.includes(r.name)} disabled={!canEditAssignments || !editingUserId} onCheckedChange={(checked) => { if (editingUserId) toggleRoleMut.mutate({ userId: editingUserId, roleName: r.name, active: checked }); }} />
                         </div>
                       ))}
                       {allRoles.length === 0 && (
