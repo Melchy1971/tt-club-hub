@@ -773,33 +773,6 @@ function TeamsAdminTab() {
     </div>
   );
 }
-  const toggleRoleMut = useMutation({
-    mutationFn: async ({ userId, roleName, active }: { userId: string; roleName: string; active: boolean }) => {
-      if (active) {
-        const { error } = await supabase.from('user_roles').insert({ user_id: userId, role: roleName as any });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('user_roles').delete().eq('user_id', userId).eq('role', roleName as any);
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => { toast.success('Rolle aktualisiert'); queryClient.invalidateQueries({ queryKey: ['admin-user-roles'] }); },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const toggleTeamMut = useMutation({
-    mutationFn: async ({ memberId, teamId, active }: { memberId: string; teamId: string; active: boolean }) => {
-      if (active) {
-        const { error } = await supabase.from('team_members').insert({ member_id: memberId, team_id: teamId });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('team_members').delete().eq('member_id', memberId).eq('team_id', teamId);
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => { toast.success('Mannschaftszuordnung aktualisiert'); queryClient.invalidateQueries({ queryKey: ['admin-team-members'] }); },
-    onError: (e: Error) => toast.error(e.message),
-  });
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
