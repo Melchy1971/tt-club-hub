@@ -86,10 +86,10 @@ interface FullRoleRow {
 async function fetchAllRoles(): Promise<FullRoleRow[]> {
   const { data, error } = await supabase
     .from('roles')
-    .select('id, name, display_name, description, is_system')
+    .select('id, name, display_name, description')
     .order('display_name');
   if (error) throw error;
-  return (data ?? []) as unknown as FullRoleRow[];
+  return (data ?? []).map((r) => ({ ...r, is_system: false })) as FullRoleRow[];
 }
 
 async function fetchPermissions(): Promise<RoleModulePerm[]> {
@@ -233,7 +233,6 @@ export default function Roles() {
           display_name: displayName,
           description: description || null,
           name: slug as AppRole,
-          is_system: false,
           permissions: EMPTY_ROLE_PERMISSIONS,
         } as never);
       if (error) throw error;

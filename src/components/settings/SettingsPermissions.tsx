@@ -65,10 +65,10 @@ export default function SettingsPermissions() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('roles')
-        .select('id, name, display_name, description, is_system')
+        .select('id, name, display_name, description')
         .order('name');
       if (error) throw error;
-      return (data ?? []) as unknown as RoleRow[];
+      return (data ?? []).map((r) => ({ ...r, is_system: false })) as RoleRow[];
     },
   });
 
@@ -111,7 +111,7 @@ export default function SettingsPermissions() {
       const slug = displayName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
       const { error } = await supabase
         .from('roles')
-        .insert({ display_name: displayName, description: description || null, name: slug, is_system: false } as never);
+        .insert({ display_name: displayName, description: description || null, name: slug } as never);
       if (error) throw error;
     },
     onSuccess: () => {
