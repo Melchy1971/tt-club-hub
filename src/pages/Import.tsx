@@ -1296,8 +1296,19 @@ function RatingImportTab() {
       const members = allMembers ?? [];
 
       const parsed: RatingRow[] = raw.map((r) => {
-        const firstName = (r['Vorname'] || r['first_name'] || '').trim();
-        const lastName = (r['Nachname'] || r['last_name'] || r['Name'] || '').trim();
+        let firstName = (r['Vorname'] || r['first_name'] || '').trim();
+        let lastName = (r['Nachname'] || r['last_name'] || r['Name'] || '').trim();
+
+        // Support combined "Spieler" column (e.g. "Jochen Boll")
+        if (!firstName && !lastName) {
+          const spieler = (r['Spieler'] || r['spieler'] || r['Player'] || '').trim();
+          if (spieler) {
+            const parts = spieler.split(/\s+/);
+            firstName = parts[0] || '';
+            lastName = parts.slice(1).join(' ') || '';
+          }
+        }
+
         const ttrRaw = r['TTR'] || r['ttr'] || r['TTR-Punkte'] || '';
         const qttrRaw = r['QTTR'] || r['qttr'] || r['Q-TTR'] || '';
         const ttr = ttrRaw ? parseInt(ttrRaw, 10) : null;
@@ -1344,7 +1355,7 @@ function RatingImportTab() {
   });
 
   const downloadTemplate = () => {
-    const csv = 'Vorname;Nachname;TTR;QTTR\nMax;Mustermann;1500;1450\n';
+    const csv = 'Rang;Spieler;TTR\n1;Max Mustermann;1500\n2;Erika Musterfrau;1450\n';
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'ttr_vorlage.csv'; a.click();
   };
@@ -1354,7 +1365,7 @@ function RatingImportTab() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold">QTTR/TTR-Import</h2>
-          <p className="text-sm text-muted-foreground">Aktualisiere TTR- und QTTR-Werte aus CSV oder Excel</p>
+          <p className="text-sm text-muted-foreground">Aktualisiere TTR- und QTTR-Werte aus CSV oder Excel. Format: <code className="text-xs bg-muted px-1 rounded">Rang;Spieler;TTR</code> oder <code className="text-xs bg-muted px-1 rounded">Vorname;Nachname;TTR;QTTR</code></p>
         </div>
         <Button variant="outline" size="sm" onClick={downloadTemplate}><Download className="mr-2 h-4 w-4" /> Vorlage</Button>
       </div>
