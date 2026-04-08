@@ -585,7 +585,15 @@ export default function Members() {
                       {allRoles.map((r) => (
                         <div key={r.name} className="flex items-center justify-between">
                           <span className="text-sm">{r.display_name}</span>
-                          <Switch checked={memberRoles.includes(r.name)} disabled />
+                          <Switch
+                            checked={memberRoles.includes(r.name)}
+                            disabled={!canEditAssignments || !editingMember.userId}
+                            onCheckedChange={(checked) => {
+                              if (canEditAssignments && editingMember.userId) {
+                                toggleRoleMut.mutate({ userId: editingMember.userId, roleName: r.name, active: checked });
+                              }
+                            }}
+                          />
                         </div>
                       ))}
                       {allRoles.length === 0 && (
@@ -612,7 +620,16 @@ export default function Members() {
                                 {t.age_group ? getAgeGroupLabel(t.age_group) : ''} {t.league ?? ''} {(t.season_phases as any)?.name ? (t.season_phases as any).name : ''}
                               </p>
                             </div>
-                            <Switch checked={memberTeamIds.has(t.id)} disabled className="shrink-0 ml-2" />
+                            <Switch
+                              checked={memberTeamIds.has(t.id)}
+                              disabled={!canEditAssignments}
+                              onCheckedChange={(checked) => {
+                                if (canEditAssignments) {
+                                  toggleTeamMut.mutate({ memberId: editingMember.id, teamId: t.id, active: checked });
+                                }
+                              }}
+                              className="shrink-0 ml-2"
+                            />
                           </div>
                         ))}
                       </div>
@@ -629,7 +646,16 @@ export default function Members() {
                                 {t.age_group ? getAgeGroupLabel(t.age_group) : ''} {t.league ?? ''} {(t.season_phases as any)?.name ? (t.season_phases as any).name : ''}
                               </p>
                             </div>
-                            <Switch checked={memberTeamIds.has(t.id)} disabled className="shrink-0 ml-2" />
+                            <Switch
+                              checked={memberTeamIds.has(t.id)}
+                              disabled={!canEditAssignments}
+                              onCheckedChange={(checked) => {
+                                if (canEditAssignments) {
+                                  toggleTeamMut.mutate({ memberId: editingMember.id, teamId: t.id, active: checked });
+                                }
+                              }}
+                              className="shrink-0 ml-2"
+                            />
                           </div>
                         ))}
                       </div>
