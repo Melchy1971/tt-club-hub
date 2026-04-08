@@ -1296,8 +1296,19 @@ function RatingImportTab() {
       const members = allMembers ?? [];
 
       const parsed: RatingRow[] = raw.map((r) => {
-        const firstName = (r['Vorname'] || r['first_name'] || '').trim();
-        const lastName = (r['Nachname'] || r['last_name'] || r['Name'] || '').trim();
+        let firstName = (r['Vorname'] || r['first_name'] || '').trim();
+        let lastName = (r['Nachname'] || r['last_name'] || r['Name'] || '').trim();
+
+        // Support combined "Spieler" column (e.g. "Jochen Boll")
+        if (!firstName && !lastName) {
+          const spieler = (r['Spieler'] || r['spieler'] || r['Player'] || '').trim();
+          if (spieler) {
+            const parts = spieler.split(/\s+/);
+            firstName = parts[0] || '';
+            lastName = parts.slice(1).join(' ') || '';
+          }
+        }
+
         const ttrRaw = r['TTR'] || r['ttr'] || r['TTR-Punkte'] || '';
         const qttrRaw = r['QTTR'] || r['qttr'] || r['Q-TTR'] || '';
         const ttr = ttrRaw ? parseInt(ttrRaw, 10) : null;
