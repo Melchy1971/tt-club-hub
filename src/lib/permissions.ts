@@ -32,6 +32,9 @@ export function hasAllPermissions(
 export const isAdmin = (role: AppRole | null | undefined): boolean =>
   role === 'admin' || role === 'developer';
 
+export const canManageRoles = (role: AppRole | null | undefined): boolean =>
+  role === 'admin' || role === 'developer' || role === 'vorstand';
+
 export const isStaff = (role: AppRole | null | undefined): boolean =>
   role === 'admin' || role === 'developer' || role === 'vorstand' || role === 'trainer';
 
