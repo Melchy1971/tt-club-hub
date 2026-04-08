@@ -1365,7 +1365,7 @@ function RatingImportTab() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold">QTTR/TTR-Import</h2>
-          <p className="text-sm text-muted-foreground">Aktualisiere TTR- und QTTR-Werte aus CSV oder Excel</p>
+          <p className="text-sm text-muted-foreground">Aktualisiere TTR- und QTTR-Werte aus CSV oder Excel. Format: <code className="text-xs bg-muted px-1 rounded">Rang;Spieler;TTR</code> oder <code className="text-xs bg-muted px-1 rounded">Vorname;Nachname;TTR;QTTR</code></p>
         </div>
         <Button variant="outline" size="sm" onClick={downloadTemplate}><Download className="mr-2 h-4 w-4" /> Vorlage</Button>
       </div>
