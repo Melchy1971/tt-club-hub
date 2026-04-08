@@ -1355,7 +1355,7 @@ function RatingImportTab() {
   });
 
   const downloadTemplate = () => {
-    const csv = 'Vorname;Nachname;TTR;QTTR\nMax;Mustermann;1500;1450\n';
+    const csv = 'Rang;Spieler;TTR\n1;Max Mustermann;1500\n2;Erika Musterfrau;1450\n';
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'ttr_vorlage.csv'; a.click();
   };
