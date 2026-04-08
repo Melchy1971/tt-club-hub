@@ -103,15 +103,6 @@ export const ROUTES: RouteConfig[] = [
     guard: { type: 'roles', roles: ['admin', 'developer'] },
   },
   {
-    path: '/rollen',
-    label: MODULE_LABELS_DE.roles,
-    moduleKey: 'roles',
-    icon: Shield,
-    group: 'system',
-    navVisibility: 'sidebar',
-    guard: { type: 'roles', roles: ['admin', 'developer'] },
-  },
-  {
     path: '/saisons',
     label: MODULE_LABELS_DE.seasons,
     moduleKey: 'seasons',

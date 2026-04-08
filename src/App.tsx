@@ -24,7 +24,7 @@ import Board from './pages/Board';
 import Training from './pages/Training';
 import ImportPage from './pages/Import';
 import Seasons from './pages/Seasons';
-import Roles from './pages/Roles';
+
 import Profile from './pages/Profile';
 import SecurityPage from './pages/Security';
 import NotificationsPage from './pages/Notifications';
@@ -46,7 +46,7 @@ const APP_ROUTE_COMPONENTS: AppRouteComponentMap = {
   '/vorstand': Board,
   '/import': ImportPage,
   '/admin': Admin,
-  '/rollen': Roles,
+  
   '/einstellungen': SettingsPage,
   '/saisons': Seasons,
   '/profil': Profile,
