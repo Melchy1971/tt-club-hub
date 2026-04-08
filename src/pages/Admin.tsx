@@ -109,6 +109,8 @@ type MemberFormState = typeof emptyMemberForm;
 const JUGEND_GROUPS = new Set(['jungen_18','maedchen_18','jungen_15','maedchen_15','jungen_13','maedchen_13','jungen_11','maedchen_11']);
 
 function MembersAdminTab() {
+  const { role: currentRole } = useAuth();
+  const canEditAssignments = currentRole === 'admin' || currentRole === 'developer' || currentRole === 'vorstand';
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [formOpen, setFormOpen] = useState(false);
