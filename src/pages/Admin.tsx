@@ -525,7 +525,7 @@ function MembersAdminTab() {
                                 {t.age_group ? getAgeGroupLabel(t.age_group) : ''} {t.league ?? ''} {(t.season_phases as any)?.name ?? ''}
                               </p>
                             </div>
-                            <Switch checked={memberTeamIds.has(t.id)} disabled className="shrink-0 ml-2" />
+                            <Switch checked={memberTeamIds.has(t.id)} disabled={!canEditAssignments} onCheckedChange={(checked) => { if (editingId) toggleTeamMut.mutate({ memberId: editingId, teamId: t.id, active: checked }); }} className="shrink-0 ml-2" />
                           </div>
                         ))}
                       </div>
