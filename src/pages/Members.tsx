@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Users, Search, Pencil, Trash2, Eye, X, UserPlus } from 'lucide-react';
 import { memberService } from '@/services/memberService';
@@ -23,6 +23,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/common/EmptyState';
 import { Constants } from '@/integrations/supabase/types';
@@ -485,102 +486,101 @@ export default function Members() {
           <DialogHeader>
             <DialogTitle>{editingMember ? 'Mitglied bearbeiten' : 'Neues Mitglied'}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="grid grid-cols-2 gap-4">
-              <FormField label="Vorname *" id="first_name" value={form.first_name} error={errors.first_name}
-                onChange={(v) => setField('first_name', v)} />
-              <FormField label="Nachname *" id="last_name" value={form.last_name} error={errors.last_name}
-                onChange={(v) => setField('last_name', v)} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <FormField label="E-Mail" id="email" value={form.email} error={errors.email} type="email"
-                onChange={(v) => setField('email', v)} />
-              <FormField label="Telefon" id="phone" value={form.phone}
-                onChange={(v) => setField('phone', v)} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <FormField label="Geburtsdatum" id="date_of_birth" value={form.date_of_birth} type="date"
-                onChange={(v) => setField('date_of_birth', v)} />
-              <div className="space-y-1.5">
-                <Label htmlFor="gender">Geschlecht</Label>
-                <Select value={form.gender} onValueChange={(v) => setField('gender', v)}>
-                  <SelectTrigger id="gender"><SelectValue placeholder="Auswählen" /></SelectTrigger>
-                  <SelectContent>
-                    {Constants.public.Enums.gender.map((g) => (
-                      <SelectItem key={g} value={g}>{getGenderLabel(g)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <FormField label="Straße" id="street" value={form.street}
-              onChange={(v) => setField('street', v)} />
-            <div className="grid grid-cols-3 gap-4">
-              <FormField label="PLZ" id="zip_code" value={form.zip_code}
-                onChange={(v) => setField('zip_code', v)} />
-              <div className="col-span-2">
-                <FormField label="Ort" id="city" value={form.city}
-                  onChange={(v) => setField('city', v)} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <FormField label="Mitgliedsnummer" id="member_number" value={form.member_number}
-                onChange={(v) => setField('member_number', v)} />
-              <div className="space-y-1.5">
-                <Label htmlFor="age_group">Altersgruppe</Label>
-                <Select value={form.age_group} onValueChange={(v) => setField('age_group', v)}>
-                  <SelectTrigger id="age_group"><SelectValue placeholder="Auswählen" /></SelectTrigger>
-                  <SelectContent>
-                    {Constants.public.Enums.age_group.map((ag) => (
-                      <SelectItem key={ag} value={ag}>{getAgeGroupLabel(ag)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <FormField label="TTR-Wert" id="ttr_rating" value={form.ttr_rating} error={errors.ttr_rating}
-                type="number" onChange={(v) => setField('ttr_rating', v)} />
-              <FormField label="QTTR-Wert" id="qttr_rating" value={form.qttr_rating} error={errors.qttr_rating}
-                type="number" onChange={(v) => setField('qttr_rating', v)} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <FormField label="Eintrittsdatum *" id="entry_date" value={form.entry_date} error={errors.entry_date}
-                type="date" onChange={(v) => setField('entry_date', v)} />
-              {editingMember && (
-                <FormField label="Austrittsdatum" id="exit_date" value={editingMember.exitDate ?? ''} type="date"
-                  onChange={() => {}} />
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="notes">Notizen</Label>
-              <Textarea id="notes" value={form.notes} onChange={(e) => setField('notes', e.target.value)}
-                rows={3} placeholder="Optionale Anmerkungen…" />
-            </div>
-            <div className="flex items-center gap-3">
-              <Switch id="is_active" checked={form.is_active}
-                onCheckedChange={(v) => setField('is_active', v)} />
-              <Label htmlFor="is_active">Aktives Mitglied</Label>
-            </div>
+          <Tabs defaultValue="profil" className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="profil">Profil</TabsTrigger>
+              <TabsTrigger value="rollen" disabled={!editingMember}>Rollen</TabsTrigger>
+              <TabsTrigger value="teams" disabled={!editingMember}>Teams</TabsTrigger>
+              <TabsTrigger value="passwort" disabled={!editingMember}>Passwort</TabsTrigger>
+            </TabsList>
 
-            {/* Rollen & Mannschaften (nur bei Bearbeitung) */}
-            {editingMember && (() => {
-              const JUGEND_GROUPS = new Set(['jungen_18','maedchen_18','jungen_15','maedchen_15','jungen_13','maedchen_13','jungen_11','maedchen_11']);
-              const memberRoles = getRolesForMember(editingMember);
-              const memberTeamIds = new Set(
-                teamMembers.filter((tm) => tm.member_id === editingMember.id).map((tm) => tm.team_id)
-              );
-              const erwachseneTeams = allTeams.filter((t) => !JUGEND_GROUPS.has(t.age_group));
-              const jugendTeams = allTeams.filter((t) => JUGEND_GROUPS.has(t.age_group));
+            {/* Tab: Profil */}
+            <TabsContent value="profil" className="space-y-4 pt-2">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField label="Vorname *" id="first_name" value={form.first_name} error={errors.first_name}
+                  onChange={(v) => setField('first_name', v)} />
+                <FormField label="Nachname *" id="last_name" value={form.last_name} error={errors.last_name}
+                  onChange={(v) => setField('last_name', v)} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField label="E-Mail" id="email" value={form.email} error={errors.email} type="email"
+                  onChange={(v) => setField('email', v)} />
+                <FormField label="Telefon" id="phone" value={form.phone}
+                  onChange={(v) => setField('phone', v)} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField label="Geburtsdatum" id="date_of_birth" value={form.date_of_birth} type="date"
+                  onChange={(v) => setField('date_of_birth', v)} />
+                <div className="space-y-1.5">
+                  <Label htmlFor="gender">Geschlecht</Label>
+                  <Select value={form.gender} onValueChange={(v) => setField('gender', v)}>
+                    <SelectTrigger id="gender"><SelectValue placeholder="Auswählen" /></SelectTrigger>
+                    <SelectContent>
+                      {Constants.public.Enums.gender.map((g) => (
+                        <SelectItem key={g} value={g}>{getGenderLabel(g)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <FormField label="Straße" id="street" value={form.street}
+                onChange={(v) => setField('street', v)} />
+              <div className="grid grid-cols-3 gap-4">
+                <FormField label="PLZ" id="zip_code" value={form.zip_code}
+                  onChange={(v) => setField('zip_code', v)} />
+                <div className="col-span-2">
+                  <FormField label="Ort" id="city" value={form.city}
+                    onChange={(v) => setField('city', v)} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField label="Mitgliedsnummer" id="member_number" value={form.member_number}
+                  onChange={(v) => setField('member_number', v)} />
+                <div className="space-y-1.5">
+                  <Label htmlFor="age_group">Altersgruppe</Label>
+                  <Select value={form.age_group} onValueChange={(v) => setField('age_group', v)}>
+                    <SelectTrigger id="age_group"><SelectValue placeholder="Auswählen" /></SelectTrigger>
+                    <SelectContent>
+                      {Constants.public.Enums.age_group.map((ag) => (
+                        <SelectItem key={ag} value={ag}>{getAgeGroupLabel(ag)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField label="TTR-Wert" id="ttr_rating" value={form.ttr_rating} error={errors.ttr_rating}
+                  type="number" onChange={(v) => setField('ttr_rating', v)} />
+                <FormField label="QTTR-Wert" id="qttr_rating" value={form.qttr_rating} error={errors.qttr_rating}
+                  type="number" onChange={(v) => setField('qttr_rating', v)} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField label="Eintrittsdatum *" id="entry_date" value={form.entry_date} error={errors.entry_date}
+                  type="date" onChange={(v) => setField('entry_date', v)} />
+                {editingMember && (
+                  <FormField label="Austrittsdatum" id="exit_date" value={editingMember.exitDate ?? ''} type="date"
+                    onChange={() => {}} />
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="notes">Notizen</Label>
+                <Textarea id="notes" value={form.notes} onChange={(e) => setField('notes', e.target.value)}
+                  rows={3} placeholder="Optionale Anmerkungen…" />
+              </div>
+              <div className="flex items-center gap-3">
+                <Switch id="is_active" checked={form.is_active}
+                  onCheckedChange={(v) => setField('is_active', v)} />
+                <Label htmlFor="is_active">Aktives Mitglied</Label>
+              </div>
+            </TabsContent>
 
-              return (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
-                  {/* Rollen */}
+            {/* Tab: Rollen */}
+            <TabsContent value="rollen" className="space-y-4 pt-2">
+              {editingMember && (() => {
+                const memberRoles = getRolesForMember(editingMember);
+                return (
                   <div className="space-y-3">
-                    <div>
-                      <p className="text-base font-semibold">Rollen</p>
-                      <p className="text-xs text-muted-foreground">Berechtigungen dem Profil zuweisen</p>
-                    </div>
+                    <p className="text-sm text-muted-foreground">Berechtigungen dem Profil zuweisen</p>
                     <div className="space-y-2">
                       {allRoles.map((r) => (
                         <div key={r.name} className="flex items-center justify-between">
@@ -599,15 +599,28 @@ export default function Members() {
                       {allRoles.length === 0 && (
                         <span className="text-sm text-muted-foreground">Keine Rollen definiert</span>
                       )}
+                      {!editingMember.userId && (
+                        <p className="text-sm text-muted-foreground italic">Dieses Mitglied hat noch kein verknüpftes Benutzerkonto. Rollen können erst zugewiesen werden, wenn ein Login existiert.</p>
+                      )}
                     </div>
                   </div>
+                );
+              })()}
+            </TabsContent>
 
-                  {/* Mannschaften */}
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-base font-semibold">Mannschaften</p>
-                      <p className="text-xs text-muted-foreground">Mannschaften dem Profil zuweisen</p>
-                    </div>
+            {/* Tab: Teams */}
+            <TabsContent value="teams" className="space-y-4 pt-2">
+              {editingMember && (() => {
+                const JUGEND_GROUPS = new Set(['jungen_18','maedchen_18','jungen_15','maedchen_15','jungen_13','maedchen_13','jungen_11','maedchen_11']);
+                const memberTeamIds = new Set(
+                  teamMembers.filter((tm) => tm.member_id === editingMember.id).map((tm) => tm.team_id)
+                );
+                const erwachseneTeams = allTeams.filter((t) => !JUGEND_GROUPS.has(t.age_group));
+                const jugendTeams = allTeams.filter((t) => JUGEND_GROUPS.has(t.age_group));
+
+                return (
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">Mannschaften dem Profil zuweisen</p>
 
                     {erwachseneTeams.length > 0 && (
                       <div className="space-y-2">
@@ -665,10 +678,17 @@ export default function Members() {
                       <span className="text-sm text-muted-foreground">Keine Mannschaften angelegt</span>
                     )}
                   </div>
-                </div>
-              );
-            })()}
-          </div>
+                );
+              })()}
+            </TabsContent>
+
+            {/* Tab: Passwort */}
+            <TabsContent value="passwort" className="space-y-4 pt-2">
+              <p className="text-sm text-muted-foreground">
+                Passwort-Verwaltung ist über die persönlichen Sicherheitseinstellungen des jeweiligen Nutzers möglich.
+              </p>
+            </TabsContent>
+          </Tabs>
           <DialogFooter>
             <Button variant="outline" onClick={closeForm}>Abbrechen</Button>
             <Button onClick={handleSubmit} disabled={createMut.isPending || updateMut.isPending}>
