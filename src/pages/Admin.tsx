@@ -180,7 +180,7 @@ function MembersAdminTab() {
 
   const updateMut = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Record<string, any> }) => {
-      const { error } = await supabase.from('members').update(data).eq('id', id);
+      const { error } = await supabase.from('members').update(data as any).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => { toast.success('Mitglied aktualisiert'); queryClient.invalidateQueries({ queryKey: ['admin-members'] }); closeForm(); },

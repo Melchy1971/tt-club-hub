@@ -931,6 +931,56 @@ export type Database = {
           },
         ]
       }
+      team_training_slots: {
+        Row: {
+          created_at: string
+          end_time: string
+          id: string
+          is_active: boolean
+          location: string | null
+          start_time: string
+          team_id: string
+          updated_at: string
+          valid_from: string | null
+          valid_to: string | null
+          weekday: number
+        }
+        Insert: {
+          created_at?: string
+          end_time: string
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          start_time: string
+          team_id: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_to?: string | null
+          weekday: number
+        }
+        Update: {
+          created_at?: string
+          end_time?: string
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          start_time?: string
+          team_id?: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_to?: string | null
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_training_slots_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teams: {
         Row: {
           age_group: Database["public"]["Enums"]["age_group"]
