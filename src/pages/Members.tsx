@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Users, Search, Pencil, Trash2, Eye, X, UserPlus } from 'lucide-react';
 import { memberService } from '@/services/memberService';
