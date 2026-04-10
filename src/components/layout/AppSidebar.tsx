@@ -76,15 +76,23 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="p-4">
+       <SidebarHeader className="p-4">
         <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground font-display font-bold text-sm">
-            TT
-          </div>
+          {clubSettings?.logo_url ? (
+            <img
+              src={clubSettings.logo_url}
+              alt="Vereinslogo"
+              className="h-9 w-9 shrink-0 rounded-lg object-contain"
+            />
+          ) : (
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground font-display font-bold text-sm">
+              TT
+            </div>
+          )}
           {!collapsed && (
             <div className="flex flex-col">
               <span className="font-display font-bold text-sidebar-accent-foreground text-base tracking-tight leading-tight">
-                {NAV_UI_LABELS_DE.appName}
+                {clubSettings?.club_name || NAV_UI_LABELS_DE.appName}
               </span>
               <span className="text-[10px] text-sidebar-foreground/50 leading-tight">
                 {NAV_UI_LABELS_DE.appTagline}
