@@ -5,6 +5,8 @@ import { useLocation } from 'react-router-dom';
 import { useNavigationPermissions } from '@/hooks/useNavigationPermissions';
 import { NAV_GROUP_LABELS_DE, NAV_UI_LABELS_DE } from '@/constants/uiLabels';
 import type { RouteConfig } from '@/types/navigation';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Sidebar,
   SidebarContent,
@@ -18,7 +20,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export function AppSidebar() {
   const { signOut, user } = useAuth();
