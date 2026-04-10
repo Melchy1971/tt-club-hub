@@ -29,6 +29,16 @@ export function AppSidebar() {
   const location = useLocation();
   const { navGroups } = useNavigationPermissions();
 
+  const { data: clubSettings } = useQuery({
+    queryKey: ['club-settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('club_settings').select('club_name, logo_url').limit(1).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   const isActive = (path: string) =>
     path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
 
