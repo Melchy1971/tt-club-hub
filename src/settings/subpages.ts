@@ -44,15 +44,6 @@ export const SETTINGS_SUBPAGES: SettingsSubpageDef[] = [
   },
 
   {
-    id: 'roles',
-    label: SETTINGS_SUBPAGE_LABELS_DE.roles,
-    icon: Users,
-    component: SettingsRoles,
-    group: 'admin',
-    readAccess: getSettingsPermissionRule('roles').read,
-    writeAccess: getSettingsPermissionRule('roles').write,
-  },
-  {
     id: 'permissions',
     label: SETTINGS_SUBPAGE_LABELS_DE.permissions,
     icon: SlidersHorizontal,
