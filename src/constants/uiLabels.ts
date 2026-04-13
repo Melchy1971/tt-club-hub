@@ -80,6 +80,7 @@ export const ROLE_LABELS_DE: Record<AppRole, string> = {
   trainer: 'Trainer',
   spieler: 'Spieler',
   mitglied: 'Mitglied',
+  fördermitglied: 'Fördermitglied',
 };
 
 export const PERMISSION_LABELS_DE: Record<Permission, string> = {

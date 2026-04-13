@@ -9,6 +9,7 @@ export const APP_ROLES = [
   'spieler',
   'mitglied',
   'developer',
+  'fördermitglied',
 ] as const;
 
 export type AppRole = Enums<'app_role'>;
@@ -113,6 +114,7 @@ export const ROLE_PERMISSIONS: Record<AppRole, Permission[]> = {
     'substitute:write',
   ],
   mitglied: ['member:read', 'team:read', 'match:read', 'season:read'],
+  fördermitglied: ['member:read', 'team:read', 'match:read', 'season:read'],
 };
 
 // === Auth-Fehler ===

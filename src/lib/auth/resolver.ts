@@ -3,7 +3,7 @@ import type { AppRole, AuthProblem, AuthSessionState, AuthUser } from '@/types/a
 import { APP_ROLES } from '@/types/auth';
 import type { Tables } from '@/integrations/supabase/types';
 
-const ROLE_PRIORITY: AppRole[] = ['developer', 'admin', 'vorstand', 'trainer', 'spieler', 'mitglied'];
+const ROLE_PRIORITY: AppRole[] = ['developer', 'admin', 'vorstand', 'trainer', 'spieler', 'mitglied', 'fördermitglied'];
 
 type UserRoleRow = Pick<Tables<'user_roles'>, 'user_id' | 'role'>;
 
