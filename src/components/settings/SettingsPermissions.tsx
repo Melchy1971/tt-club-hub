@@ -108,7 +108,7 @@ export default function SettingsPermissions() {
 
   const createMut = useMutation({
     mutationFn: async ({ displayName, description }: { displayName: string; description: string }) => {
-      const slug = displayName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+      const slug = displayName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-zäöüß0-9_]/g, '');
       const { error } = await supabase
         .from('roles')
         .insert({ display_name: displayName, description: description || null, name: slug } as never);
