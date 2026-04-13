@@ -1200,6 +1200,7 @@ export type Database = {
         | "spieler"
         | "mitglied"
         | "developer"
+        | "fördermitglied"
       gender: "maennlich" | "weiblich" | "divers"
       match_status:
         | "geplant"
@@ -1359,6 +1360,7 @@ export const Constants = {
         "spieler",
         "mitglied",
         "developer",
+        "fördermitglied",
       ],
       gender: ["maennlich", "weiblich", "divers"],
       match_status: ["geplant", "laufend", "beendet", "verschoben", "abgesagt"],
