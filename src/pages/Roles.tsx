@@ -285,9 +285,6 @@ export default function Roles() {
         </div>
         {canEdit && (
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setCreateOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" /> Neue Rolle
-            </Button>
             <Button variant="outline" onClick={() => setAssignOpen(true)}>
               <UserPlus className="mr-2 h-4 w-4" /> Rolle zuweisen
             </Button>
