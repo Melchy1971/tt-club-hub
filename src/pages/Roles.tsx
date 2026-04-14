@@ -89,7 +89,10 @@ async function fetchAllRoles(): Promise<FullRoleRow[]> {
     .select('id, name, display_name, description')
     .order('display_name');
   if (error) throw error;
-  return (data ?? []).map((r) => ({ ...r, is_system: false })) as FullRoleRow[];
+  return (data ?? []).map((r) => ({
+    ...r,
+    is_system: SYSTEM_APP_ROLES.includes(r.name as AppRole),
+  })) as FullRoleRow[];
 }
 
 async function fetchPermissions(): Promise<RoleModulePerm[]> {
@@ -278,13 +281,10 @@ export default function Roles() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Rollen & Berechtigungen</h1>
-          <p className="text-muted-foreground">Systemrollen und Modul-Berechtigungen verwalten</p>
+          <p className="text-muted-foreground">Systemrollen verwalten und bestehenden Mitgliedern zuweisen</p>
         </div>
         {canEdit && (
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setCreateOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" /> Neue Rolle
-            </Button>
             <Button variant="outline" onClick={() => setAssignOpen(true)}>
               <UserPlus className="mr-2 h-4 w-4" /> Rolle zuweisen
             </Button>
