@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import {
   MODULE_KEYS,
+  SYSTEM_APP_ROLES,
   type ModuleKey,
   type PermissionLevel,
 } from '@/constants/permissionsMatrix';
@@ -68,7 +69,10 @@ export default function SettingsPermissions() {
         .select('id, name, display_name, description')
         .order('name');
       if (error) throw error;
-      return (data ?? []).map((r) => ({ ...r, is_system: false })) as RoleRow[];
+      return (data ?? []).map((r) => ({
+        ...r,
+        is_system: SYSTEM_APP_ROLES.includes(r.name as DbAppRole),
+      })) as RoleRow[];
     },
   });
 
@@ -166,17 +170,10 @@ export default function SettingsPermissions() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Rollen & Rechte Matrix</CardTitle>
-            <CardDescription>Feingranulare Zugriffssteuerung pro Modul und Rolle</CardDescription>
-          </div>
-          {canEdit && (
-            <Button variant="outline" size="sm" onClick={openCreate}>
-              <Plus className="mr-2 h-4 w-4" /> Neue Rolle
-            </Button>
-          )}
-        </div>
+        <CardTitle>Rollen & Rechte Matrix</CardTitle>
+        <CardDescription>
+          Feingranulare Zugriffssteuerung pro Modul und Rolle. Rollenzuweisungen erfolgen über die Mitgliederprofile.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto rounded-md border">
