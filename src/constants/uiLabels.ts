@@ -73,7 +73,7 @@ export const SETTINGS_GROUP_LABELS_DE: Record<SettingsSubpageGroup, string> = {
   admin: 'Administration',
 };
 
-export const ROLE_LABELS_DE: Record<AppRole, string> = {
+export const ROLE_LABELS_DE: Record<string, string> = {
   developer: 'Entwickler',
   admin: 'Administrator',
   vorstand: 'Vorstand',
