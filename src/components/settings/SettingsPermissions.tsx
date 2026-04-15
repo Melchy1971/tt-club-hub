@@ -170,10 +170,19 @@ export default function SettingsPermissions() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Rollen & Rechte Matrix</CardTitle>
-        <CardDescription>
-          Feingranulare Zugriffssteuerung pro Modul und Rolle. Rollenzuweisungen erfolgen über die Mitgliederprofile.
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Rollen & Rechte Matrix</CardTitle>
+            <CardDescription>
+              Feingranulare Zugriffssteuerung pro Modul und Rolle. Rollenzuweisungen erfolgen über die Mitgliederprofile.
+            </CardDescription>
+          </div>
+          {canEdit && (
+            <Button onClick={openCreate}>
+              <Plus className="mr-2 h-4 w-4" /> Neue Rolle
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto rounded-md border">
