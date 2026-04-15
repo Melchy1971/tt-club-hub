@@ -13,8 +13,8 @@ const pushProblem = (problems: AuthProblem[], problem: AuthProblem) => {
   }
 };
 
-export const isValidRole = (role: string | null | undefined): role is AppRole =>
-  !!role && APP_ROLES.includes(role as AppRole);
+export const isValidRole = (role: string | null | undefined): role is string =>
+  !!role && (APP_ROLES as readonly string[]).includes(role);
 
 export const resolveRolesFromAssignments = (
   userId: string,

@@ -1,7 +1,7 @@
 import type { AppRole } from '@/types/auth';
 import type { CommunicationAudience, PublicationStatus } from '@/types/domain/communication';
 
-export type BoardActorRole = Extract<AppRole, 'admin' | 'developer' | 'vorstand' | 'trainer' | 'mitglied' | 'spieler'>;
+export type BoardActorRole = 'admin' | 'developer' | 'vorstand' | 'trainer' | 'mitglied' | 'spieler';
 
 export type BoardChannel = 'members' | 'news' | 'meetings' | 'documents' | 'email' | 'lists';
 

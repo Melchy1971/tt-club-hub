@@ -571,7 +571,7 @@ export type Database = {
           id: string
           level: Database["public"]["Enums"]["permission_level"]
           module: string
-          role: Database["public"]["Enums"]["app_role"]
+          role: string
           updated_at: string
         }
         Insert: {
@@ -579,7 +579,7 @@ export type Database = {
           id?: string
           level?: Database["public"]["Enums"]["permission_level"]
           module: string
-          role: Database["public"]["Enums"]["app_role"]
+          role: string
           updated_at?: string
         }
         Update: {
@@ -587,7 +587,7 @@ export type Database = {
           id?: string
           level?: Database["public"]["Enums"]["permission_level"]
           module?: string
-          role?: Database["public"]["Enums"]["app_role"]
+          role?: string
           updated_at?: string
         }
         Relationships: []
@@ -598,21 +598,24 @@ export type Database = {
           description: string | null
           display_name: string
           id: string
-          name: Database["public"]["Enums"]["app_role"]
+          is_system: boolean
+          name: string
         }
         Insert: {
           created_at?: string
           description?: string | null
           display_name: string
           id?: string
-          name: Database["public"]["Enums"]["app_role"]
+          is_system?: boolean
+          name: string
         }
         Update: {
           created_at?: string
           description?: string | null
           display_name?: string
           id?: string
-          name?: Database["public"]["Enums"]["app_role"]
+          is_system?: boolean
+          name?: string
         }
         Relationships: []
       }
@@ -1110,21 +1113,21 @@ export type Database = {
           assigned_by: string | null
           created_at: string
           id: string
-          role: Database["public"]["Enums"]["app_role"]
+          role: string
           user_id: string
         }
         Insert: {
           assigned_by?: string | null
           created_at?: string
           id?: string
-          role: Database["public"]["Enums"]["app_role"]
+          role: string
           user_id: string
         }
         Update: {
           assigned_by?: string | null
           created_at?: string
           id?: string
-          role?: Database["public"]["Enums"]["app_role"]
+          role?: string
           user_id?: string
         }
         Relationships: []
@@ -1170,13 +1173,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
+      has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       is_admin_or_board: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
