@@ -17,6 +17,7 @@ const clubSchema = z.object({
   club_name: z.string().min(1, 'Vereinsname erforderlich').max(200),
   club_number: z.string().max(50).optional().or(z.literal('')),
   association: z.string().max(200).optional().or(z.literal('')),
+  chairman: z.string().max(200).optional().or(z.literal('')),
   contact_email: z.string().email('Ungültige E-Mail').max(255).optional().or(z.literal('')),
   contact_phone: z.string().max(30).optional().or(z.literal('')),
   website: z.string().max(255).optional().or(z.literal('')),
@@ -43,7 +44,7 @@ export default function SettingsClub() {
 
   const form = useForm<ClubForm>({
     resolver: zodResolver(clubSchema),
-    defaultValues: { club_name: '', club_number: '', association: '', contact_email: '', contact_phone: '', website: '', street: '', zip_code: '', city: '' },
+    defaultValues: { club_name: '', club_number: '', association: '', chairman: '', contact_email: '', contact_phone: '', website: '', street: '', zip_code: '', city: '' },
   });
 
   useEffect(() => {
@@ -52,6 +53,7 @@ export default function SettingsClub() {
         club_name: settings.club_name ?? '',
         club_number: settings.club_number ?? '',
         association: settings.association ?? '',
+        chairman: (settings as any).chairman ?? '',
         contact_email: settings.contact_email ?? '',
         contact_phone: settings.contact_phone ?? '',
         website: settings.website ?? '',
@@ -200,6 +202,7 @@ export default function SettingsClub() {
                   ['club_name', 'Vereinsname'],
                   ['club_number', 'Vereinsnummer'],
                   ['association', 'Verband'],
+                  ['chairman', '1. Vorsitzender'],
                   ['contact_email', 'Kontakt-E-Mail'],
                   ['contact_phone', 'Telefon'],
                   ['website', 'Website'],
