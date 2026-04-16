@@ -24,7 +24,7 @@ export const infoService: InfoService = {
   async getPublicClubInfo() {
     const { data, error } = await supabase
       .from('club_settings')
-      .select('club_name, club_number, association, website, contact_email, contact_phone, street, zip_code, city')
+      .select('club_name, club_number, association, chairman, website, contact_email, contact_phone, street, zip_code, city')
       .limit(1)
       .maybeSingle();
 
@@ -36,6 +36,7 @@ export const infoService: InfoService = {
       clubName: data.club_name,
       clubNumber: data.club_number ?? null,
       association: data.association ?? null,
+      chairman: (data as any).chairman ?? null,
       website: data.website ?? null,
       contactEmail: data.contact_email ?? null,
       contactPhone: data.contact_phone ?? null,
