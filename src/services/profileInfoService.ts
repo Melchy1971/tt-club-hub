@@ -218,6 +218,7 @@ export const profileInfoService = {
       clubName: data.club_name,
       clubNumber: data.club_number ?? null,
       association: data.association ?? null,
+      chairman: (data as any).chairman ?? null,
       website: data.website ?? null,
       contactEmail: data.contact_email ?? null,
       contactPhone: data.contact_phone ?? null,
