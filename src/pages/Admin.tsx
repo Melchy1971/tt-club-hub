@@ -408,74 +408,85 @@ function MembersAdminTab() {
           <DialogHeader>
             <DialogTitle>{editingId ? 'Mitglied bearbeiten' : 'Neues Mitglied'}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="grid grid-cols-2 gap-4">
-              <AdminFormField label="Vorname *" id="adm_first_name" value={form.first_name} error={errors.first_name}
-                onChange={(v) => setField('first_name', v)} />
-              <AdminFormField label="Nachname *" id="adm_last_name" value={form.last_name} error={errors.last_name}
-                onChange={(v) => setField('last_name', v)} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <AdminFormField label="E-Mail" id="adm_email" value={form.email} error={errors.email} type="email"
-                onChange={(v) => setField('email', v)} />
-              <AdminFormField label="Telefon" id="adm_phone" value={form.phone}
-                onChange={(v) => setField('phone', v)} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <AdminFormField label="Geburtsdatum" id="adm_dob" value={form.date_of_birth} type="date"
-                onChange={(v) => setField('date_of_birth', v)} />
+          <Tabs defaultValue="stammdaten" className="py-2">
+            {editingId && (
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="stammdaten">Stammdaten</TabsTrigger>
+                <TabsTrigger value="rollen">Rollen</TabsTrigger>
+                <TabsTrigger value="mannschaften">Mannschaften</TabsTrigger>
+              </TabsList>
+            )}
+
+            <TabsContent value="stammdaten" className="space-y-4 mt-4">
+              <div className="grid grid-cols-2 gap-4">
+                <AdminFormField label="Vorname *" id="adm_first_name" value={form.first_name} error={errors.first_name}
+                  onChange={(v) => setField('first_name', v)} />
+                <AdminFormField label="Nachname *" id="adm_last_name" value={form.last_name} error={errors.last_name}
+                  onChange={(v) => setField('last_name', v)} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <AdminFormField label="E-Mail" id="adm_email" value={form.email} error={errors.email} type="email"
+                  onChange={(v) => setField('email', v)} />
+                <AdminFormField label="Telefon" id="adm_phone" value={form.phone}
+                  onChange={(v) => setField('phone', v)} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <AdminFormField label="Geburtsdatum" id="adm_dob" value={form.date_of_birth} type="date"
+                  onChange={(v) => setField('date_of_birth', v)} />
+                <div className="space-y-1.5">
+                  <Label htmlFor="adm_gender">Geschlecht</Label>
+                  <Select value={form.gender} onValueChange={(v) => setField('gender', v)}>
+                    <SelectTrigger id="adm_gender"><SelectValue placeholder="Auswählen" /></SelectTrigger>
+                    <SelectContent>
+                      {Constants.public.Enums.gender.map((g) => (
+                        <SelectItem key={g} value={g}>{getGenderLabel(g)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <AdminFormField label="Straße" id="adm_street" value={form.street}
+                onChange={(v) => setField('street', v)} />
+              <div className="grid grid-cols-3 gap-4">
+                <AdminFormField label="PLZ" id="adm_zip" value={form.zip_code}
+                  onChange={(v) => setField('zip_code', v)} />
+                <div className="col-span-2">
+                  <AdminFormField label="Ort" id="adm_city" value={form.city}
+                    onChange={(v) => setField('city', v)} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <AdminFormField label="Mitgliedsnummer" id="adm_member_nr" value={form.member_number}
+                  onChange={(v) => setField('member_number', v)} />
+                <div className="space-y-1.5">
+                  <Label htmlFor="adm_age_group">Altersgruppe</Label>
+                  <Select value={form.age_group} onValueChange={(v) => setField('age_group', v)}>
+                    <SelectTrigger id="adm_age_group"><SelectValue placeholder="Auswählen" /></SelectTrigger>
+                    <SelectContent>
+                      {Constants.public.Enums.age_group.map((ag) => (
+                        <SelectItem key={ag} value={ag}>{getAgeGroupLabel(ag)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <AdminFormField label="TTR-Wert" id="adm_ttr" value={form.ttr_rating} error={errors.ttr_rating}
+                  type="number" onChange={(v) => setField('ttr_rating', v)} />
+                <AdminFormField label="QTTR-Wert" id="adm_qttr" value={form.qttr_rating} error={errors.qttr_rating}
+                  type="number" onChange={(v) => setField('qttr_rating', v)} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <AdminFormField label="Eintrittsdatum *" id="adm_entry" value={form.entry_date} error={errors.entry_date}
+                  type="date" onChange={(v) => setField('entry_date', v)} />
+              </div>
               <div className="space-y-1.5">
-                <Label htmlFor="adm_gender">Geschlecht</Label>
-                <Select value={form.gender} onValueChange={(v) => setField('gender', v)}>
-                  <SelectTrigger id="adm_gender"><SelectValue placeholder="Auswählen" /></SelectTrigger>
-                  <SelectContent>
-                    {Constants.public.Enums.gender.map((g) => (
-                      <SelectItem key={g} value={g}>{getGenderLabel(g)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="adm_notes">Notizen</Label>
+                <Textarea id="adm_notes" value={form.notes} onChange={(e) => setField('notes', e.target.value)}
+                  rows={3} placeholder="Optionale Anmerkungen…" />
               </div>
-            </div>
-            <AdminFormField label="Straße" id="adm_street" value={form.street}
-              onChange={(v) => setField('street', v)} />
-            <div className="grid grid-cols-3 gap-4">
-              <AdminFormField label="PLZ" id="adm_zip" value={form.zip_code}
-                onChange={(v) => setField('zip_code', v)} />
-              <div className="col-span-2">
-                <AdminFormField label="Ort" id="adm_city" value={form.city}
-                  onChange={(v) => setField('city', v)} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <AdminFormField label="Mitgliedsnummer" id="adm_member_nr" value={form.member_number}
-                onChange={(v) => setField('member_number', v)} />
-              <div className="space-y-1.5">
-                <Label htmlFor="adm_age_group">Altersgruppe</Label>
-                <Select value={form.age_group} onValueChange={(v) => setField('age_group', v)}>
-                  <SelectTrigger id="adm_age_group"><SelectValue placeholder="Auswählen" /></SelectTrigger>
-                  <SelectContent>
-                    {Constants.public.Enums.age_group.map((ag) => (
-                      <SelectItem key={ag} value={ag}>{getAgeGroupLabel(ag)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <AdminFormField label="TTR-Wert" id="adm_ttr" value={form.ttr_rating} error={errors.ttr_rating}
-                type="number" onChange={(v) => setField('ttr_rating', v)} />
-              <AdminFormField label="QTTR-Wert" id="adm_qttr" value={form.qttr_rating} error={errors.qttr_rating}
-                type="number" onChange={(v) => setField('qttr_rating', v)} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <AdminFormField label="Eintrittsdatum *" id="adm_entry" value={form.entry_date} error={errors.entry_date}
-                type="date" onChange={(v) => setField('entry_date', v)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="adm_notes">Notizen</Label>
-              <Textarea id="adm_notes" value={form.notes} onChange={(e) => setField('notes', e.target.value)}
-                rows={3} placeholder="Optionale Anmerkungen…" />
-            {/* Rollen & Mannschaften (nur bei Bearbeitung) */}
+            </TabsContent>
+
             {editingId && (() => {
               const memberRoles = editingUserId
                 ? userRoles.filter((r) => r.user_id === editingUserId).map((r) => r.role)
@@ -487,9 +498,8 @@ function MembersAdminTab() {
               const jugendTeams = allTeams.filter((t) => JUGEND_GROUPS.has(t.age_group));
 
               return (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
-                  {/* Rollen */}
-                  <div className="space-y-3">
+                <>
+                  <TabsContent value="rollen" className="space-y-4 mt-4">
                     <div>
                       <p className="text-base font-semibold">Rollen</p>
                       <p className="text-xs text-muted-foreground">Berechtigungen dem Profil zuweisen</p>
@@ -505,10 +515,9 @@ function MembersAdminTab() {
                         <span className="text-sm text-muted-foreground">Keine Rollen definiert</span>
                       )}
                     </div>
-                  </div>
+                  </TabsContent>
 
-                  {/* Mannschaften */}
-                  <div className="space-y-3">
+                  <TabsContent value="mannschaften" className="space-y-4 mt-4">
                     <div>
                       <p className="text-base font-semibold">Mannschaften</p>
                       <p className="text-xs text-muted-foreground">Mannschaften dem Profil zuweisen</p>
@@ -551,12 +560,11 @@ function MembersAdminTab() {
                     {allTeams.length === 0 && (
                       <span className="text-sm text-muted-foreground">Keine Mannschaften angelegt</span>
                     )}
-                  </div>
-                </div>
+                  </TabsContent>
+                </>
               );
             })()}
-          </div>
-          </div>
+          </Tabs>
           <DialogFooter>
             <Button variant="outline" onClick={closeForm}>Abbrechen</Button>
             <Button onClick={handleSubmit} disabled={createMut.isPending || updateMut.isPending}>
