@@ -17,6 +17,7 @@ export type Database = {
       club_settings: {
         Row: {
           association: string | null
+          chairman: string | null
           city: string | null
           club_name: string
           club_number: string | null
@@ -33,6 +34,7 @@ export type Database = {
         }
         Insert: {
           association?: string | null
+          chairman?: string | null
           city?: string | null
           club_name?: string
           club_number?: string | null
@@ -49,6 +51,7 @@ export type Database = {
         }
         Update: {
           association?: string | null
+          chairman?: string | null
           city?: string | null
           club_name?: string
           club_number?: string | null
