@@ -56,6 +56,7 @@ export interface PublicClubInfoViewModel {
   clubName: string;
   clubNumber: string | null;
   association: string | null;
+  chairman: string | null;
   website: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
