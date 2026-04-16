@@ -1,4 +1,4 @@
-import { CalendarDays } from 'lucide-react';
+import { CalendarDays, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -107,6 +107,7 @@ export default function Schedule() {
         />
       ) : (
         <div className="space-y-8">
+          <VenueBar />
           {adultTeams.length > 0 && (
             <TeamSection title="Erwachsene" teams={adultTeams} />
           )}
@@ -146,6 +147,39 @@ function TeamSection({ title, teams }: { title: string; teams: TeamWithMatchCoun
               </CardContent>
             </Card>
           </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function VenueBar() {
+  const { data: venues } = useQuery({
+    queryKey: ['venues-overview'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('venues')
+        .select('id, name, city, is_home_venue')
+        .order('is_home_venue', { ascending: false })
+        .order('name');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  if (!venues?.length) return null;
+
+  return (
+    <div className="space-y-2">
+      <h2 className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+        <MapPin className="h-4 w-4" />
+        Spielorte
+      </h2>
+      <div className="flex flex-wrap gap-2">
+        {venues.map((v) => (
+          <Badge key={v.id} variant={v.is_home_venue ? 'default' : 'outline'} className="text-xs">
+            {v.name}{v.city ? ` · ${v.city}` : ''}
+          </Badge>
         ))}
       </div>
     </div>
