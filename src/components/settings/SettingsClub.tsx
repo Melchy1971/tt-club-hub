@@ -17,6 +17,7 @@ const clubSchema = z.object({
   club_name: z.string().min(1, 'Vereinsname erforderlich').max(200),
   club_number: z.string().max(50).optional().or(z.literal('')),
   association: z.string().max(200).optional().or(z.literal('')),
+  chairman: z.string().max(200).optional().or(z.literal('')),
   contact_email: z.string().email('Ungültige E-Mail').max(255).optional().or(z.literal('')),
   contact_phone: z.string().max(30).optional().or(z.literal('')),
   website: z.string().max(255).optional().or(z.literal('')),
