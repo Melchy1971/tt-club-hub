@@ -504,6 +504,16 @@ function MembersAdminTab() {
                       <p className="text-base font-semibold">Rollen</p>
                       <p className="text-xs text-muted-foreground">Berechtigungen dem Profil zuweisen</p>
                     </div>
+                    {!canEditAssignments && (
+                      <p className="text-xs text-destructive">
+                        Nur Administrator, Vorstand oder Entwickler dürfen Rollen ändern.
+                      </p>
+                    )}
+                    {canEditAssignments && !editingUserId && (
+                      <p className="text-xs text-muted-foreground">
+                        Diesem Mitglied ist kein Benutzerkonto zugeordnet – Rollen können erst nach Verknüpfung vergeben werden.
+                      </p>
+                    )}
                     <div className="space-y-2">
                       {allRoles.map((r) => (
                         <div key={r.name} className="flex items-center justify-between">
