@@ -110,36 +110,41 @@ export const boardMemberService = {
 
       const userIds = (boardRows as BoardMemberRow[]).map((r) => r.user_id);
 
-      const [{ data: roles, error: roleErr }, { data: members, error: memErr }] = await Promise.all([
-        supabase.from('user_roles').select('user_id, role').in('user_id', userIds),
-        supabase.from('members').select('id, user_id, first_name, last_name, email').in('user_id', userIds),
-      ]);
-
-      if (roleErr) throw roleErr;
+      const { data: members, error: memErr } = await supabase
+        .from('members')
+        .select('id, user_id, first_name, last_name, email')
+        .in('user_id', userIds);
       if (memErr) throw memErr;
-
-      const roleMap = new Map<string, string>();
-      (roles ?? []).forEach((r) => {
-        if (!roleMap.has(r.user_id) || r.role === 'admin') {
-          roleMap.set(r.user_id, r.role);
-        }
-      });
 
       const memberMap = new Map<string, MemberRow>();
       ((members ?? []) as MemberRow[]).forEach((m) => {
         if (m.user_id) memberMap.set(m.user_id, m);
       });
 
+      const memberIds = ((members ?? []) as MemberRow[]).map((m) => m.id);
+      const { data: roles, error: roleErr } = memberIds.length
+        ? await supabase.from('member_roles').select('member_id, role').in('member_id', memberIds)
+        : { data: [] as Array<{ member_id: string; role: string }>, error: null };
+      if (roleErr) throw roleErr;
+
+      const roleMapByMemberId = new Map<string, string>();
+      (roles ?? []).forEach((r) => {
+        if (!roleMapByMemberId.has(r.member_id) || r.role === 'admin') {
+          roleMapByMemberId.set(r.member_id, r.role);
+        }
+      });
+
       return (boardRows as BoardMemberRow[]).map((row) => {
         const member = memberMap.get(row.user_id);
+        const memberId = row.member_id ?? member?.id ?? null;
         return {
           id: row.id,
           userId: row.user_id,
-          memberId: row.member_id ?? member?.id ?? null,
+          memberId,
           firstName: member?.first_name ?? '',
           lastName: member?.last_name ?? '',
           email: member?.email ?? null,
-          role: roleMap.get(row.user_id) ?? 'vorstand',
+          role: (memberId && roleMapByMemberId.get(memberId)) || 'vorstand',
           position: row.position,
           termStart: row.term_start,
           termEnd: row.term_end,
