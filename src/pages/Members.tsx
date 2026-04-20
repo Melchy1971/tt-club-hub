@@ -586,10 +586,10 @@ export default function Members() {
                           <span className="text-sm">{r.display_name}</span>
                           <Switch
                             checked={memberRoles.includes(r.name)}
-                            disabled={!canEditAssignments || !editingMember.userId}
+                            disabled={!canEditAssignments}
                             onCheckedChange={(checked) => {
-                              if (canEditAssignments && editingMember.userId) {
-                                toggleRoleMut.mutate({ userId: editingMember.userId, roleName: r.name, active: checked });
+                              if (canEditAssignments) {
+                                toggleRoleMut.mutate({ memberId: editingMember.id, roleName: r.name, active: checked });
                               }
                             }}
                           />
@@ -597,9 +597,6 @@ export default function Members() {
                       ))}
                       {allRoles.length === 0 && (
                         <span className="text-sm text-muted-foreground">Keine Rollen definiert</span>
-                      )}
-                      {!editingMember.userId && (
-                        <p className="text-sm text-muted-foreground italic">Dieses Mitglied hat noch kein verknüpftes Benutzerkonto. Rollen können erst zugewiesen werden, wenn ein Login existiert.</p>
                       )}
                     </div>
                   </div>
