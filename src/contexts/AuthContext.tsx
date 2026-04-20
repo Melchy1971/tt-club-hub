@@ -58,14 +58,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const supaUser: User = session.user;
 
-    const [{ data: roles, error: roleError }, { data: member, error: memberError }] = await Promise.all([
-      supabase.from('user_roles').select('role').eq('user_id', supaUser.id),
-      supabase.from('members').select('*').eq('user_id', supaUser.id).maybeSingle(),
-    ]);
+    // Member zuerst laden, dann Rollen über member_id
+    const { data: member, error: memberError } = await supabase
+      .from('members')
+      .select('*')
+      .eq('user_id', supaUser.id)
+      .maybeSingle();
+
+    let roleRows: Array<{ role: string }> = [];
+    let roleError: unknown = null;
+    if (member?.id) {
+      const { data, error } = await supabase
+        .from('member_roles')
+        .select('role')
+        .eq('member_id', member.id);
+      roleRows = data ?? [];
+      roleError = error;
+    }
 
     const resolved = resolveSessionState({
       session,
-      userRoles: (roles ?? []).map((entry) => ({ user_id: supaUser.id, role: entry.role })),
+      userRoles: roleRows.map((entry) => ({ user_id: supaUser.id, role: entry.role })),
       member: member ?? null,
       roleError: !!roleError,
       memberError: !!memberError,

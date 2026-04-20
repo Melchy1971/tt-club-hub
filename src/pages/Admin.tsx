@@ -133,10 +133,10 @@ function MembersAdminTab() {
     },
   });
 
-  const { data: userRoles = [] } = useQuery({
-    queryKey: ['admin-user-roles'],
+  const { data: memberRolesData = [] } = useQuery({
+    queryKey: ['admin-member-roles'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('user_roles').select('user_id, role');
+      const { data, error } = await supabase.from('member_roles').select('member_id, role');
       if (error) throw error;
       return data ?? [];
     },
@@ -197,16 +197,16 @@ function MembersAdminTab() {
   });
 
   const toggleRoleMut = useMutation({
-    mutationFn: async ({ userId, roleName, active }: { userId: string; roleName: string; active: boolean }) => {
+    mutationFn: async ({ memberId, roleName, active }: { memberId: string; roleName: string; active: boolean }) => {
       if (active) {
-        const { error } = await supabase.from('user_roles').insert({ user_id: userId, role: roleName as any });
+        const { error } = await supabase.from('member_roles').insert({ member_id: memberId, role: roleName });
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('user_roles').delete().eq('user_id', userId).eq('role', roleName as any);
+        const { error } = await supabase.from('member_roles').delete().eq('member_id', memberId).eq('role', roleName);
         if (error) throw error;
       }
     },
-    onSuccess: () => { toast.success('Rolle aktualisiert'); queryClient.invalidateQueries({ queryKey: ['admin-user-roles'] }); },
+    onSuccess: () => { toast.success('Rolle aktualisiert'); queryClient.invalidateQueries({ queryKey: ['admin-member-roles'] }); },
     onError: (e: Error) => toast.error(e.message),
   });
 
