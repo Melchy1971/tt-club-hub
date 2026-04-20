@@ -1,6 +1,6 @@
-/**
+ï»¿/**
  * TeamRosterDialog - Spieler einer Mannschaft zuordnen / entfernen.
- * Spieler können in mehreren Mannschaften gleichzeitig sein.
+ * Spieler kÃ¶nnen in mehreren Mannschaften gleichzeitig sein.
  */
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -112,13 +112,30 @@ export function TeamRosterDialog({ open, onOpenChange, team }: TeamRosterDialogP
 
   const rosterFiltered = useMemo(() => {
     if (!roster) return [];
-    const sorted = [...roster].sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0));
+
+    const withEffectivePosition = roster.map((r: any) => {
+      const edited = positionEdits[r.id];
+      const parsed = edited != null ? parsePosition(edited) : null;
+      return {
+        ...r,
+        effectivePosition: parsed ?? r.position,
+      };
+    });
+
+    const sorted = withEffectivePosition.sort((a: any, b: any) => {
+      const posDiff = (a.effectivePosition ?? 0) - (b.effectivePosition ?? 0);
+      if (posDiff !== 0) return posDiff;
+      const aName = `${a.members?.last_name ?? ''} ${a.members?.first_name ?? ''}`.toLowerCase();
+      const bName = `${b.members?.last_name ?? ''} ${b.members?.first_name ?? ''}`.toLowerCase();
+      return aName.localeCompare(bName);
+    });
+
     if (!search) return sorted;
     const s = search.toLowerCase();
     return sorted.filter((r: any) =>
       `${r.members?.first_name ?? ''} ${r.members?.last_name ?? ''}`.toLowerCase().includes(s),
     );
-  }, [roster, search]);
+  }, [roster, positionEdits, search]);
 
   const addMember = useMutation({
     mutationFn: async ({ memberId, position }: { memberId: string; position: number }) => {
@@ -205,7 +222,7 @@ export function TeamRosterDialog({ open, onOpenChange, team }: TeamRosterDialogP
             onClick={() => { setTab('add'); setSearch(''); }}
           >
             <UserPlus className="h-4 w-4 mr-1" />
-            Spieler hinzufügen
+            Spieler hinzufÃ¼gen
           </Button>
         </div>
 
@@ -319,7 +336,7 @@ export function TeamRosterDialog({ open, onOpenChange, team }: TeamRosterDialogP
           ) : (
             !availableMembers.length ? (
               <div className="text-center py-8 text-muted-foreground text-sm">
-                Keine weiteren Spieler verfügbar
+                Keine weiteren Spieler verfÃ¼gbar
               </div>
             ) : (
               <Table>
