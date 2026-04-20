@@ -47,6 +47,7 @@ export function TeamRosterDialog({ open, onOpenChange, team }: TeamRosterDialogP
   const [tab, setTab] = useState<'roster' | 'add'>('roster');
   const [addPosition, setAddPosition] = useState('1');
   const [positionEdits, setPositionEdits] = useState<Record<string, string>>({});
+  const [isNormalizing, setIsNormalizing] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: roster, isLoading: loadingRoster } = useQuery({
@@ -98,6 +99,66 @@ export function TeamRosterDialog({ open, onOpenChange, team }: TeamRosterDialogP
     setAddPosition(String(getNextFreePosition(rows)));
   }, [open, roster]);
 
+  const normalizeRosterPositions = useMutation({
+    mutationFn: async (rows: any[]) => {
+      const sorted = [...rows].sort((a: any, b: any) => {
+        const aPos = Number.isInteger(a.position) ? a.position : Number.MAX_SAFE_INTEGER;
+        const bPos = Number.isInteger(b.position) ? b.position : Number.MAX_SAFE_INTEGER;
+        if (aPos !== bPos) return aPos - bPos;
+        const aName = `${a.members?.last_name ?? ''} ${a.members?.first_name ?? ''}`.toLowerCase();
+        const bName = `${b.members?.last_name ?? ''} ${b.members?.first_name ?? ''}`.toLowerCase();
+        if (aName !== bName) return aName.localeCompare(bName);
+        return String(a.id).localeCompare(String(b.id));
+      });
+
+      // Phase 1: temporary unique positions to avoid unique-constraint collisions.
+      for (let i = 0; i < sorted.length; i += 1) {
+        const tempPosition = 1000 + i + 1;
+        const { error } = await supabase
+          .from('team_members')
+          .update({ position: tempPosition })
+          .eq('id', sorted[i].id);
+        if (error) throw error;
+      }
+
+      // Phase 2: final normalized positions 1..n.
+      for (let i = 0; i < sorted.length; i += 1) {
+        const finalPosition = i + 1;
+        const { error } = await supabase
+          .from('team_members')
+          .update({ position: finalPosition })
+          .eq('id', sorted[i].id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['team-roster', team?.id] });
+      queryClient.invalidateQueries({ queryKey: ['admin-teams'] });
+    },
+  });
+
+  useEffect(() => {
+    if (!open || !roster || roster.length === 0 || isNormalizing || normalizeRosterPositions.isPending) return;
+
+    const positions = roster.map((r: any) => r.position);
+    const hasNonPositive = positions.some((p: any) => !Number.isInteger(p) || p <= 0);
+    const uniqueCount = new Set(positions).size;
+    const hasDuplicates = uniqueCount !== positions.length;
+    const startsAtOne = Math.min(...positions.filter((p: any) => Number.isInteger(p))) === 1;
+
+    if (!hasNonPositive && !hasDuplicates && startsAtOne) return;
+
+    setIsNormalizing(true);
+    normalizeRosterPositions.mutate(roster, {
+      onError: () => {
+        toast.error('Positionen konnten nicht automatisch normalisiert werden.');
+      },
+      onSettled: () => {
+        setIsNormalizing(false);
+      },
+    });
+  }, [open, roster, isNormalizing, normalizeRosterPositions, queryClient, team?.id]);
+
   const availableMembers = useMemo(() => {
     if (!allMembers) return [];
     return allMembers.filter((m) => {
@@ -110,19 +171,21 @@ export function TeamRosterDialog({ open, onOpenChange, team }: TeamRosterDialogP
     });
   }, [allMembers, assignedIds, search]);
 
-  const rosterFiltered = useMemo(() => {
+  const rosterWithEffectivePosition = useMemo(() => {
     if (!roster) return [];
 
-    const withEffectivePosition = roster.map((r: any) => {
+    return roster.map((r: any) => {
       const edited = positionEdits[r.id];
       const parsed = edited != null ? parsePosition(edited) : null;
       return {
         ...r,
-        effectivePosition: parsed ?? r.position,
+        effectivePosition: parsed ?? (Number.isInteger(r.position) && r.position > 0 ? r.position : Number.MAX_SAFE_INTEGER),
       };
     });
+  }, [roster, positionEdits]);
 
-    const sorted = withEffectivePosition.sort((a: any, b: any) => {
+  const rosterFiltered = useMemo(() => {
+    const sorted = [...rosterWithEffectivePosition].sort((a: any, b: any) => {
       const posDiff = (a.effectivePosition ?? 0) - (b.effectivePosition ?? 0);
       if (posDiff !== 0) return posDiff;
       const aName = `${a.members?.last_name ?? ''} ${a.members?.first_name ?? ''}`.toLowerCase();
@@ -135,7 +198,7 @@ export function TeamRosterDialog({ open, onOpenChange, team }: TeamRosterDialogP
     return sorted.filter((r: any) =>
       `${r.members?.first_name ?? ''} ${r.members?.last_name ?? ''}`.toLowerCase().includes(s),
     );
-  }, [roster, positionEdits, search]);
+  }, [rosterWithEffectivePosition, search]);
 
   const addMember = useMutation({
     mutationFn: async ({ memberId, position }: { memberId: string; position: number }) => {
@@ -275,7 +338,7 @@ export function TeamRosterDialog({ open, onOpenChange, team }: TeamRosterDialogP
                     const currentEdit = positionEdits[r.id] ?? String(r.position ?? '');
                     const parsed = parsePosition(currentEdit);
                     const hasConflict = parsed != null
-                      && (roster ?? []).some((row: any) => row.id !== r.id && row.position === parsed);
+                      && (rosterWithEffectivePosition ?? []).some((row: any) => row.id !== r.id && (row.effectivePosition ?? row.position) === parsed);
                     const unchanged = parsed === r.position;
 
                     return (
