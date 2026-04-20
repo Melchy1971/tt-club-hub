@@ -16,7 +16,7 @@ export default function SettingsVenues() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: '', street: '', zip_code: '', city: '', is_home_venue: false });
+  const [form, setForm] = useState({ name: '', street: '', zip_code: '', city: '', is_home_venue: false, location_id: null as number | null });
 
   const { data: venues = [], isLoading } = useQuery({
     queryKey: ['settings-venues'],
@@ -44,17 +44,23 @@ export default function SettingsVenues() {
       setOpen(false);
       resetForm();
     },
-    onError: (e) => toast.error(e.message || 'Fehler'),
+    onError: (e: Error) => {
+      if (e.message?.includes('23505') || e.message?.toLowerCase().includes('unique')) {
+        toast.error('Diese Standort-ID wird bereits verwendet');
+      } else {
+        toast.error(e.message || 'Fehler');
+      }
+    },
   });
 
   const resetForm = () => {
-    setForm({ name: '', street: '', zip_code: '', city: '', is_home_venue: false });
+    setForm({ name: '', street: '', zip_code: '', city: '', is_home_venue: false, location_id: null });
     setEditId(null);
   };
 
   const openEdit = (venue: any) => {
     setEditId(venue.id);
-    setForm({ name: venue.name, street: venue.street ?? '', zip_code: venue.zip_code ?? '', city: venue.city ?? '', is_home_venue: venue.is_home_venue });
+    setForm({ name: venue.name, street: venue.street ?? '', zip_code: venue.zip_code ?? '', city: venue.city ?? '', is_home_venue: venue.is_home_venue, location_id: venue.location_id ?? null });
     setOpen(true);
   };
 
@@ -74,7 +80,19 @@ export default function SettingsVenues() {
               <DialogTitle>{editId ? 'Spiellokal bearbeiten' : 'Neues Spiellokal'}</DialogTitle>
             </DialogHeader>
             <div className="space-y-3">
-              <div><Label>Name *</Label><Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>Name</Label><Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} /></div>
+                <div>
+                  <Label>Standort-ID</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={form.location_id ?? ''}
+                    onChange={(e) => setForm((f) => ({ ...f, location_id: e.target.value === '' ? null : parseInt(e.target.value, 10) || null }))}
+                    placeholder="z.B. 4711"
+                  />
+                </div>
+              </div>
               <div><Label>Straße</Label><Input value={form.street} onChange={(e) => setForm((f) => ({ ...f, street: e.target.value }))} /></div>
               <div className="grid grid-cols-2 gap-3">
                 <div><Label>PLZ</Label><Input value={form.zip_code} onChange={(e) => setForm((f) => ({ ...f, zip_code: e.target.value }))} /></div>
@@ -95,6 +113,7 @@ export default function SettingsVenues() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
+                <TableHead className="w-28">Standort-ID</TableHead>
                 <TableHead>Adresse</TableHead>
                 <TableHead>Typ</TableHead>
                 <TableHead className="w-12" />
@@ -102,13 +121,14 @@ export default function SettingsVenues() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Laden…</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Laden…</TableCell></TableRow>
               ) : venues.length === 0 ? (
-                <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Keine Spiellokale</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Keine Spiellokale</TableCell></TableRow>
               ) : (
                 venues.map((v) => (
                   <TableRow key={v.id}>
                     <TableCell className="font-medium flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" />{v.name}</TableCell>
+                    <TableCell className="font-mono text-sm">{v.location_id ?? <span className="text-muted-foreground">–</span>}</TableCell>
                     <TableCell className="text-muted-foreground">{[v.street, v.zip_code, v.city].filter(Boolean).join(', ') || '–'}</TableCell>
                     <TableCell>{v.is_home_venue ? <Badge className="bg-primary text-primary-foreground">Heim</Badge> : <Badge variant="outline">Auswärts</Badge>}</TableCell>
                     <TableCell>

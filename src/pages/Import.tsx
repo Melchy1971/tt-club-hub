@@ -503,6 +503,7 @@ interface ParsedVSPRow {
   homeTeam: string;
   awayTeam: string;
   isHome: boolean;
+  locationId: number | null;
 }
 
 function ScheduleImportTab() {
@@ -634,7 +635,10 @@ function ScheduleImportTab() {
 
         const isHome = deriveIsHome(homeTeam, clubName);
 
-        results.push({ rowIndex: i, date: terminParsed.date, time: terminParsed.time, staffel, runde, homeTeam, awayTeam, isHome });
+        const spiellokalRaw = (r['Spiellokal'] ?? r['spiellokal'] ?? r['SpiellokalNr'] ?? r['Spiellokal-Nr'] ?? '').trim();
+        const locationId = spiellokalRaw ? (parseInt(spiellokalRaw, 10) || null) : null;
+
+        results.push({ rowIndex: i, date: terminParsed.date, time: terminParsed.time, staffel, runde, homeTeam, awayTeam, isHome, locationId });
       }
 
       setParsed(results);
@@ -663,6 +667,33 @@ function ScheduleImportTab() {
       if (!firstTeam) throw new Error('Kein Team gefunden');
       const seasonId = firstTeam.season_id ?? null;
 
+      // Resolve Spiellokal locationIds → venue UUIDs
+      const uniqueLocationIds = [...new Set(parsed.map((r) => r.locationId).filter((id): id is number => id !== null))];
+      const locationIdToVenueId = new Map<number, string>();
+
+      if (uniqueLocationIds.length > 0) {
+        const { data: existingVenues } = await supabase
+          .from('venues')
+          .select('id, location_id')
+          .in('location_id', uniqueLocationIds);
+
+        for (const v of existingVenues ?? []) {
+          if (v.location_id != null) locationIdToVenueId.set(v.location_id, v.id);
+        }
+
+        // Auto-create venues for unknown location IDs
+        for (const locId of uniqueLocationIds) {
+          if (!locationIdToVenueId.has(locId)) {
+            const { data: created, error } = await supabase
+              .from('venues')
+              .insert({ name: `Spiellokal ${locId}`, location_id: locId, is_home_venue: false })
+              .select('id')
+              .single();
+            if (!error && created) locationIdToVenueId.set(locId, created.id);
+          }
+        }
+      }
+
       // Build inserts grouped by team
       const inserts: Array<{
         team_id: string;
@@ -677,6 +708,7 @@ function ScheduleImportTab() {
         home_score: null;
         away_score: null;
         status: 'geplant';
+        venue_id: string | null;
       }> = [];
 
       for (const row of parsed) {
@@ -695,6 +727,7 @@ function ScheduleImportTab() {
           home_score: null,
           away_score: null,
           status: 'geplant',
+          venue_id: row.locationId != null ? (locationIdToVenueId.get(row.locationId) ?? null) : null,
         });
       }
 
@@ -960,6 +993,7 @@ function ScheduleImportTab() {
                           <TableHead>Heim</TableHead>
                           <TableHead>Gast</TableHead>
                           <TableHead>H/A</TableHead>
+                          <TableHead>Standort-ID</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -986,6 +1020,7 @@ function ScheduleImportTab() {
                                   {m.isHome ? 'Heim' : 'Auswärts'}
                                 </Badge>
                               </TableCell>
+                              <TableCell className="font-mono text-xs">{m.locationId ?? <span className="text-muted-foreground">–</span>}</TableCell>
                             </TableRow>
                           );
                         })}

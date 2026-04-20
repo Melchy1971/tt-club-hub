@@ -1146,6 +1146,7 @@ export type Database = {
           created_at: string
           id: string
           is_home_venue: boolean
+          location_id: number | null
           name: string
           notes: string | null
           street: string | null
@@ -1157,6 +1158,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_home_venue?: boolean
+          location_id?: number | null
           name: string
           notes?: string | null
           street?: string | null
@@ -1168,6 +1170,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_home_venue?: boolean
+          location_id?: number | null
           name?: string
           notes?: string | null
           street?: string | null
