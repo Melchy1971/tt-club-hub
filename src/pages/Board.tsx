@@ -114,84 +114,116 @@ function LoadingSkeleton() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TAB 1: Vorstandsmitglieder
+// TAB 1: Mitglieder (alle, mit optionalem Vorstand-Filter)
 // ═══════════════════════════════════════════════════════════════════════════════
 
+const ROLE_LABELS: Record<string, string> = {
+  admin:          'Administrator',
+  vorstand:       'Vorstand',
+  trainer:        'Trainer',
+  spieler:        'Spieler',
+  mitglied:       'Mitglied',
+  developer:      'Entwickler',
+  foerdermitglied: 'Fördermitglied',
+};
+
+// Priority determines which role badge to show when a member has multiple roles
+const ROLE_PRIORITY: Record<string, number> = {
+  admin: 6, developer: 5, vorstand: 4, trainer: 3, spieler: 2, mitglied: 1, foerdermitglied: 0,
+};
+
+const BOARD_ROLES = new Set(['admin', 'vorstand']);
+
+function roleBadgeVariant(role: string): 'default' | 'secondary' | 'outline' {
+  if (role === 'admin') return 'default';
+  if (role === 'vorstand' || role === 'trainer') return 'secondary';
+  return 'outline';
+}
+
 function BoardMembersTab() {
-  const { data: members, isLoading } = useQuery({
-    queryKey: ['board-members'],
+  const [nurVorstand, setNurVorstand] = useState(false);
+
+  const { data: rows, isLoading } = useQuery({
+    queryKey: ['board-members-all'],
     queryFn: async () => {
-      // Get member_ids with vorstand or admin role
-      const { data: roleData, error: roleErr } = await supabase
-        .from('member_roles')
-        .select('member_id, role')
-        .in('role', ['vorstand', 'admin']);
+      const [{ data: memberData, error: memberErr }, { data: roleData, error: roleErr }] =
+        await Promise.all([
+          supabase.from('members').select('id, first_name, last_name, email, phone').eq('is_active', true).order('last_name'),
+          supabase.from('member_roles').select('member_id, role'),
+        ]);
+      if (memberErr) throw memberErr;
       if (roleErr) throw roleErr;
 
-      if (!roleData?.length) return [];
-
-      const memberIds = roleData.map((r) => r.member_id);
-      const { data: memberData, error: memberErr } = await supabase
-        .from('members')
-        .select('*')
-        .in('id', memberIds)
-        .eq('is_active', true)
-        .order('last_name');
-      if (memberErr) throw memberErr;
-
-      // Attach role info (admin gewinnt vor vorstand)
+      // Build role map: memberId → highest-priority role
       const roleMap = new Map<string, string>();
-      roleData.forEach((r) => {
-        if (!roleMap.has(r.member_id) || r.role === 'admin') {
-          roleMap.set(r.member_id, r.role);
-        }
-      });
+      for (const r of roleData ?? []) {
+        const current = roleMap.get(r.member_id);
+        const currentPriority = current != null ? (ROLE_PRIORITY[current] ?? -1) : -1;
+        const newPriority = ROLE_PRIORITY[r.role] ?? -1;
+        if (newPriority > currentPriority) roleMap.set(r.member_id, r.role);
+      }
+
       return (memberData ?? []).map((m) => ({
         ...m,
-        boardRole: roleMap.get(m.id) ?? 'vorstand',
+        role: roleMap.get(m.id) ?? null,
       }));
     },
   });
 
-  const ROLE_LABELS: Record<string, string> = {
-    admin: 'Administrator',
-    vorstand: 'Vorstand',
-  };
+  const displayed = nurVorstand
+    ? (rows ?? []).filter((m) => m.role != null && BOARD_ROLES.has(m.role))
+    : (rows ?? []);
 
   if (isLoading) return <LoadingSkeleton />;
 
-  return !members?.length ? (
-    <EmptyState
-      icon={Users}
-      title="Keine Vorstandsmitglieder"
-      description="Es gibt noch keine Mitglieder mit Vorstandsrolle."
-    />
-  ) : (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>E-Mail</TableHead>
-            <TableHead>Telefon</TableHead>
-            <TableHead>Rolle</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {members.map((m) => (
-            <TableRow key={m.id}>
-              <TableCell className="font-medium">{m.first_name} {m.last_name}</TableCell>
-              <TableCell className="text-sm text-muted-foreground">{m.email ?? '–'}</TableCell>
-              <TableCell className="text-sm text-muted-foreground">{m.phone ?? '–'}</TableCell>
-              <TableCell>
-                <Badge variant={m.boardRole === 'admin' ? 'default' : 'secondary'}>
-                  {ROLE_LABELS[m.boardRole] ?? m.boardRole}
-                </Badge>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <Switch id="nur-vorstand" checked={nurVorstand} onCheckedChange={setNurVorstand} />
+        <Label htmlFor="nur-vorstand" className="cursor-pointer text-sm">Nur Vorstand</Label>
+        <span className="ml-auto text-sm text-muted-foreground">{displayed.length} Mitglied{displayed.length !== 1 ? 'er' : ''}</span>
+      </div>
+
+      {displayed.length === 0 ? (
+        <EmptyState
+          icon={Users}
+          title={nurVorstand ? 'Keine Vorstandsmitglieder' : 'Keine Mitglieder'}
+          description={nurVorstand ? 'Es gibt noch keine Mitglieder mit Vorstandsrolle.' : 'Es sind noch keine aktiven Mitglieder vorhanden.'}
+        />
+      ) : (
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>E-Mail</TableHead>
+                <TableHead>Telefon</TableHead>
+                <TableHead>Rolle</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {displayed.map((m) => (
+                <TableRow key={m.id}>
+                  <TableCell className="font-medium">{m.first_name} {m.last_name}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {m.email ? <a href={`mailto:${m.email}`} className="hover:text-foreground">{m.email}</a> : '–'}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{m.phone ?? '–'}</TableCell>
+                  <TableCell>
+                    {m.role ? (
+                      <Badge variant={roleBadgeVariant(m.role)}>
+                        {ROLE_LABELS[m.role] ?? m.role}
+                      </Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">–</span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 }
