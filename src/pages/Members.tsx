@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, Search, Pencil, Trash2, Eye, X, UserPlus } from 'lucide-react';
+import { Users, Search, Pencil, Trash2, Eye, X, UserPlus, FileDown } from 'lucide-react';
 import { memberService } from '@/services/memberService';
 import { useAuth } from '@/contexts/AuthContext';
 import { canWriteMembers, canDeleteMembers } from '@/lib/permissions';
@@ -90,6 +90,141 @@ function formToPayload(f: FormState): MemberCreateDTO {
     entry_date: f.entry_date || undefined,
     is_active: f.is_active,
   };
+}
+
+// ─── PDF Helpers ──────────────────────────────────────────────────────────────
+
+const PDF_STYLE = `
+  body { font-family: system-ui, Arial, sans-serif; font-size: 11px; color: #111; margin: 0; padding: 16px; }
+  h1 { font-size: 16px; margin: 0 0 2px; }
+  p.sub { font-size: 10px; color: #666; margin: 0 0 12px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #f3f4f6; text-align: left; padding: 5px 8px; border-bottom: 2px solid #d1d5db; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  td { padding: 5px 8px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  .badge { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: #e0e7ff; color: #3730a3; margin-right: 3px; }
+  .sec { margin-top: 14px; }
+  .sec-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; border-bottom: 1px solid #e5e7eb; padding-bottom: 3px; margin-bottom: 6px; }
+  .row { display: grid; grid-template-columns: 140px 1fr; gap: 2px 8px; margin-bottom: 3px; }
+  .lbl { color: #6b7280; }
+  @media print { @page { margin: 1.5cm; } body { padding: 0; } }
+`;
+
+function fmtIso(iso: string | null | undefined): string {
+  if (!iso) return '–';
+  const [y, m, d] = iso.split('-');
+  return `${d}.${m}.${y}`;
+}
+
+function printCompactOverview(
+  members: import('@/types/member').MemberUI[],
+  rolesMap: Map<string, string[]>,
+  title = 'Mitglieder – Kompaktübersicht',
+) {
+  const now = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const rows = members.map((m) => {
+    const roles = (rolesMap.get(m.id) ?? []).join(', ') || '–';
+    return `<tr>
+      <td>${m.memberNumber ?? '–'}</td>
+      <td>${m.lastName}, ${m.firstName}</td>
+      <td>${m.email ?? '–'}</td>
+      <td>${m.phone ?? m.mobile ?? '–'}</td>
+      <td>${m.isActive ? 'Aktiv' : 'Inaktiv'}</td>
+      <td>${roles}</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8">
+    <title>${title}</title><style>${PDF_STYLE}</style></head><body>
+    <h1>${title}</h1>
+    <p class="sub">Stand: ${now} · ${members.length} Mitglied${members.length !== 1 ? 'er' : ''}</p>
+    <table>
+      <thead><tr>
+        <th>Nr.</th><th>Name</th><th>E-Mail</th><th>Telefon</th><th>Status</th><th>Rollen</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </body></html>`;
+
+  const w = window.open('', '_blank', 'width=900,height=700');
+  if (!w) return;
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(() => w.print(), 400);
+}
+
+function printMemberProfile(
+  m: import('@/types/member').MemberUI,
+  roles: string[],
+  teams: { name: string; position: number | null }[],
+) {
+  const now = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  const field = (label: string, value: string | null | undefined) =>
+    `<div class="row"><span class="lbl">${label}</span><span>${value ?? '–'}</span></div>`;
+
+  const teamsHtml = teams.length
+    ? teams.map((t) => `<div class="row"><span class="lbl">Position ${t.position ?? '–'}</span><span>${t.name}</span></div>`).join('')
+    : '<div class="row"><span class="lbl">–</span><span>Keine Mannschaften</span></div>';
+
+  const rolesHtml = roles.length
+    ? roles.map((r) => `<span class="badge">${r}</span>`).join('')
+    : '–';
+
+  const html = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8">
+    <title>Profil – ${m.firstName} ${m.lastName}</title><style>${PDF_STYLE}</style></head><body>
+    <h1>Mitgliedsprofil</h1>
+    <p class="sub">Erstellt am ${now}</p>
+
+    <div class="sec">
+      <div class="sec-title">Persönliche Daten</div>
+      ${field('Nachname', m.lastName)}
+      ${field('Vorname', m.firstName)}
+      ${field('Mitgliedsnr.', m.memberNumber)}
+      ${field('Geburtsdatum', fmtIso(m.birthdate))}
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">Kontakt</div>
+      ${field('E-Mail', m.email)}
+      ${field('Telefon', m.phone)}
+      ${field('Mobil', m.mobile)}
+      ${field('Straße', m.street)}
+      ${field('PLZ / Ort', [m.zipCode, m.city].filter(Boolean).join(' ') || null)}
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">Mitgliedschaft</div>
+      ${field('Eintritt', fmtIso(m.entryDate))}
+      ${field('Austritt', fmtIso(m.exitDate))}
+      ${field('Status', m.isActive ? 'Aktiv' : 'Inaktiv')}
+      ${field('Altersgruppe', m.ageGroup ?? null)}
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">Spielstärke</div>
+      ${field('TTR', m.ttr?.toString() ?? null)}
+      ${field('QTTR', m.qttr?.toString() ?? null)}
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">Rollen</div>
+      <div class="row"><span class="lbl">Systemrollen</span><span>${rolesHtml}</span></div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">Mannschaften</div>
+      ${teamsHtml}
+    </div>
+  </body></html>`;
+
+  const w = window.open('', '_blank', 'width=800,height=700');
+  if (!w) return;
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(() => w.print(), 400);
 }
 
 export default function Members() {
@@ -257,6 +392,15 @@ export default function Members() {
     return matchesSearch && matchesStatus;
   });
 
+  const rolesMap = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const r of memberRolesData) {
+      const existing = m.get(r.member_id) ?? [];
+      m.set(r.member_id, [...existing, r.role]);
+    }
+    return m;
+  }, [memberRolesData]);
+
   function getTeamsForMember(memberId: string) {
     return teamMembers
       .filter((tm) => tm.member_id === memberId)
@@ -334,11 +478,21 @@ export default function Members() {
             {members.length} Mitglied{members.length !== 1 ? 'er' : ''} insgesamt
           </p>
         </div>
-        {canWrite && (
-          <Button onClick={openCreate}>
-            <UserPlus className="mr-2 h-4 w-4" /> Mitglied hinzufügen
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => printCompactOverview(filtered, rolesMap)}
+            disabled={filtered.length === 0}
+          >
+            <FileDown className="mr-2 h-4 w-4" /> Kompakt PDF
           </Button>
-        )}
+          {canWrite && (
+            <Button onClick={openCreate}>
+              <UserPlus className="mr-2 h-4 w-4" /> Mitglied hinzufügen
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Filters */}
@@ -493,6 +647,20 @@ export default function Members() {
             </div>
           )}
           <DialogFooter>
+            {viewingMember && (
+              <Button
+                variant="outline"
+                onClick={() =>
+                  printMemberProfile(
+                    viewingMember,
+                    getRolesForMember(viewingMember),
+                    getTeamsForMember(viewingMember.id),
+                  )
+                }
+              >
+                <FileDown className="mr-2 h-4 w-4" /> Als PDF
+              </Button>
+            )}
             {canWrite && viewingMember && (
               <Button variant="outline" onClick={() => { setDetailOpen(false); openEdit(viewingMember); }}>
                 <Pencil className="mr-2 h-4 w-4" /> Bearbeiten
