@@ -27,8 +27,8 @@ export interface TeamMember {
   team_id: TeamId;
   member_id: MemberId;
   /**
-   * Aufstellungsposition (1-20). 0 = keine feste Position.
-   * DB-Constraint: position >= 0, UNIQUE(team_id, position).
+   * Aufstellungsposition (positive ganze Zahl).
+   * DB-Constraint: position > 0, UNIQUE(team_id, position).
    */
   position: number;
   readonly created_at: string;

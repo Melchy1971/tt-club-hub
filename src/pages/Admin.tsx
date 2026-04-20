@@ -175,7 +175,17 @@ function MembersAdminTab() {
       if (error) throw error;
     },
     onSuccess: () => { toast.success('Mitglied erstellt'); queryClient.invalidateQueries({ queryKey: ['admin-members'] }); closeForm(); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: any) => {
+      if (e?.code === '23505') {
+        toast.error('Diese Position ist in der Mannschaft bereits vergeben.');
+        return;
+      }
+      if (e?.code === '23514') {
+        toast.error('Position muss eine positive ganze Zahl sein.');
+        return;
+      }
+      toast.error(e.message);
+    },
   });
 
   const updateMut = useMutation({
@@ -213,7 +223,21 @@ function MembersAdminTab() {
   const toggleTeamMut = useMutation({
     mutationFn: async ({ memberId, teamId, active }: { memberId: string; teamId: string; active: boolean }) => {
       if (active) {
-        const { error } = await supabase.from('team_members').insert({ member_id: memberId, team_id: teamId });
+        const { data: existingRows, error: existingError } = await supabase
+          .from('team_members')
+          .select('position')
+          .eq('team_id', teamId);
+        if (existingError) throw existingError;
+
+        const used = new Set((existingRows ?? []).map((r) => r.position).filter((p) => Number.isInteger(p) && p > 0));
+        let nextPosition = 1;
+        while (used.has(nextPosition)) nextPosition += 1;
+
+        const { error } = await supabase.from('team_members').insert({
+          member_id: memberId,
+          team_id: teamId,
+          position: nextPosition,
+        });
         if (error) throw error;
       } else {
         const { error } = await supabase.from('team_members').delete().eq('member_id', memberId).eq('team_id', teamId);

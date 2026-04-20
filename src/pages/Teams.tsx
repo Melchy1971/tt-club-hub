@@ -116,7 +116,7 @@ function TeamCard({ team }: { team: TeamWithRoster }) {
                   className="flex items-center gap-2 py-1 px-2 rounded-md hover:bg-muted/50 transition-colors text-sm"
                 >
                   <span className="w-6 text-center text-xs font-mono text-muted-foreground">
-                    {entry.position > 0 ? entry.position : '–'}
+                    {entry.position}
                   </span>
                   <UserCircle className="h-4 w-4 text-muted-foreground/60 shrink-0" />
                   <span className="truncate font-medium">

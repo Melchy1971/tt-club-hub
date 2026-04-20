@@ -1,9 +1,9 @@
 /**
- * TeamRosterDialog – Spieler einer Mannschaft zuordnen / entfernen.
- * Spieler können in mehreren Mannschaften gleichzeitig sein.
+ * TeamRosterDialog - Spieler einer Mannschaft zuordnen / entfernen.
+ * Spieler k�nnen in mehreren Mannschaften gleichzeitig sein.
  */
-import { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Dialog,
@@ -13,10 +13,10 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, UserPlus, UserMinus, Users } from 'lucide-react';
+import { Save, Search, UserMinus, UserPlus, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface TeamRosterDialogProps {
@@ -25,12 +25,30 @@ interface TeamRosterDialogProps {
   team: { id: string; name: string } | null;
 }
 
+function parsePosition(value: string): number | null {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) return null;
+  return parsed;
+}
+
+function getNextFreePosition(rows: any[] = []): number {
+  const used = new Set(
+    rows
+      .map((r) => r.position)
+      .filter((p): p is number => Number.isInteger(p) && p > 0),
+  );
+  let next = 1;
+  while (used.has(next)) next += 1;
+  return next;
+}
+
 export function TeamRosterDialog({ open, onOpenChange, team }: TeamRosterDialogProps) {
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<'roster' | 'add'>('roster');
+  const [addPosition, setAddPosition] = useState('1');
+  const [positionEdits, setPositionEdits] = useState<Record<string, string>>({});
   const queryClient = useQueryClient();
 
-  // Current roster
   const { data: roster, isLoading: loadingRoster } = useQuery({
     queryKey: ['team-roster', team?.id],
     queryFn: async () => {
@@ -45,7 +63,6 @@ export function TeamRosterDialog({ open, onOpenChange, team }: TeamRosterDialogP
     enabled: open && !!team?.id,
   });
 
-  // All active members (for adding)
   const { data: allMembers } = useQuery({
     queryKey: ['all-active-members-for-roster'],
     queryFn: async () => {
@@ -65,6 +82,22 @@ export function TeamRosterDialog({ open, onOpenChange, team }: TeamRosterDialogP
     [roster],
   );
 
+  const usedPositions = useMemo(
+    () => new Set((roster ?? []).map((r: any) => r.position)),
+    [roster],
+  );
+
+  useEffect(() => {
+    if (!open) return;
+    const rows = roster ?? [];
+    const edits: Record<string, string> = {};
+    rows.forEach((r: any) => {
+      edits[r.id] = String(r.position ?? '');
+    });
+    setPositionEdits(edits);
+    setAddPosition(String(getNextFreePosition(rows)));
+  }, [open, roster]);
+
   const availableMembers = useMemo(() => {
     if (!allMembers) return [];
     return allMembers.filter((m) => {
@@ -79,27 +112,56 @@ export function TeamRosterDialog({ open, onOpenChange, team }: TeamRosterDialogP
 
   const rosterFiltered = useMemo(() => {
     if (!roster) return [];
-    if (!search) return roster;
+    const sorted = [...roster].sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0));
+    if (!search) return sorted;
     const s = search.toLowerCase();
-    return roster.filter((r: any) =>
+    return sorted.filter((r: any) =>
       `${r.members?.first_name ?? ''} ${r.members?.last_name ?? ''}`.toLowerCase().includes(s),
     );
   }, [roster, search]);
 
   const addMember = useMutation({
-    mutationFn: async (memberId: string) => {
-      const nextPosition = (roster ?? []).length;
+    mutationFn: async ({ memberId, position }: { memberId: string; position: number }) => {
       const { error } = await supabase
         .from('team_members')
-        .insert({ team_id: team!.id, member_id: memberId, position: nextPosition });
+        .insert({ team_id: team!.id, member_id: memberId, position });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['team-roster', team?.id] });
       queryClient.invalidateQueries({ queryKey: ['admin-teams'] });
       toast.success('Spieler zugeordnet');
+      setSearch('');
     },
-    onError: () => toast.error('Fehler beim Zuordnen'),
+    onError: (error: any) => {
+      if (error?.code === '23505') {
+        toast.error('Diese Position ist in der Mannschaft bereits vergeben.');
+        return;
+      }
+      toast.error('Fehler beim Zuordnen');
+    },
+  });
+
+  const updatePosition = useMutation({
+    mutationFn: async ({ id, position }: { id: string; position: number }) => {
+      const { error } = await supabase
+        .from('team_members')
+        .update({ position })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['team-roster', team?.id] });
+      queryClient.invalidateQueries({ queryKey: ['admin-teams'] });
+      toast.success('Position aktualisiert');
+    },
+    onError: (error: any) => {
+      if (error?.code === '23505') {
+        toast.error('Diese Position ist in der Mannschaft bereits vergeben.');
+        return;
+      }
+      toast.error('Fehler beim Speichern der Position');
+    },
   });
 
   const removeMember = useMutation({
@@ -121,7 +183,7 @@ export function TeamRosterDialog({ open, onOpenChange, team }: TeamRosterDialogP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
+      <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
@@ -143,24 +205,39 @@ export function TeamRosterDialog({ open, onOpenChange, team }: TeamRosterDialogP
             onClick={() => { setTab('add'); setSearch(''); }}
           >
             <UserPlus className="h-4 w-4 mr-1" />
-            Spieler hinzufügen
+            Spieler hinzuf�gen
           </Button>
         </div>
 
         <div className="relative mb-3">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Spieler suchen…"
+            placeholder="Spieler suchen..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
           />
         </div>
 
+        {tab === 'add' && (
+          <div className="mb-3 space-y-1.5">
+            <Label htmlFor="roster-add-position">Position *</Label>
+            <Input
+              id="roster-add-position"
+              type="number"
+              min={1}
+              step={1}
+              value={addPosition}
+              onChange={(e) => setAddPosition(e.target.value)}
+              className="w-32"
+            />
+          </div>
+        )}
+
         <ScrollArea className="flex-1 min-h-0">
           {tab === 'roster' ? (
             loadingRoster ? (
-              <p className="text-sm text-muted-foreground p-4">Laden…</p>
+              <p className="text-sm text-muted-foreground p-4">Laden...</p>
             ) : !rosterFiltered.length ? (
               <div className="text-center py-8 text-muted-foreground text-sm">
                 Kein Spieler zugeordnet
@@ -169,7 +246,7 @@ export function TeamRosterDialog({ open, onOpenChange, team }: TeamRosterDialogP
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-12">Pos</TableHead>
+                    <TableHead className="w-32">Position</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>QTTR</TableHead>
                     <TableHead>TTR</TableHead>
@@ -177,38 +254,78 @@ export function TeamRosterDialog({ open, onOpenChange, team }: TeamRosterDialogP
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rosterFiltered.map((r: any, idx: number) => (
-                    <TableRow key={r.id}>
-                      <TableCell className="text-sm font-mono">{idx + 1}</TableCell>
-                      <TableCell className="font-medium text-sm">
-                        {r.members?.first_name} {r.members?.last_name}
-                      </TableCell>
-                      <TableCell className="text-sm">{r.members?.qttr_rating ?? '–'}</TableCell>
-                      <TableCell className="text-sm">{r.members?.ttr_rating ?? '–'}</TableCell>
-                      <TableCell>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => removeMember.mutate(r.member_id)}
-                          disabled={removeMember.isPending}
-                        >
-                          <UserMinus className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {rosterFiltered.map((r: any) => {
+                    const currentEdit = positionEdits[r.id] ?? String(r.position ?? '');
+                    const parsed = parsePosition(currentEdit);
+                    const hasConflict = parsed != null
+                      && (roster ?? []).some((row: any) => row.id !== r.id && row.position === parsed);
+                    const unchanged = parsed === r.position;
+
+                    return (
+                      <TableRow key={r.id}>
+                        <TableCell className="text-sm font-mono">
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              min={1}
+                              step={1}
+                              value={currentEdit}
+                              onChange={(e) => setPositionEdits((prev) => ({ ...prev, [r.id]: e.target.value }))}
+                              className="h-8 w-20"
+                            />
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => {
+                                if (parsed == null) {
+                                  toast.error('Position muss eine positive ganze Zahl sein.');
+                                  return;
+                                }
+                                if (hasConflict) {
+                                  toast.error('Diese Position ist in der Mannschaft bereits vergeben.');
+                                  return;
+                                }
+                                if (unchanged) return;
+                                updatePosition.mutate({ id: r.id, position: parsed });
+                              }}
+                              disabled={updatePosition.isPending || parsed == null || hasConflict || unchanged}
+                              title="Position speichern"
+                            >
+                              <Save className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-medium text-sm">
+                          {r.members?.first_name} {r.members?.last_name}
+                        </TableCell>
+                        <TableCell className="text-sm">{r.members?.qttr_rating ?? '-'}</TableCell>
+                        <TableCell className="text-sm">{r.members?.ttr_rating ?? '-'}</TableCell>
+                        <TableCell>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => removeMember.mutate(r.member_id)}
+                            disabled={removeMember.isPending}
+                          >
+                            <UserMinus className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )
           ) : (
             !availableMembers.length ? (
               <div className="text-center py-8 text-muted-foreground text-sm">
-                Keine weiteren Spieler verfügbar
+                Keine weiteren Spieler verf�gbar
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-20">Pos</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>QTTR</TableHead>
                     <TableHead>TTR</TableHead>
@@ -218,16 +335,30 @@ export function TeamRosterDialog({ open, onOpenChange, team }: TeamRosterDialogP
                 <TableBody>
                   {availableMembers.map((m) => (
                     <TableRow key={m.id}>
+                      <TableCell className="text-sm font-mono">{addPosition}</TableCell>
                       <TableCell className="font-medium text-sm">
                         {m.first_name} {m.last_name}
                       </TableCell>
-                      <TableCell className="text-sm">{m.qttr_rating ?? '–'}</TableCell>
-                      <TableCell className="text-sm">{m.ttr_rating ?? '–'}</TableCell>
+                      <TableCell className="text-sm">{m.qttr_rating ?? '-'}</TableCell>
+                      <TableCell className="text-sm">{m.ttr_rating ?? '-'}</TableCell>
                       <TableCell>
                         <Button
                           size="icon"
                           variant="ghost"
-                          onClick={() => addMember.mutate(m.id)}
+                          onClick={() => {
+                            const parsed = parsePosition(addPosition);
+                            if (parsed == null) {
+                              toast.error('Position muss eine positive ganze Zahl sein.');
+                              return;
+                            }
+                            if (usedPositions.has(parsed)) {
+                              toast.error('Diese Position ist in der Mannschaft bereits vergeben.');
+                              return;
+                            }
+                            addMember.mutate({ memberId: m.id, position: parsed }, {
+                              onSuccess: () => setAddPosition(String(parsed + 1)),
+                            });
+                          }}
                           disabled={addMember.isPending}
                         >
                           <UserPlus className="h-4 w-4 text-primary" />

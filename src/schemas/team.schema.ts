@@ -54,11 +54,10 @@ export const teamFilterSchema = z.object({
 // ─── Team-Spieler-Zuordnung ───────────────────────────────────────────────────
 
 /**
- * Position 0 ist DB-seitig erlaubt (chk_team_member_position: position >= 0).
- * 0 steht semantisch für „ohne feste Aufstellungsposition".
- * Positionen 1-20 sind nummerierte Plätze im Kader.
+ * Position im Teamkader.
+ * Muss eine positive ganze Zahl sein und ist pro Team eindeutig.
  */
-export const positionSchema = z.number().int().min(0).max(20);
+export const positionSchema = z.number().int().positive();
 
 export const teamAssignmentSchema = z.object({
   team_id: z.string().uuid('Ungültige Mannschafts-ID'),
@@ -74,12 +73,7 @@ export const rosterEntrySchema = z.object({
 
 /**
  * Kompletter Kader-Austausch.
- * Validierung: Positionen > 0 müssen eindeutig sein.
- * Mehrere Einträge mit Position 0 sind möglich (alle ohne feste Position).
- *
- * HINWEIS: Die DB hat UNIQUE(team_id, position) – das schließt auch position=0 ein.
- * D.h. bei setRoster darf position 0 nur einmal vorkommen.
- * Diese Validierung wird hier daher auf ALLE Positionen angewendet.
+ * Validierung: Positionen müssen eindeutig sein.
  */
 export const setRosterSchema = z
   .array(rosterEntrySchema)

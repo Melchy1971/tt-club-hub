@@ -6,7 +6,7 @@
  * DB-Constraints, die die Upsert-Logik prägen:
  *   UNIQUE(team_id, member_id)  – ein Spieler kann pro Team nur einmal eingetragen sein
  *   UNIQUE(team_id, position)   – pro Team ist jede Position nur einmal vergeben
- *   CHECK(position >= 0)        – 0 = keine feste Position
+ *   CHECK(position > 0)         – nur positive ganze Zahlen
  *
  * Strategie für Konflikte:
  *   assign()      → ON CONFLICT(team_id, member_id) DO UPDATE position
