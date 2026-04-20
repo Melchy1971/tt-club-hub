@@ -24,6 +24,7 @@ interface TeamWithRoster {
   name: string;
   league: string | null;
   age_group: string;
+  team_size: 4 | 6 | null;
   is_active: boolean;
   roster: RosterMember[];
 }
@@ -52,7 +53,7 @@ const ADULT_GROUPS = new Set(['herren', 'damen', 'senioren', 'seniorinnen']);
 async function fetchTeamsWithRoster(): Promise<TeamWithRoster[]> {
   const { data, error } = await supabase
     .from('teams')
-    .select('id, name, league, age_group, is_active, team_members(position, members(id, first_name, last_name, ttr_rating))')
+    .select('id, name, league, age_group, team_size, is_active, team_members(position, members(id, first_name, last_name, ttr_rating))')
     .eq('is_active', true)
     .order('name');
 
@@ -63,6 +64,7 @@ async function fetchTeamsWithRoster(): Promise<TeamWithRoster[]> {
     name: t.name,
     league: t.league,
     age_group: t.age_group,
+    team_size: (t.team_size === 4 || t.team_size === 6) ? t.team_size : null,
     is_active: t.is_active,
     roster: (t.team_members ?? [])
       .map((tm: any) => ({ position: tm.position, member: tm.members }))
@@ -92,6 +94,9 @@ function TeamCard({ team }: { team: TeamWithRoster }) {
               <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                 {AGE_GROUP_LABELS[team.age_group] ?? team.age_group}
               </Badge>
+              {team.team_size != null && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0">{team.team_size}er</Badge>
+              )}
             </div>
           </div>
         </div>

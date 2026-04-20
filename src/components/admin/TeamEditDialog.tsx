@@ -29,6 +29,7 @@ interface TeamFormData {
   league: string;
   age_group: string;
   season_phase_id: string;
+  team_size: 4 | 6 | null;
   is_active: boolean;
 }
 
@@ -46,6 +47,7 @@ export function TeamEditDialog({ open, onOpenChange, team, onSave, saving }: Tea
     league: '',
     age_group: 'herren',
     season_phase_id: '',
+    team_size: null,
     is_active: true,
   });
 
@@ -70,6 +72,7 @@ export function TeamEditDialog({ open, onOpenChange, team, onSave, saving }: Tea
         league: team.league ?? '',
         age_group: team.age_group ?? 'herren',
         season_phase_id: team.season_phase_id ?? '',
+        team_size: (team.team_size === 4 || team.team_size === 6) ? team.team_size : null,
         is_active: team.is_active ?? true,
       });
     } else {
@@ -79,6 +82,7 @@ export function TeamEditDialog({ open, onOpenChange, team, onSave, saving }: Tea
         league: '',
         age_group: 'herren',
         season_phase_id: activePhase?.id ?? phases?.[0]?.id ?? '',
+        team_size: null,
         is_active: true,
       });
     }
@@ -89,7 +93,7 @@ export function TeamEditDialog({ open, onOpenChange, team, onSave, saving }: Tea
     onSave(form, team?.id);
   };
 
-  const isValid = form.name.trim() && form.league.trim() && form.season_phase_id;
+  const isValid = form.name.trim() && form.league.trim() && form.season_phase_id && form.team_size != null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -132,18 +136,32 @@ export function TeamEditDialog({ open, onOpenChange, team, onSave, saving }: Tea
             </div>
 
             <div className="space-y-2">
-              <Label>Saisonphase</Label>
-              <Select value={form.season_phase_id} onValueChange={(v) => setForm((f) => ({ ...f, season_phase_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Saisonphase wählen" /></SelectTrigger>
+              <Label>Typ *</Label>
+              <Select
+                value={form.team_size != null ? String(form.team_size) : ''}
+                onValueChange={(v) => setForm((f) => ({ ...f, team_size: Number(v) as 4 | 6 }))}
+              >
+                <SelectTrigger><SelectValue placeholder="4er / 6er" /></SelectTrigger>
                 <SelectContent>
-                  {(phases ?? []).map((p: any) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.season_cycles?.name} – {p.name} {p.is_active ? '(aktiv)' : ''}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="4">4er</SelectItem>
+                  <SelectItem value="6">6er</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Saisonphase</Label>
+            <Select value={form.season_phase_id} onValueChange={(v) => setForm((f) => ({ ...f, season_phase_id: v }))}>
+              <SelectTrigger><SelectValue placeholder="Saisonphase wählen" /></SelectTrigger>
+              <SelectContent>
+                {(phases ?? []).map((p: any) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.season_cycles?.name} – {p.name} {p.is_active ? '(aktiv)' : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex items-center gap-3">

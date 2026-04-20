@@ -681,6 +681,7 @@ function TeamsAdminTab() {
           league: data.league || null,
           age_group: data.age_group,
           season_phase_id: data.season_phase_id || null,
+          team_size: data.team_size ?? null,
           is_active: data.is_active,
         }).eq('id', id);
         if (error) throw error;
@@ -690,6 +691,7 @@ function TeamsAdminTab() {
           league: data.league || null,
           age_group: data.age_group,
           season_phase_id: data.season_phase_id || null,
+          team_size: data.team_size ?? null,
           is_active: data.is_active,
         } as any);
         if (error) throw error;
@@ -759,6 +761,7 @@ function TeamsAdminTab() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Liga</TableHead>
+                <TableHead className="w-20">Typ</TableHead>
                 <TableHead>Spieler</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-32">Aktionen</TableHead>
@@ -769,6 +772,11 @@ function TeamsAdminTab() {
                 <TableRow key={t.id}>
                   <TableCell className="font-medium">{t.name}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{t.league ?? '–'}</TableCell>
+                  <TableCell>
+                    {t.team_size != null
+                      ? <Badge variant="outline" className="text-xs">{t.team_size}er</Badge>
+                      : <span className="text-muted-foreground text-sm">–</span>}
+                  </TableCell>
                   <TableCell className="text-sm">{t.team_members?.[0]?.count ?? 0}</TableCell>
                   <TableCell>
                     <Badge variant={t.is_active ? 'default' : 'secondary'}>

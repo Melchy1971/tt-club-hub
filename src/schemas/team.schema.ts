@@ -33,6 +33,7 @@ export const teamCreateSchema = z.object({
    */
   season_id: z.string().uuid('Ungültige Saison-ID').optional(),
   age_group: ageGroupSchema.default('herren'),
+  team_size: z.union([z.literal(4), z.literal(6)]).nullable().default(null),
   captain_id: z.string().uuid('Ungültige Spielführer-ID').nullable().optional(),
   is_active: z.boolean().default(true),
 });
