@@ -121,29 +121,34 @@ function BoardMembersTab() {
   const { data: members, isLoading } = useQuery({
     queryKey: ['board-members'],
     queryFn: async () => {
-      // Get user_ids with vorstand or admin role
+      // Get member_ids with vorstand or admin role
       const { data: roleData, error: roleErr } = await supabase
-        .from('user_roles')
-        .select('user_id, role')
+        .from('member_roles')
+        .select('member_id, role')
         .in('role', ['vorstand', 'admin']);
       if (roleErr) throw roleErr;
 
       if (!roleData?.length) return [];
 
-      const userIds = roleData.map((r) => r.user_id);
+      const memberIds = roleData.map((r) => r.member_id);
       const { data: memberData, error: memberErr } = await supabase
         .from('members')
         .select('*')
-        .in('user_id', userIds)
+        .in('id', memberIds)
         .eq('is_active', true)
         .order('last_name');
       if (memberErr) throw memberErr;
 
-      // Attach role info
-      const roleMap = new Map(roleData.map((r) => [r.user_id, r.role]));
+      // Attach role info (admin gewinnt vor vorstand)
+      const roleMap = new Map<string, string>();
+      roleData.forEach((r) => {
+        if (!roleMap.has(r.member_id) || r.role === 'admin') {
+          roleMap.set(r.member_id, r.role);
+        }
+      });
       return (memberData ?? []).map((m) => ({
         ...m,
-        boardRole: roleMap.get(m.user_id ?? '') ?? 'vorstand',
+        boardRole: roleMap.get(m.id) ?? 'vorstand',
       }));
     },
   });

@@ -133,10 +133,10 @@ function MembersAdminTab() {
     },
   });
 
-  const { data: userRoles = [] } = useQuery({
-    queryKey: ['admin-user-roles'],
+  const { data: memberRolesData = [] } = useQuery({
+    queryKey: ['admin-member-roles'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('user_roles').select('user_id, role');
+      const { data, error } = await supabase.from('member_roles').select('member_id, role');
       if (error) throw error;
       return data ?? [];
     },
@@ -180,7 +180,7 @@ function MembersAdminTab() {
 
   const updateMut = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Record<string, any> }) => {
-      const { error } = await supabase.from('members').update(data).eq('id', id);
+      const { error } = await supabase.from('members').update(data as any).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => { toast.success('Mitglied aktualisiert'); queryClient.invalidateQueries({ queryKey: ['admin-members'] }); closeForm(); },
@@ -197,16 +197,16 @@ function MembersAdminTab() {
   });
 
   const toggleRoleMut = useMutation({
-    mutationFn: async ({ userId, roleName, active }: { userId: string; roleName: string; active: boolean }) => {
+    mutationFn: async ({ memberId, roleName, active }: { memberId: string; roleName: string; active: boolean }) => {
       if (active) {
-        const { error } = await supabase.from('user_roles').insert({ user_id: userId, role: roleName as any });
+        const { error } = await supabase.from('member_roles').insert({ member_id: memberId, role: roleName });
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('user_roles').delete().eq('user_id', userId).eq('role', roleName as any);
+        const { error } = await supabase.from('member_roles').delete().eq('member_id', memberId).eq('role', roleName);
         if (error) throw error;
       }
     },
-    onSuccess: () => { toast.success('Rolle aktualisiert'); queryClient.invalidateQueries({ queryKey: ['admin-user-roles'] }); },
+    onSuccess: () => { toast.success('Rolle aktualisiert'); queryClient.invalidateQueries({ queryKey: ['admin-member-roles'] }); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -408,78 +408,89 @@ function MembersAdminTab() {
           <DialogHeader>
             <DialogTitle>{editingId ? 'Mitglied bearbeiten' : 'Neues Mitglied'}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="grid grid-cols-2 gap-4">
-              <AdminFormField label="Vorname *" id="adm_first_name" value={form.first_name} error={errors.first_name}
-                onChange={(v) => setField('first_name', v)} />
-              <AdminFormField label="Nachname *" id="adm_last_name" value={form.last_name} error={errors.last_name}
-                onChange={(v) => setField('last_name', v)} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <AdminFormField label="E-Mail" id="adm_email" value={form.email} error={errors.email} type="email"
-                onChange={(v) => setField('email', v)} />
-              <AdminFormField label="Telefon" id="adm_phone" value={form.phone}
-                onChange={(v) => setField('phone', v)} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <AdminFormField label="Geburtsdatum" id="adm_dob" value={form.date_of_birth} type="date"
-                onChange={(v) => setField('date_of_birth', v)} />
+          <Tabs defaultValue="stammdaten" className="py-2">
+            {editingId && (
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="stammdaten">Stammdaten</TabsTrigger>
+                <TabsTrigger value="rollen">Rollen</TabsTrigger>
+                <TabsTrigger value="mannschaften">Mannschaften</TabsTrigger>
+              </TabsList>
+            )}
+
+            <TabsContent value="stammdaten" className="space-y-4 mt-4">
+              <div className="grid grid-cols-2 gap-4">
+                <AdminFormField label="Vorname *" id="adm_first_name" value={form.first_name} error={errors.first_name}
+                  onChange={(v) => setField('first_name', v)} />
+                <AdminFormField label="Nachname *" id="adm_last_name" value={form.last_name} error={errors.last_name}
+                  onChange={(v) => setField('last_name', v)} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <AdminFormField label="E-Mail" id="adm_email" value={form.email} error={errors.email} type="email"
+                  onChange={(v) => setField('email', v)} />
+                <AdminFormField label="Telefon" id="adm_phone" value={form.phone}
+                  onChange={(v) => setField('phone', v)} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <AdminFormField label="Geburtsdatum" id="adm_dob" value={form.date_of_birth} type="date"
+                  onChange={(v) => setField('date_of_birth', v)} />
+                <div className="space-y-1.5">
+                  <Label htmlFor="adm_gender">Geschlecht</Label>
+                  <Select value={form.gender} onValueChange={(v) => setField('gender', v)}>
+                    <SelectTrigger id="adm_gender"><SelectValue placeholder="Auswählen" /></SelectTrigger>
+                    <SelectContent>
+                      {Constants.public.Enums.gender.map((g) => (
+                        <SelectItem key={g} value={g}>{getGenderLabel(g)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <AdminFormField label="Straße" id="adm_street" value={form.street}
+                onChange={(v) => setField('street', v)} />
+              <div className="grid grid-cols-3 gap-4">
+                <AdminFormField label="PLZ" id="adm_zip" value={form.zip_code}
+                  onChange={(v) => setField('zip_code', v)} />
+                <div className="col-span-2">
+                  <AdminFormField label="Ort" id="adm_city" value={form.city}
+                    onChange={(v) => setField('city', v)} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <AdminFormField label="Mitgliedsnummer" id="adm_member_nr" value={form.member_number}
+                  onChange={(v) => setField('member_number', v)} />
+                <div className="space-y-1.5">
+                  <Label htmlFor="adm_age_group">Altersgruppe</Label>
+                  <Select value={form.age_group} onValueChange={(v) => setField('age_group', v)}>
+                    <SelectTrigger id="adm_age_group"><SelectValue placeholder="Auswählen" /></SelectTrigger>
+                    <SelectContent>
+                      {Constants.public.Enums.age_group.map((ag) => (
+                        <SelectItem key={ag} value={ag}>{getAgeGroupLabel(ag)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <AdminFormField label="TTR-Wert" id="adm_ttr" value={form.ttr_rating} error={errors.ttr_rating}
+                  type="number" onChange={(v) => setField('ttr_rating', v)} />
+                <AdminFormField label="QTTR-Wert" id="adm_qttr" value={form.qttr_rating} error={errors.qttr_rating}
+                  type="number" onChange={(v) => setField('qttr_rating', v)} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <AdminFormField label="Eintrittsdatum *" id="adm_entry" value={form.entry_date} error={errors.entry_date}
+                  type="date" onChange={(v) => setField('entry_date', v)} />
+              </div>
               <div className="space-y-1.5">
-                <Label htmlFor="adm_gender">Geschlecht</Label>
-                <Select value={form.gender} onValueChange={(v) => setField('gender', v)}>
-                  <SelectTrigger id="adm_gender"><SelectValue placeholder="Auswählen" /></SelectTrigger>
-                  <SelectContent>
-                    {Constants.public.Enums.gender.map((g) => (
-                      <SelectItem key={g} value={g}>{getGenderLabel(g)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="adm_notes">Notizen</Label>
+                <Textarea id="adm_notes" value={form.notes} onChange={(e) => setField('notes', e.target.value)}
+                  rows={3} placeholder="Optionale Anmerkungen…" />
               </div>
-            </div>
-            <AdminFormField label="Straße" id="adm_street" value={form.street}
-              onChange={(v) => setField('street', v)} />
-            <div className="grid grid-cols-3 gap-4">
-              <AdminFormField label="PLZ" id="adm_zip" value={form.zip_code}
-                onChange={(v) => setField('zip_code', v)} />
-              <div className="col-span-2">
-                <AdminFormField label="Ort" id="adm_city" value={form.city}
-                  onChange={(v) => setField('city', v)} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <AdminFormField label="Mitgliedsnummer" id="adm_member_nr" value={form.member_number}
-                onChange={(v) => setField('member_number', v)} />
-              <div className="space-y-1.5">
-                <Label htmlFor="adm_age_group">Altersgruppe</Label>
-                <Select value={form.age_group} onValueChange={(v) => setField('age_group', v)}>
-                  <SelectTrigger id="adm_age_group"><SelectValue placeholder="Auswählen" /></SelectTrigger>
-                  <SelectContent>
-                    {Constants.public.Enums.age_group.map((ag) => (
-                      <SelectItem key={ag} value={ag}>{getAgeGroupLabel(ag)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <AdminFormField label="TTR-Wert" id="adm_ttr" value={form.ttr_rating} error={errors.ttr_rating}
-                type="number" onChange={(v) => setField('ttr_rating', v)} />
-              <AdminFormField label="QTTR-Wert" id="adm_qttr" value={form.qttr_rating} error={errors.qttr_rating}
-                type="number" onChange={(v) => setField('qttr_rating', v)} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <AdminFormField label="Eintrittsdatum *" id="adm_entry" value={form.entry_date} error={errors.entry_date}
-                type="date" onChange={(v) => setField('entry_date', v)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="adm_notes">Notizen</Label>
-              <Textarea id="adm_notes" value={form.notes} onChange={(e) => setField('notes', e.target.value)}
-                rows={3} placeholder="Optionale Anmerkungen…" />
-            {/* Rollen & Mannschaften (nur bei Bearbeitung) */}
+            </TabsContent>
+
             {editingId && (() => {
-              const memberRoles = editingUserId
-                ? userRoles.filter((r) => r.user_id === editingUserId).map((r) => r.role)
-                : [];
+              const memberRoles = memberRolesData
+                .filter((r) => r.member_id === editingId)
+                .map((r) => r.role);
               const memberTeamIds = new Set(
                 teamMembers.filter((tm) => tm.member_id === editingId).map((tm) => tm.team_id)
               );
@@ -487,28 +498,31 @@ function MembersAdminTab() {
               const jugendTeams = allTeams.filter((t) => JUGEND_GROUPS.has(t.age_group));
 
               return (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
-                  {/* Rollen */}
-                  <div className="space-y-3">
+                <>
+                  <TabsContent value="rollen" className="space-y-4 mt-4">
                     <div>
                       <p className="text-base font-semibold">Rollen</p>
                       <p className="text-xs text-muted-foreground">Berechtigungen dem Profil zuweisen</p>
                     </div>
+                    {!canEditAssignments && (
+                      <p className="text-xs text-destructive">
+                        Nur Administrator, Vorstand oder Entwickler dürfen Rollen ändern.
+                      </p>
+                    )}
                     <div className="space-y-2">
                       {allRoles.map((r) => (
                         <div key={r.name} className="flex items-center justify-between">
                           <span className="text-sm">{r.display_name}</span>
-                          <Switch checked={memberRoles.includes(r.name)} disabled={!canEditAssignments || !editingUserId} onCheckedChange={(checked) => { if (editingUserId) toggleRoleMut.mutate({ userId: editingUserId, roleName: r.name, active: checked }); }} />
+                          <Switch checked={memberRoles.includes(r.name)} disabled={!canEditAssignments} onCheckedChange={(checked) => toggleRoleMut.mutate({ memberId: editingId, roleName: r.name, active: checked })} />
                         </div>
                       ))}
                       {allRoles.length === 0 && (
                         <span className="text-sm text-muted-foreground">Keine Rollen definiert</span>
                       )}
                     </div>
-                  </div>
+                  </TabsContent>
 
-                  {/* Mannschaften */}
-                  <div className="space-y-3">
+                  <TabsContent value="mannschaften" className="space-y-4 mt-4">
                     <div>
                       <p className="text-base font-semibold">Mannschaften</p>
                       <p className="text-xs text-muted-foreground">Mannschaften dem Profil zuweisen</p>
@@ -551,12 +565,11 @@ function MembersAdminTab() {
                     {allTeams.length === 0 && (
                       <span className="text-sm text-muted-foreground">Keine Mannschaften angelegt</span>
                     )}
-                  </div>
-                </div>
+                  </TabsContent>
+                </>
               );
             })()}
-          </div>
-          </div>
+          </Tabs>
           <DialogFooter>
             <Button variant="outline" onClick={closeForm}>Abbrechen</Button>
             <Button onClick={handleSubmit} disabled={createMut.isPending || updateMut.isPending}>

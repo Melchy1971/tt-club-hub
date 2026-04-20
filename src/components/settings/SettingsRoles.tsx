@@ -17,23 +17,29 @@ export default function SettingsRoles() {
   const [search, setSearch] = useState('');
 
   const { data: userRoles = [], isLoading } = useQuery({
-    queryKey: ['settings-user-roles'],
+    queryKey: ['settings-member-roles'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('user_roles')
-        .select('id, user_id, role, created_at');
+        .from('member_roles')
+        .select('id, member_id, role, created_at');
       if (error) throw error;
 
-      const userIds = [...new Set(data.map((r) => r.user_id))];
-      const { data: members } = await supabase
-        .from('members')
-        .select('user_id, first_name, last_name, email')
-        .in('user_id', userIds);
+      const memberIds = [...new Set((data ?? []).map((r) => r.member_id))];
+      const { data: members } = memberIds.length
+        ? await supabase
+            .from('members')
+            .select('id, user_id, first_name, last_name, email')
+            .in('id', memberIds)
+        : { data: [] as Array<{ id: string; user_id: string | null; first_name: string; last_name: string; email: string | null }> };
 
-      return data.map((r) => {
-        const member = members?.find((m) => m.user_id === r.user_id);
+      return (data ?? []).map((r) => {
+        const member = members?.find((m) => m.id === r.member_id);
         return {
-          ...r,
+          id: r.id,
+          member_id: r.member_id,
+          user_id: member?.user_id ?? null,
+          role: r.role,
+          created_at: r.created_at,
           name: member ? `${member.first_name} ${member.last_name}` : '–',
           email: member?.email ?? '–',
         };
@@ -43,11 +49,11 @@ export default function SettingsRoles() {
 
   const deleteMut = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('user_roles').delete().eq('id', id);
+      const { error } = await supabase.from('member_roles').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['settings-user-roles'] });
+      queryClient.invalidateQueries({ queryKey: ['settings-member-roles'] });
       toast.success('Rolle entfernt');
     },
     onError: () => toast.error('Fehler beim Entfernen'),

@@ -60,7 +60,7 @@ export interface MatchLineup {
 export type MatchLineupInsert = Omit<MatchLineup, 'id' | 'created_at' | 'updated_at'>;
 
 export type Role = Tables<'roles'>;
-export type UserRole = Tables<'user_roles'>;
+export type UserRole = Tables<'member_roles'>;
 export type ClubSettings = Tables<'club_settings'>;
 
 // Training types are re-exported from domain/training below

@@ -63,7 +63,7 @@ interface RoleModulePerm {
 
 interface UserRoleRow {
   id: string;
-  user_id: string;
+  member_id: string;
   role: AppRole;
 }
 
@@ -89,7 +89,10 @@ async function fetchAllRoles(): Promise<FullRoleRow[]> {
     .select('id, name, display_name, description')
     .order('display_name');
   if (error) throw error;
-  return (data ?? []).map((r) => ({ ...r, is_system: false })) as FullRoleRow[];
+  return (data ?? []).map((r) => ({
+    ...r,
+    is_system: SYSTEM_APP_ROLES.includes(r.name as AppRole),
+  })) as FullRoleRow[];
 }
 
 async function fetchPermissions(): Promise<RoleModulePerm[]> {
@@ -112,16 +115,15 @@ async function fetchPermissions(): Promise<RoleModulePerm[]> {
 }
 
 async function fetchUserRoles(): Promise<UserRoleRow[]> {
-  const { data, error } = await supabase.from('user_roles').select('id, user_id, role');
+  const { data, error } = await supabase.from('member_roles').select('id, member_id, role');
   if (error) throw error;
-  return (data ?? []) as UserRoleRow[];
+  return (data ?? []) as unknown as UserRoleRow[];
 }
 
 async function fetchMembers(): Promise<MemberRow[]> {
   const { data, error } = await supabase
     .from('members')
     .select('id, user_id, first_name, last_name, email')
-    .not('user_id', 'is', null)
     .order('last_name');
   if (error) throw error;
   return (data ?? []) as MemberRow[];
@@ -198,8 +200,8 @@ export default function Roles() {
   });
 
   const assignMut = useMutation({
-    mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
-      const { error } = await supabase.from('user_roles').insert({ user_id: userId, role });
+    mutationFn: async ({ memberId, role }: { memberId: string; role: AppRole }) => {
+      const { error } = await supabase.from('member_roles').insert({ member_id: memberId, role });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -214,7 +216,7 @@ export default function Roles() {
 
   const removeMut = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('user_roles').delete().eq('id', id);
+      const { error } = await supabase.from('member_roles').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -266,25 +268,22 @@ export default function Roles() {
     setEditedPerms((prev) => ({ ...prev, [`${role}:${module}`]: level }));
   }
 
-  function getMemberName(userId: string) {
-    const m = members.find((mb) => mb.user_id === userId);
-    return m ? `${m.last_name}, ${m.first_name}` : userId.slice(0, 8) + '…';
+  function getMemberName(memberId: string) {
+    const m = members.find((mb) => mb.id === memberId);
+    return m ? `${m.last_name}, ${m.first_name}` : memberId.slice(0, 8) + '…';
   }
 
-  const assignableMembers = members.filter((m) => m.user_id);
+  const assignableMembers = members;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Rollen & Berechtigungen</h1>
-          <p className="text-muted-foreground">Systemrollen und Modul-Berechtigungen verwalten</p>
+          <p className="text-muted-foreground">Systemrollen verwalten und bestehenden Mitgliedern zuweisen</p>
         </div>
         {canEdit && (
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setCreateOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" /> Neue Rolle
-            </Button>
             <Button variant="outline" onClick={() => setAssignOpen(true)}>
               <UserPlus className="mr-2 h-4 w-4" /> Rolle zuweisen
             </Button>
@@ -374,7 +373,7 @@ export default function Roles() {
                 <TableBody>
                   {userRoles.map((ur) => (
                     <TableRow key={ur.id}>
-                      <TableCell className="font-medium">{getMemberName(ur.user_id)}</TableCell>
+                      <TableCell className="font-medium">{getMemberName(ur.member_id)}</TableCell>
                       <TableCell>
                         <Badge variant="outline">{APP_ROLE_LABELS[ur.role] ?? ur.role}</Badge>
                       </TableCell>
@@ -533,7 +532,7 @@ export default function Roles() {
                 <SelectTrigger><SelectValue placeholder="Mitglied auswählen" /></SelectTrigger>
                 <SelectContent>
                   {assignableMembers.map((m) => (
-                    <SelectItem key={m.user_id!} value={m.user_id!}>
+                    <SelectItem key={m.id} value={m.id}>
                       {m.last_name}, {m.first_name} {m.email ? `(${m.email})` : ''}
                     </SelectItem>
                   ))}
@@ -560,7 +559,7 @@ export default function Roles() {
                   toast.error('Bitte Mitglied und Rolle auswählen');
                   return;
                 }
-                assignMut.mutate({ userId: assignUserId, role: assignRole as AppRole });
+                assignMut.mutate({ memberId: assignUserId, role: assignRole as AppRole });
               }}
               disabled={assignMut.isPending}
             >

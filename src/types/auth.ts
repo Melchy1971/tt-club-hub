@@ -1,4 +1,4 @@
-import type { Enums, Tables } from '@/integrations/supabase/types';
+import type { Tables } from '@/integrations/supabase/types';
 import type { Session } from '@supabase/supabase-js';
 
 // === Rollen ===
@@ -9,11 +9,14 @@ export const APP_ROLES = [
   'spieler',
   'mitglied',
   'developer',
+  'fördermitglied',
 ] as const;
 
-export type AppRole = Enums<'app_role'>;
+/** System-Rollen + benutzerdefinierte Rollen – jetzt text-basiert */
+export type AppRole = string;
+export type SystemAppRole = (typeof APP_ROLES)[number];
 export type RoleRow = Tables<'roles'>;
-export type UserRoleRow = Tables<'user_roles'>;
+export type UserRoleRow = Tables<'member_roles'>;
 
 // === Berechtigungen ===
 export type Permission =
@@ -113,6 +116,7 @@ export const ROLE_PERMISSIONS: Record<AppRole, Permission[]> = {
     'substitute:write',
   ],
   mitglied: ['member:read', 'team:read', 'match:read', 'season:read'],
+  fördermitglied: ['member:read', 'team:read', 'match:read', 'season:read'],
 };
 
 // === Auth-Fehler ===

@@ -23,6 +23,7 @@ export const SYSTEM_APP_ROLES: readonly AppRole[] = [
   'trainer',
   'spieler',
   'mitglied',
+  'fördermitglied',
 ] as const;
 
 export const isPermissionLevel = (value: string): value is PermissionLevel =>
@@ -31,7 +32,7 @@ export const isPermissionLevel = (value: string): value is PermissionLevel =>
 export const isModuleKey = (value: string): value is ModuleKey =>
   (MODULE_KEYS as readonly string[]).includes(value);
 
-export const SYSTEM_APP_ROLE_PERMISSIONS: Record<AppRole, Record<ModuleKey, PermissionLevel>> = {
+export const SYSTEM_APP_ROLE_PERMISSIONS: Record<string, Record<ModuleKey, PermissionLevel>> = {
   developer: {
     dashboard: 'WRITE',
     teams: 'WRITE',
@@ -83,6 +84,16 @@ export const SYSTEM_APP_ROLE_PERMISSIONS: Record<AppRole, Record<ModuleKey, Perm
     import: 'NONE',
   },
   mitglied: {
+    dashboard: 'READ',
+    teams: 'READ',
+    schedule: 'READ',
+    members: 'READ',
+    communication: 'NONE',
+    board: 'NONE',
+    settings: 'NONE',
+    import: 'NONE',
+  },
+  fördermitglied: {
     dashboard: 'READ',
     teams: 'READ',
     schedule: 'READ',

@@ -17,6 +17,7 @@ export type Database = {
       club_settings: {
         Row: {
           association: string | null
+          chairman: string | null
           city: string | null
           club_name: string
           club_number: string | null
@@ -33,6 +34,7 @@ export type Database = {
         }
         Insert: {
           association?: string | null
+          chairman?: string | null
           city?: string | null
           club_name?: string
           club_number?: string | null
@@ -49,6 +51,7 @@ export type Database = {
         }
         Update: {
           association?: string | null
+          chairman?: string | null
           city?: string | null
           club_name?: string
           club_number?: string | null
@@ -454,6 +457,38 @@ export type Database = {
           },
         ]
       }
+      member_roles: {
+        Row: {
+          assigned_by: string | null
+          created_at: string
+          id: string
+          member_id: string
+          role: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          member_id: string
+          role: string
+        }
+        Update: {
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          member_id?: string
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_roles_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       members: {
         Row: {
           age_group: Database["public"]["Enums"]["age_group"] | null
@@ -571,7 +606,7 @@ export type Database = {
           id: string
           level: Database["public"]["Enums"]["permission_level"]
           module: string
-          role: Database["public"]["Enums"]["app_role"]
+          role: string
           updated_at: string
         }
         Insert: {
@@ -579,7 +614,7 @@ export type Database = {
           id?: string
           level?: Database["public"]["Enums"]["permission_level"]
           module: string
-          role: Database["public"]["Enums"]["app_role"]
+          role: string
           updated_at?: string
         }
         Update: {
@@ -587,7 +622,7 @@ export type Database = {
           id?: string
           level?: Database["public"]["Enums"]["permission_level"]
           module?: string
-          role?: Database["public"]["Enums"]["app_role"]
+          role?: string
           updated_at?: string
         }
         Relationships: []
@@ -598,21 +633,24 @@ export type Database = {
           description: string | null
           display_name: string
           id: string
-          name: Database["public"]["Enums"]["app_role"]
+          is_system: boolean
+          name: string
         }
         Insert: {
           created_at?: string
           description?: string | null
           display_name: string
           id?: string
-          name: Database["public"]["Enums"]["app_role"]
+          is_system?: boolean
+          name: string
         }
         Update: {
           created_at?: string
           description?: string | null
           display_name?: string
           id?: string
-          name?: Database["public"]["Enums"]["app_role"]
+          is_system?: boolean
+          name?: string
         }
         Relationships: []
       }
@@ -931,6 +969,56 @@ export type Database = {
           },
         ]
       }
+      team_training_slots: {
+        Row: {
+          created_at: string
+          end_time: string
+          id: string
+          is_active: boolean
+          location: string | null
+          start_time: string
+          team_id: string
+          updated_at: string
+          valid_from: string | null
+          valid_to: string | null
+          weekday: number
+        }
+        Insert: {
+          created_at?: string
+          end_time: string
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          start_time: string
+          team_id: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_to?: string | null
+          weekday: number
+        }
+        Update: {
+          created_at?: string
+          end_time?: string
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          start_time?: string
+          team_id?: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_to?: string | null
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_training_slots_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teams: {
         Row: {
           age_group: Database["public"]["Enums"]["age_group"]
@@ -1052,30 +1140,6 @@ export type Database = {
           },
         ]
       }
-      user_roles: {
-        Row: {
-          assigned_by: string | null
-          created_at: string
-          id: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
-        Insert: {
-          assigned_by?: string | null
-          created_at?: string
-          id?: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
-        Update: {
-          assigned_by?: string | null
-          created_at?: string
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id?: string
-        }
-        Relationships: []
-      }
       venues: {
         Row: {
           city: string | null
@@ -1117,13 +1181,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
+      has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       is_admin_or_board: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
@@ -1147,6 +1205,7 @@ export type Database = {
         | "spieler"
         | "mitglied"
         | "developer"
+        | "fördermitglied"
       gender: "maennlich" | "weiblich" | "divers"
       match_status:
         | "geplant"
@@ -1306,6 +1365,7 @@ export const Constants = {
         "spieler",
         "mitglied",
         "developer",
+        "fördermitglied",
       ],
       gender: ["maennlich", "weiblich", "divers"],
       match_status: ["geplant", "laufend", "beendet", "verschoben", "abgesagt"],

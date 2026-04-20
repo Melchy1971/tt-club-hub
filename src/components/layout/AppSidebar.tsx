@@ -5,6 +5,8 @@ import { useLocation } from 'react-router-dom';
 import { useNavigationPermissions } from '@/hooks/useNavigationPermissions';
 import { NAV_GROUP_LABELS_DE, NAV_UI_LABELS_DE } from '@/constants/uiLabels';
 import type { RouteConfig } from '@/types/navigation';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Sidebar,
   SidebarContent,
@@ -18,7 +20,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export function AppSidebar() {
   const { signOut, user } = useAuth();
@@ -26,6 +28,16 @@ export function AppSidebar() {
   const collapsed = state === 'collapsed';
   const location = useLocation();
   const { navGroups } = useNavigationPermissions();
+
+  const { data: clubSettings } = useQuery({
+    queryKey: ['club-settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('club_settings').select('club_name, logo_url').limit(1).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
   const isActive = (path: string) =>
     path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
@@ -64,15 +76,23 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="p-4">
+       <SidebarHeader className="p-4">
         <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground font-display font-bold text-sm">
-            TT
-          </div>
+          {clubSettings?.logo_url ? (
+            <img
+              src={clubSettings.logo_url}
+              alt="Vereinslogo"
+              className="h-9 w-9 shrink-0 rounded-lg object-contain"
+            />
+          ) : (
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground font-display font-bold text-sm">
+              TT
+            </div>
+          )}
           {!collapsed && (
             <div className="flex flex-col">
               <span className="font-display font-bold text-sidebar-accent-foreground text-base tracking-tight leading-tight">
-                {NAV_UI_LABELS_DE.appName}
+                {clubSettings?.club_name || NAV_UI_LABELS_DE.appName}
               </span>
               <span className="text-[10px] text-sidebar-foreground/50 leading-tight">
                 {NAV_UI_LABELS_DE.appTagline}

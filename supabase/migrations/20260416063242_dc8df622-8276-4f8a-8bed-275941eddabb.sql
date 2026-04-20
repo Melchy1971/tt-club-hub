@@ -1,0 +1,1 @@
+ALTER TABLE public.club_settings ADD COLUMN chairman text DEFAULT NULL;

@@ -2,13 +2,25 @@ import { Outlet } from 'react-router-dom';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { useAuth } from '@/contexts/AuthContext';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { NavLink } from '@/components/NavLink';
 import { Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 export function AppLayout() {
   const { user } = useAuth();
+
+  const { data: clubSettings } = useQuery({
+    queryKey: ['club-settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('club_settings').select('club_name, logo_url').limit(1).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
   const initials = user?.name
     ? user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
@@ -22,9 +34,18 @@ export function AppLayout() {
           <header className="h-14 flex items-center justify-between border-b bg-card px-4 shrink-0">
             <div className="flex items-center gap-3">
               <SidebarTrigger />
-              <span className="text-sm text-muted-foreground font-medium hidden sm:inline">
-                Tischtennisverwaltung
-              </span>
+              <div className="flex items-center gap-2">
+                {clubSettings?.logo_url && (
+                  <img
+                    src={clubSettings.logo_url}
+                    alt="Vereinslogo"
+                    className="h-7 w-7 rounded object-contain"
+                  />
+                )}
+                <span className="text-sm text-muted-foreground font-medium hidden sm:inline">
+                  {clubSettings?.club_name || 'Tischtennisverwaltung'}
+                </span>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="icon" className="text-muted-foreground">

@@ -34,15 +34,6 @@ export const SETTINGS_SUBPAGES: SettingsSubpageDef[] = [
     writeAccess: getSettingsPermissionRule('club').write,
   },
   {
-    id: 'season',
-    label: SETTINGS_SUBPAGE_LABELS_DE.season,
-    icon: Calendar,
-    component: SettingsSeasons,
-    group: 'club',
-    readAccess: getSettingsPermissionRule('season').read,
-    writeAccess: getSettingsPermissionRule('season').write,
-  },
-  {
     id: 'venues',
     label: SETTINGS_SUBPAGE_LABELS_DE.venues,
     icon: MapPin,
@@ -52,15 +43,6 @@ export const SETTINGS_SUBPAGES: SettingsSubpageDef[] = [
     writeAccess: getSettingsPermissionRule('venues').write,
   },
 
-  {
-    id: 'roles',
-    label: SETTINGS_SUBPAGE_LABELS_DE.roles,
-    icon: Users,
-    component: SettingsRoles,
-    group: 'admin',
-    readAccess: getSettingsPermissionRule('roles').read,
-    writeAccess: getSettingsPermissionRule('roles').write,
-  },
   {
     id: 'permissions',
     label: SETTINGS_SUBPAGE_LABELS_DE.permissions,

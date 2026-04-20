@@ -52,6 +52,7 @@ export default function SettingsInfo() {
               <InfoRow label="Vereinsname" value={club.clubName} />
               <InfoRow label="Vereinsnummer" value={club.clubNumber} />
               <InfoRow label="Verband" value={club.association} />
+              <InfoRow label="1. Vorsitzender" value={club.chairman} />
               <InfoRow label="Anschrift" value={[club.street, [club.zipCode, club.city].filter(Boolean).join(' ')].filter(Boolean).join(', ')} />
               <InfoRow label="E-Mail" value={club.contactEmail} />
               <InfoRow label="Telefon" value={club.contactPhone} />

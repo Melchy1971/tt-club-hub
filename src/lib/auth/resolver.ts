@@ -3,9 +3,16 @@ import type { AppRole, AuthProblem, AuthSessionState, AuthUser } from '@/types/a
 import { APP_ROLES } from '@/types/auth';
 import type { Tables } from '@/integrations/supabase/types';
 
-const ROLE_PRIORITY: AppRole[] = ['developer', 'admin', 'vorstand', 'trainer', 'spieler', 'mitglied'];
+const ROLE_PRIORITY: AppRole[] = ['developer', 'admin', 'vorstand', 'trainer', 'spieler', 'mitglied', 'fördermitglied'];
 
-type UserRoleRow = Pick<Tables<'user_roles'>, 'user_id' | 'role'>;
+/**
+ * Eintrag aus member_roles, gemappt auf user_id (über members.user_id).
+ * Hält bestehende API kompatibel.
+ */
+export interface UserRoleRow {
+  user_id: string;
+  role: string;
+}
 
 const pushProblem = (problems: AuthProblem[], problem: AuthProblem) => {
   if (!problems.includes(problem)) {
@@ -13,8 +20,8 @@ const pushProblem = (problems: AuthProblem[], problem: AuthProblem) => {
   }
 };
 
-export const isValidRole = (role: string | null | undefined): role is AppRole =>
-  !!role && APP_ROLES.includes(role as AppRole);
+export const isValidRole = (role: string | null | undefined): role is string =>
+  !!role && (APP_ROLES as readonly string[]).includes(role);
 
 export const resolveRolesFromAssignments = (
   userId: string,
