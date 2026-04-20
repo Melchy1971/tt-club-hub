@@ -16,7 +16,7 @@ export const APP_ROLES = [
 export type AppRole = string;
 export type SystemAppRole = (typeof APP_ROLES)[number];
 export type RoleRow = Tables<'roles'>;
-export type UserRoleRow = Tables<'user_roles'>;
+export type UserRoleRow = Tables<'member_roles'>;
 
 // === Berechtigungen ===
 export type Permission =

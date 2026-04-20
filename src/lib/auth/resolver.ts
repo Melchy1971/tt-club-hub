@@ -5,7 +5,14 @@ import type { Tables } from '@/integrations/supabase/types';
 
 const ROLE_PRIORITY: AppRole[] = ['developer', 'admin', 'vorstand', 'trainer', 'spieler', 'mitglied', 'fördermitglied'];
 
-type UserRoleRow = Pick<Tables<'user_roles'>, 'user_id' | 'role'>;
+/**
+ * Eintrag aus member_roles, gemappt auf user_id (über members.user_id).
+ * Hält bestehende API kompatibel.
+ */
+export interface UserRoleRow {
+  user_id: string;
+  role: string;
+}
 
 const pushProblem = (problems: AuthProblem[], problem: AuthProblem) => {
   if (!problems.includes(problem)) {

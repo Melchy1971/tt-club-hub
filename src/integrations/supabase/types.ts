@@ -457,6 +457,38 @@ export type Database = {
           },
         ]
       }
+      member_roles: {
+        Row: {
+          assigned_by: string | null
+          created_at: string
+          id: string
+          member_id: string
+          role: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          member_id: string
+          role: string
+        }
+        Update: {
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          member_id?: string
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_roles_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       members: {
         Row: {
           age_group: Database["public"]["Enums"]["age_group"] | null
@@ -1110,30 +1142,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      user_roles: {
-        Row: {
-          assigned_by: string | null
-          created_at: string
-          id: string
-          role: string
-          user_id: string
-        }
-        Insert: {
-          assigned_by?: string | null
-          created_at?: string
-          id?: string
-          role: string
-          user_id: string
-        }
-        Update: {
-          assigned_by?: string | null
-          created_at?: string
-          id?: string
-          role?: string
-          user_id?: string
-        }
-        Relationships: []
       }
       venues: {
         Row: {

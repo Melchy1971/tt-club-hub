@@ -77,11 +77,21 @@ export const profileInfoService = {
     if (!member) return null;
 
     const targetUserId_ = member.user_id;
-    if (!targetUserId_) return null;
+
+    // Requester-Rollen über member -> member_roles
+    const { data: requesterMember } = await supabase
+      .from('members')
+      .select('id')
+      .eq('user_id', requesterUserId)
+      .maybeSingle();
+
+    const requesterMemberId = requesterMember?.id;
 
     const [{ data: targetRoleRows, error: targetRoleError }, { data: requesterRoleRows, error: requesterRoleError }, { data: teamRows, error: teamError }] = await Promise.all([
-      supabase.from('user_roles').select('role').eq('user_id', targetUserId_),
-      supabase.from('user_roles').select('role').eq('user_id', requesterUserId),
+      supabase.from('member_roles').select('role').eq('member_id', member.id),
+      requesterMemberId
+        ? supabase.from('member_roles').select('role').eq('member_id', requesterMemberId)
+        : Promise.resolve({ data: [] as Array<{ role: string }>, error: null }),
       supabase
         .from('team_members')
         .select('team_id, position, teams(name, league, age_group, division, captain_id, season_phase_id, season_phases(name))')

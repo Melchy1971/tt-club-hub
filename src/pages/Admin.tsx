@@ -133,10 +133,10 @@ function MembersAdminTab() {
     },
   });
 
-  const { data: userRoles = [] } = useQuery({
-    queryKey: ['admin-user-roles'],
+  const { data: memberRolesData = [] } = useQuery({
+    queryKey: ['admin-member-roles'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('user_roles').select('user_id, role');
+      const { data, error } = await supabase.from('member_roles').select('member_id, role');
       if (error) throw error;
       return data ?? [];
     },
@@ -197,16 +197,16 @@ function MembersAdminTab() {
   });
 
   const toggleRoleMut = useMutation({
-    mutationFn: async ({ userId, roleName, active }: { userId: string; roleName: string; active: boolean }) => {
+    mutationFn: async ({ memberId, roleName, active }: { memberId: string; roleName: string; active: boolean }) => {
       if (active) {
-        const { error } = await supabase.from('user_roles').insert({ user_id: userId, role: roleName as any });
+        const { error } = await supabase.from('member_roles').insert({ member_id: memberId, role: roleName });
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('user_roles').delete().eq('user_id', userId).eq('role', roleName as any);
+        const { error } = await supabase.from('member_roles').delete().eq('member_id', memberId).eq('role', roleName);
         if (error) throw error;
       }
     },
-    onSuccess: () => { toast.success('Rolle aktualisiert'); queryClient.invalidateQueries({ queryKey: ['admin-user-roles'] }); },
+    onSuccess: () => { toast.success('Rolle aktualisiert'); queryClient.invalidateQueries({ queryKey: ['admin-member-roles'] }); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -488,9 +488,9 @@ function MembersAdminTab() {
             </TabsContent>
 
             {editingId && (() => {
-              const memberRoles = editingUserId
-                ? userRoles.filter((r) => r.user_id === editingUserId).map((r) => r.role)
-                : [];
+              const memberRoles = memberRolesData
+                .filter((r) => r.member_id === editingId)
+                .map((r) => r.role);
               const memberTeamIds = new Set(
                 teamMembers.filter((tm) => tm.member_id === editingId).map((tm) => tm.team_id)
               );
@@ -509,16 +509,11 @@ function MembersAdminTab() {
                         Nur Administrator, Vorstand oder Entwickler dürfen Rollen ändern.
                       </p>
                     )}
-                    {canEditAssignments && !editingUserId && (
-                      <p className="text-xs text-muted-foreground">
-                        Diesem Mitglied ist kein Benutzerkonto zugeordnet – Rollen können erst nach Verknüpfung vergeben werden.
-                      </p>
-                    )}
                     <div className="space-y-2">
                       {allRoles.map((r) => (
                         <div key={r.name} className="flex items-center justify-between">
                           <span className="text-sm">{r.display_name}</span>
-                          <Switch checked={memberRoles.includes(r.name)} disabled={!canEditAssignments || !editingUserId} onCheckedChange={(checked) => { if (editingUserId) toggleRoleMut.mutate({ userId: editingUserId, roleName: r.name, active: checked }); }} />
+                          <Switch checked={memberRoles.includes(r.name)} disabled={!canEditAssignments} onCheckedChange={(checked) => toggleRoleMut.mutate({ memberId: editingId, roleName: r.name, active: checked })} />
                         </div>
                       ))}
                       {allRoles.length === 0 && (
