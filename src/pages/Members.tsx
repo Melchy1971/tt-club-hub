@@ -113,12 +113,12 @@ export default function Members() {
     queryFn: () => memberService.list(),
   });
 
-  const { data: userRoles = [] } = useQuery({
-    queryKey: ['user_roles_all'],
+  const { data: memberRolesData = [] } = useQuery({
+    queryKey: ['member_roles_all'],
     queryFn: async () => {
       const { data, error } = await (await import('@/integrations/supabase/client')).supabase
-        .from('user_roles')
-        .select('user_id, role');
+        .from('member_roles')
+        .select('member_id, role');
       if (error) throw error;
       return data ?? [];
     },
@@ -190,17 +190,17 @@ export default function Members() {
   const canEditAssignments = role === 'admin' || role === 'developer' || role === 'vorstand';
 
   const toggleRoleMut = useMutation({
-    mutationFn: async ({ userId, roleName, active }: { userId: string; roleName: string; active: boolean }) => {
+    mutationFn: async ({ memberId, roleName, active }: { memberId: string; roleName: string; active: boolean }) => {
       const { supabase } = await import('@/integrations/supabase/client');
       if (active) {
-        const { error } = await supabase.from('user_roles').insert({ user_id: userId, role: roleName as any });
+        const { error } = await supabase.from('member_roles').insert({ member_id: memberId, role: roleName });
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('user_roles').delete().eq('user_id', userId).eq('role', roleName as any);
+        const { error } = await supabase.from('member_roles').delete().eq('member_id', memberId).eq('role', roleName);
         if (error) throw error;
       }
     },
-    onSuccess: () => { toast.success('Rolle aktualisiert'); queryClient.invalidateQueries({ queryKey: ['user_roles_all'] }); },
+    onSuccess: () => { toast.success('Rolle aktualisiert'); queryClient.invalidateQueries({ queryKey: ['member_roles_all'] }); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -243,9 +243,8 @@ export default function Members() {
   }
 
   function getRolesForMember(m: MemberUI): string[] {
-    if (!m.userId) return [];
-    return userRoles
-      .filter((r) => r.user_id === m.userId)
+    return memberRolesData
+      .filter((r) => r.member_id === m.id)
       .map((r) => r.role);
   }
 

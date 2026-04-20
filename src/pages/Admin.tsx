@@ -488,9 +488,9 @@ function MembersAdminTab() {
             </TabsContent>
 
             {editingId && (() => {
-              const memberRoles = editingUserId
-                ? userRoles.filter((r) => r.user_id === editingUserId).map((r) => r.role)
-                : [];
+              const memberRoles = memberRolesData
+                .filter((r) => r.member_id === editingId)
+                .map((r) => r.role);
               const memberTeamIds = new Set(
                 teamMembers.filter((tm) => tm.member_id === editingId).map((tm) => tm.team_id)
               );
@@ -509,16 +509,11 @@ function MembersAdminTab() {
                         Nur Administrator, Vorstand oder Entwickler dürfen Rollen ändern.
                       </p>
                     )}
-                    {canEditAssignments && !editingUserId && (
-                      <p className="text-xs text-muted-foreground">
-                        Diesem Mitglied ist kein Benutzerkonto zugeordnet – Rollen können erst nach Verknüpfung vergeben werden.
-                      </p>
-                    )}
                     <div className="space-y-2">
                       {allRoles.map((r) => (
                         <div key={r.name} className="flex items-center justify-between">
                           <span className="text-sm">{r.display_name}</span>
-                          <Switch checked={memberRoles.includes(r.name)} disabled={!canEditAssignments || !editingUserId} onCheckedChange={(checked) => { if (editingUserId) toggleRoleMut.mutate({ userId: editingUserId, roleName: r.name, active: checked }); }} />
+                          <Switch checked={memberRoles.includes(r.name)} disabled={!canEditAssignments} onCheckedChange={(checked) => toggleRoleMut.mutate({ memberId: editingId, roleName: r.name, active: checked })} />
                         </div>
                       ))}
                       {allRoles.length === 0 && (
