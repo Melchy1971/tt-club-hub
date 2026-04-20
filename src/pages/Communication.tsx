@@ -8,12 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/common/EmptyState';
-import { Newspaper, FileText, ListChecks, Trophy, Search, Download, Filter } from 'lucide-react';
+import { Newspaper, FileText, Trophy, Search, Download, Filter } from 'lucide-react';
 import type { Member } from '@/types';
 import { communicationKeys, communicationCacheConfig } from '@/lib/queryKeys';
 import { newsService } from '@/services/newsService';
 import { documentService } from '@/services/documentService';
-import { communicationListService } from '@/services/communicationListService';
 import { communicationExportService } from '@/services/communicationExportService';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -42,14 +41,6 @@ interface DocumentItem {
   file_url: string | null;
   category: string;
   uploaded_by: string;
-  created_at: string;
-}
-
-interface CommList {
-  id: string;
-  name: string;
-  description: string | null;
-  list_type: string;
   created_at: string;
 }
 
@@ -215,68 +206,6 @@ function DocumentsTab() {
   );
 }
 
-function ListsTab() {
-  const { data: lists, isLoading } = useQuery({
-    queryKey: communicationKeys.lists.list({ audience: 'public' }),
-    queryFn: async () => {
-      const result = await communicationListService.list({ audience: 'public' });
-      if (!result.success) throw new Error(result.error.message);
-      return result.data.map((list) => ({
-        id: list.id,
-        name: list.name,
-        description: list.description,
-        list_type: list.listType,
-        created_at: list.createdAt,
-      })) as CommList[];
-    },
-    staleTime: communicationCacheConfig.public.staleTime,
-    gcTime: communicationCacheConfig.public.gcTime,
-  });
-
-  if (isLoading) return <LoadingSkeleton />;
-
-  const TYPE_LABELS: Record<string, string> = {
-    email: 'E-Mail',
-    whatsapp: 'WhatsApp',
-    telefon: 'Telefon',
-  };
-
-  return !lists?.length ? (
-    <EmptyState
-      icon={ListChecks}
-      title="Keine Listen"
-      description="Es wurden noch keine Kommunikationslisten erstellt."
-    />
-  ) : (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Typ</TableHead>
-            <TableHead>Beschreibung</TableHead>
-            <TableHead>Erstellt</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {lists.map((list) => (
-            <TableRow key={list.id}>
-              <TableCell className="font-medium">{list.name}</TableCell>
-              <TableCell>
-                <Badge variant="outline">{TYPE_LABELS[list.list_type] ?? list.list_type}</Badge>
-              </TableCell>
-              <TableCell className="text-sm text-muted-foreground">{list.description ?? '–'}</TableCell>
-              <TableCell className="text-sm text-muted-foreground">
-                {formatGermanDate(list.created_at)}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  );
-}
-
 function RatingTab() {
   const [search, setSearch] = useState('');
 
@@ -415,7 +344,7 @@ function LoadingSkeleton() {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-const VALID_TABS = ['news', 'dokumente', 'listen', 'qttr'] as const;
+const VALID_TABS = ['news', 'dokumente', 'qttr'] as const;
 type TabValue = typeof VALID_TABS[number];
 
 export default function Communication() {
@@ -431,7 +360,7 @@ export default function Communication() {
     <div className="space-y-6 animate-fade-in">
       <div className="page-header">
         <h1 className="page-title">Kommunikation</h1>
-        <p className="page-description">News, Dokumente, Listen und Ranglisten verwalten</p>
+        <p className="page-description">News, Dokumente und Ranglisten</p>
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
@@ -444,10 +373,6 @@ export default function Communication() {
             <FileText className="mr-1.5 h-3.5 w-3.5" />
             Dokumente
           </TabsTrigger>
-          <TabsTrigger value="listen">
-            <ListChecks className="mr-1.5 h-3.5 w-3.5" />
-            Listen
-          </TabsTrigger>
           <TabsTrigger value="qttr">
             <Trophy className="mr-1.5 h-3.5 w-3.5" />
             QTTR/TTR
@@ -456,7 +381,6 @@ export default function Communication() {
 
         <TabsContent value="news"><NewsTab /></TabsContent>
         <TabsContent value="dokumente"><DocumentsTab /></TabsContent>
-        <TabsContent value="listen"><ListsTab /></TabsContent>
         <TabsContent value="qttr"><RatingTab /></TabsContent>
       </Tabs>
     </div>
