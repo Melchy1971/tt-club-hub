@@ -45,6 +45,7 @@ import {
   Download,
   LayoutDashboard,
   Phone,
+  FileDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Member } from '@/types';
@@ -114,20 +115,19 @@ function LoadingSkeleton() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TAB 1: Mitglieder (alle, mit optionalem Vorstand-Filter)
+// TAB 1: Mitglieder (alle, mit optionalem Vorstand-Filter + PDF-Export)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const ROLE_LABELS: Record<string, string> = {
-  admin:          'Administrator',
-  vorstand:       'Vorstand',
-  trainer:        'Trainer',
-  spieler:        'Spieler',
-  mitglied:       'Mitglied',
-  developer:      'Entwickler',
+  admin:           'Administrator',
+  vorstand:        'Vorstand',
+  trainer:         'Trainer',
+  spieler:         'Spieler',
+  mitglied:        'Mitglied',
+  developer:       'Entwickler',
   foerdermitglied: 'Fördermitglied',
 };
 
-// Priority determines which role badge to show when a member has multiple roles
 const ROLE_PRIORITY: Record<string, number> = {
   admin: 6, developer: 5, vorstand: 4, trainer: 3, spieler: 2, mitglied: 1, foerdermitglied: 0,
 };
@@ -140,6 +140,133 @@ function roleBadgeVariant(role: string): 'default' | 'secondary' | 'outline' {
   return 'outline';
 }
 
+// ── PDF helpers ───────────────────────────────────────────────────────────────
+
+const PDF_STYLE = `
+  body{font-family:system-ui,Arial,sans-serif;font-size:11px;color:#111;margin:0;padding:16px}
+  h1{font-size:16px;margin:0 0 2px}
+  p.sub{font-size:10px;color:#666;margin:0 0 12px}
+  table{width:100%;border-collapse:collapse}
+  th{background:#f3f4f6;text-align:left;padding:5px 8px;border-bottom:2px solid #d1d5db;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+  td{padding:5px 8px;border-bottom:1px solid #e5e7eb;vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  .badge{display:inline-block;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:600;background:#e0e7ff;color:#3730a3;margin-right:3px}
+  .sec{margin-top:14px}
+  .sec-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;border-bottom:1px solid #e5e7eb;padding-bottom:3px;margin-bottom:6px}
+  .row{display:grid;grid-template-columns:150px 1fr;gap:2px 8px;margin-bottom:3px}
+  .lbl{color:#6b7280}
+  @media print{@page{margin:1.5cm}body{padding:0}}
+`;
+
+function fmtIsoShort(iso: string | null | undefined): string {
+  if (!iso) return '–';
+  const [y, m, d] = iso.split('-');
+  return `${d}.${m}.${y}`;
+}
+
+type BoardMemberRow = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string | null;
+  phone: string | null;
+  member_number: string | null;
+  street: string | null;
+  zip_code: string | null;
+  city: string | null;
+  date_of_birth: string | null;
+  entry_date: string | null;
+  exit_date: string | null;
+  age_group: string | null;
+  ttr_rating: number | null;
+  qttr_rating: number | null;
+  is_active: boolean;
+  topRole: string | null;
+  allRoles: string[];
+};
+
+function printBoardCompact(members: BoardMemberRow[], filterLabel: string) {
+  const now = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const rows = members.map((m) => `<tr>
+    <td>${m.last_name}, ${m.first_name}</td>
+    <td>${m.email ?? '–'}</td>
+    <td>${m.phone ?? '–'}</td>
+    <td>${m.allRoles.map((r) => `<span class="badge">${ROLE_LABELS[r] ?? r}</span>`).join('') || '–'}</td>
+  </tr>`).join('');
+
+  const html = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8">
+    <title>Mitglieder – Kompaktübersicht</title><style>${PDF_STYLE}</style></head><body>
+    <h1>Mitglieder – Kompaktübersicht</h1>
+    <p class="sub">Stand: ${now} · ${filterLabel} · ${members.length} Einträge</p>
+    <table>
+      <thead><tr><th>Name</th><th>E-Mail</th><th>Telefon</th><th>Rollen</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </body></html>`;
+
+  const w = window.open('', '_blank', 'width=900,height=700');
+  if (!w) return;
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(() => w.print(), 400);
+}
+
+function printBoardMemberProfile(m: BoardMemberRow) {
+  const now = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const f = (lbl: string, val: string | null | undefined) =>
+    `<div class="row"><span class="lbl">${lbl}</span><span>${val ?? '–'}</span></div>`;
+
+  const rolesHtml = m.allRoles.length
+    ? m.allRoles.map((r) => `<span class="badge">${ROLE_LABELS[r] ?? r}</span>`).join('')
+    : '–';
+
+  const html = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8">
+    <title>Profil – ${m.first_name} ${m.last_name}</title><style>${PDF_STYLE}</style></head><body>
+    <h1>Mitgliedsprofil</h1>
+    <p class="sub">Erstellt am ${now}</p>
+    <div class="sec">
+      <div class="sec-title">Persönliche Daten</div>
+      ${f('Nachname', m.last_name)}
+      ${f('Vorname', m.first_name)}
+      ${f('Mitgliedsnr.', m.member_number)}
+      ${f('Geburtsdatum', fmtIsoShort(m.date_of_birth))}
+    </div>
+    <div class="sec">
+      <div class="sec-title">Kontakt</div>
+      ${f('E-Mail', m.email)}
+      ${f('Telefon', m.phone)}
+      ${f('Straße', m.street)}
+      ${f('PLZ / Ort', [m.zip_code, m.city].filter(Boolean).join(' ') || null)}
+    </div>
+    <div class="sec">
+      <div class="sec-title">Mitgliedschaft</div>
+      ${f('Eintrittsdatum', fmtIsoShort(m.entry_date))}
+      ${f('Austrittsdatum', fmtIsoShort(m.exit_date))}
+      ${f('Status', m.is_active ? 'Aktiv' : 'Inaktiv')}
+      ${f('Altersgruppe', m.age_group)}
+    </div>
+    <div class="sec">
+      <div class="sec-title">Spielstärke</div>
+      ${f('TTR', m.ttr_rating?.toString() ?? null)}
+      ${f('QTTR', m.qttr_rating?.toString() ?? null)}
+    </div>
+    <div class="sec">
+      <div class="sec-title">Rollen</div>
+      <div class="row"><span class="lbl">Systemrollen</span><span>${rolesHtml}</span></div>
+    </div>
+  </body></html>`;
+
+  const w = window.open('', '_blank', 'width=800,height=700');
+  if (!w) return;
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(() => w.print(), 400);
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
 function BoardMembersTab() {
   const [nurVorstand, setNurVorstand] = useState(false);
 
@@ -148,40 +275,57 @@ function BoardMembersTab() {
     queryFn: async () => {
       const [{ data: memberData, error: memberErr }, { data: roleData, error: roleErr }] =
         await Promise.all([
-          supabase.from('members').select('id, first_name, last_name, email, phone').eq('is_active', true).order('last_name'),
+          supabase
+            .from('members')
+            .select('id, first_name, last_name, email, phone, member_number, street, zip_code, city, date_of_birth, entry_date, exit_date, age_group, ttr_rating, qttr_rating, is_active')
+            .eq('is_active', true)
+            .order('last_name'),
           supabase.from('member_roles').select('member_id, role'),
         ]);
       if (memberErr) throw memberErr;
       if (roleErr) throw roleErr;
 
-      // Build role map: memberId → highest-priority role
-      const roleMap = new Map<string, string>();
+      // Build per-member role lists + highest-priority role
+      const allRolesMap = new Map<string, string[]>();
+      const topRoleMap = new Map<string, string>();
       for (const r of roleData ?? []) {
-        const current = roleMap.get(r.member_id);
-        const currentPriority = current != null ? (ROLE_PRIORITY[current] ?? -1) : -1;
-        const newPriority = ROLE_PRIORITY[r.role] ?? -1;
-        if (newPriority > currentPriority) roleMap.set(r.member_id, r.role);
+        allRolesMap.set(r.member_id, [...(allRolesMap.get(r.member_id) ?? []), r.role]);
+        const current = topRoleMap.get(r.member_id);
+        if ((ROLE_PRIORITY[r.role] ?? -1) > (ROLE_PRIORITY[current ?? ''] ?? -1)) {
+          topRoleMap.set(r.member_id, r.role);
+        }
       }
 
-      return (memberData ?? []).map((m) => ({
+      return (memberData ?? []).map((m): BoardMemberRow => ({
         ...m,
-        role: roleMap.get(m.id) ?? null,
+        topRole: topRoleMap.get(m.id) ?? null,
+        allRoles: allRolesMap.get(m.id) ?? [],
       }));
     },
   });
 
   const displayed = nurVorstand
-    ? (rows ?? []).filter((m) => m.role != null && BOARD_ROLES.has(m.role))
+    ? (rows ?? []).filter((m) => m.topRole != null && BOARD_ROLES.has(m.topRole))
     : (rows ?? []);
 
   if (isLoading) return <LoadingSkeleton />;
 
   return (
     <div className="space-y-4">
+      {/* Toolbar */}
       <div className="flex items-center gap-3">
         <Switch id="nur-vorstand" checked={nurVorstand} onCheckedChange={setNurVorstand} />
         <Label htmlFor="nur-vorstand" className="cursor-pointer text-sm">Nur Vorstand</Label>
-        <span className="ml-auto text-sm text-muted-foreground">{displayed.length} Mitglied{displayed.length !== 1 ? 'er' : ''}</span>
+        <span className="text-sm text-muted-foreground">{displayed.length} Mitglied{displayed.length !== 1 ? 'er' : ''}</span>
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-auto"
+          disabled={displayed.length === 0}
+          onClick={() => printBoardCompact(displayed, nurVorstand ? 'Nur Vorstand' : 'Alle Mitglieder')}
+        >
+          <FileDown className="mr-2 h-4 w-4" /> Kompakt PDF
+        </Button>
       </div>
 
       {displayed.length === 0 ? (
@@ -199,6 +343,7 @@ function BoardMembersTab() {
                 <TableHead>E-Mail</TableHead>
                 <TableHead>Telefon</TableHead>
                 <TableHead>Rolle</TableHead>
+                <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -210,13 +355,24 @@ function BoardMembersTab() {
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{m.phone ?? '–'}</TableCell>
                   <TableCell>
-                    {m.role ? (
-                      <Badge variant={roleBadgeVariant(m.role)}>
-                        {ROLE_LABELS[m.role] ?? m.role}
+                    {m.topRole ? (
+                      <Badge variant={roleBadgeVariant(m.topRole)}>
+                        {ROLE_LABELS[m.topRole] ?? m.topRole}
                       </Badge>
                     ) : (
                       <span className="text-xs text-muted-foreground">–</span>
                     )}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8"
+                      title="Profil als PDF"
+                      onClick={() => printBoardMemberProfile(m)}
+                    >
+                      <FileDown className="h-4 w-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
