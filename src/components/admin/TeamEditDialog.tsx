@@ -27,7 +27,6 @@ import { AGE_GROUP_LABELS_DE } from '@/constants/uiLabels';
 interface TeamFormData {
   name: string;
   league: string;
-  division: string;
   age_group: string;
   season_phase_id: string;
   is_active: boolean;
@@ -45,7 +44,6 @@ export function TeamEditDialog({ open, onOpenChange, team, onSave, saving }: Tea
   const [form, setForm] = useState<TeamFormData>({
     name: '',
     league: '',
-    division: '',
     age_group: 'herren',
     season_phase_id: '',
     is_active: true,
@@ -70,7 +68,6 @@ export function TeamEditDialog({ open, onOpenChange, team, onSave, saving }: Tea
       setForm({
         name: team.name ?? '',
         league: team.league ?? '',
-        division: team.division ?? '',
         age_group: team.age_group ?? 'herren',
         season_phase_id: team.season_phase_id ?? '',
         is_active: team.is_active ?? true,
@@ -80,7 +77,6 @@ export function TeamEditDialog({ open, onOpenChange, team, onSave, saving }: Tea
       setForm({
         name: '',
         league: '',
-        division: '',
         age_group: 'herren',
         season_phase_id: activePhase?.id ?? phases?.[0]?.id ?? '',
         is_active: true,
@@ -119,16 +115,6 @@ export function TeamEditDialog({ open, onOpenChange, team, onSave, saving }: Tea
               value={form.league}
               onChange={(e) => setForm((f) => ({ ...f, league: e.target.value }))}
               placeholder="z.B. Bezirksliga"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="team-division">Staffel</Label>
-            <Input
-              id="team-division"
-              value={form.division}
-              onChange={(e) => setForm((f) => ({ ...f, division: e.target.value }))}
-              placeholder="z.B. Staffel 3"
             />
           </div>
 

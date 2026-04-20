@@ -1437,13 +1437,12 @@ const TEAM_IMPORT_COLS: { key: string; label: string; required?: boolean }[] = [
   { key: 'name', label: 'Mannschaftsname', required: true },
   { key: 'league', label: 'Liga', required: true },
   { key: 'age_group', label: 'Altersgruppe' },
-  { key: 'division', label: 'Spielklasse' },
 ];
 
 const TEAM_HEADER_ALIASES: Record<string, string> = {
   mannschaft: 'name', mannschaftsname: 'name', team: 'name', teamname: 'name',
   heimmannschaft: 'name',
-  liga: 'league', staffel: 'league', spielklasse: 'division', klasse: 'division',
+  liga: 'league', staffel: 'league', spielklasse: 'league', klasse: 'league',
   altersgruppe: 'age_group', altersklasse: 'age_group',
 };
 
@@ -1547,7 +1546,7 @@ function TeamImportTab() {
       );
       if (isDuplicate) errors.push('Duplikat');
 
-      return { name: mapped.name, league: mapped.league, age_group: ageGroup, division: mapped.division || null, errors, isDuplicate };
+      return { name: mapped.name, league: mapped.league, age_group: ageGroup, errors, isDuplicate };
     });
   }, [step, rawRows, mapping, existingTeams, selectedPhaseId]);
 
@@ -1559,7 +1558,6 @@ function TeamImportTab() {
         name: r.name,
         league: r.league,
         age_group: r.age_group as any,
-        division: r.division,
         season_phase_id: selectedPhaseId,
         is_active: true,
       }));
@@ -1577,12 +1575,12 @@ function TeamImportTab() {
   });
 
   const downloadTemplate = () => {
-    const header = 'Mannschaftsname;Liga;Altersgruppe;Spielklasse';
+    const header = 'Mannschaftsname;Liga;Altersgruppe';
     const examples = [
-      'TTC Zaberfeld;Bezirksliga;herren;',
-      'TTC Zaberfeld II;Kreisliga A Gr. 2;herren;',
-      'TTC Zaberfeld;Bezirksliga VR;jungen_18;',
-      'TTC Zaberfeld;Bezirksliga;damen;',
+      'TTC Zaberfeld;Bezirksliga;herren',
+      'TTC Zaberfeld II;Kreisliga A Gr. 2;herren',
+      'TTC Zaberfeld;Bezirksliga VR;jungen_18',
+      'TTC Zaberfeld;Bezirksliga;damen',
     ].join('\n');
     const blob = new Blob(['\uFEFF' + header + '\n' + examples], { type: 'text/csv;charset=utf-8' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'mannschaften_vorlage.csv'; a.click();
@@ -1691,7 +1689,6 @@ function TeamImportTab() {
                       <TableHead>Name</TableHead>
                       <TableHead>Liga</TableHead>
                       <TableHead>Altersgruppe</TableHead>
-                      <TableHead>Spielklasse</TableHead>
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1701,7 +1698,6 @@ function TeamImportTab() {
                         <TableCell>{r.name || '–'}</TableCell>
                         <TableCell>{r.league || '–'}</TableCell>
                         <TableCell>{r.age_group}</TableCell>
-                        <TableCell>{r.division || '–'}</TableCell>
                         <TableCell>
                           {r.errors.length > 0
                             ? <Badge variant="destructive" className="text-xs">{r.errors.join(', ')}</Badge>

@@ -17,7 +17,6 @@ interface TeamWithMatchCount {
   id: string;
   name: string;
   league: string | null;
-  division: string | null;
   age_group: AgeGroup;
   matchCount: number;
   nextMatch: string | null;
@@ -33,7 +32,7 @@ export default function Schedule() {
 
       const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
-        .select('id, name, league, division, age_group')
+        .select('id, name, league, age_group')
         .eq('season_phase_id', currentSeason.id)
         .eq('is_active', true)
         .order('name');
@@ -132,7 +131,6 @@ function TeamSection({ title, teams }: { title: string; teams: TeamWithMatchCoun
                 {team.league && (
                   <p className="text-sm text-muted-foreground">
                     {team.league}
-                    {team.division ? ` · ${team.division}` : ''}
                   </p>
                 )}
               </CardHeader>

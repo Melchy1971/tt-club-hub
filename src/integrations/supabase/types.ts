@@ -936,7 +936,6 @@ export type Database = {
           age_group: Database["public"]["Enums"]["age_group"]
           captain_id: string | null
           created_at: string
-          division: string | null
           id: string
           is_active: boolean
           league: string | null
@@ -949,7 +948,6 @@ export type Database = {
           age_group?: Database["public"]["Enums"]["age_group"]
           captain_id?: string | null
           created_at?: string
-          division?: string | null
           id?: string
           is_active?: boolean
           league?: string | null
@@ -962,7 +960,6 @@ export type Database = {
           age_group?: Database["public"]["Enums"]["age_group"]
           captain_id?: string | null
           created_at?: string
-          division?: string | null
           id?: string
           is_active?: boolean
           league?: string | null

@@ -84,7 +84,7 @@ export const profileInfoService = {
       supabase.from('user_roles').select('role').eq('user_id', requesterUserId),
       supabase
         .from('team_members')
-        .select('team_id, position, teams(name, league, age_group, division, captain_id, season_phase_id, season_phases(name))')
+        .select('team_id, position, teams(name, league, age_group, captain_id, season_phase_id, season_phases(name))')
         .eq('member_id', member.id),
     ]);
 
@@ -163,7 +163,6 @@ export const profileInfoService = {
         name: team?.name ?? 'Unbenanntes Team',
         league: team?.league ?? null,
         ageGroup: team?.age_group ?? null,
-        division: team?.division ?? null,
         position: row.position ?? 0,
         isCaptain: team?.captain_id === member.id,
         seasonPhaseId: team?.season_phase_id ?? null,

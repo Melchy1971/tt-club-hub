@@ -16,7 +16,6 @@ export interface Team {
   /** @deprecated Alias auf season_cycle_id (DB-Spalte teams.season_id). */
   season_id: SeasonCycleId;
   age_group: AgeGroup;
-  division: string | null;
   captain_id: MemberId | null;
   is_active: boolean;
   readonly created_at: string;

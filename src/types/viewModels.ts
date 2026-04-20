@@ -11,7 +11,6 @@ export interface MemberTeamBadge {
   name: string;
   league: string | null;
   ageGroup: string | null;
-  division: string | null;
   position: number;
   isCaptain: boolean;
   seasonPhaseId: string | null;

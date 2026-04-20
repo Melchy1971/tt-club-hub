@@ -632,7 +632,7 @@ function TeamsAdminTab() {
     if (!search) return teams;
     const s = search.toLowerCase();
     return teams.filter((t) =>
-      [t.name, t.league, t.division].some((f) => (f ?? '').toLowerCase().includes(s))
+      [t.name, t.league].some((f) => (f ?? '').toLowerCase().includes(s))
     );
   }, [teams, search]);
 
@@ -642,7 +642,6 @@ function TeamsAdminTab() {
         const { error } = await supabase.from('teams').update({
           name: data.name,
           league: data.league || null,
-          division: data.division || null,
           age_group: data.age_group,
           season_phase_id: data.season_phase_id || null,
           is_active: data.is_active,
@@ -652,7 +651,6 @@ function TeamsAdminTab() {
         const { error } = await supabase.from('teams').insert({
           name: data.name,
           league: data.league || null,
-          division: data.division || null,
           age_group: data.age_group,
           season_phase_id: data.season_phase_id || null,
           is_active: data.is_active,
@@ -724,7 +722,6 @@ function TeamsAdminTab() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Liga</TableHead>
-                <TableHead>Staffel</TableHead>
                 <TableHead>Spieler</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-32">Aktionen</TableHead>
@@ -735,7 +732,6 @@ function TeamsAdminTab() {
                 <TableRow key={t.id}>
                   <TableCell className="font-medium">{t.name}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{t.league ?? '–'}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{t.division ?? '–'}</TableCell>
                   <TableCell className="text-sm">{t.team_members?.[0]?.count ?? 0}</TableCell>
                   <TableCell>
                     <Badge variant={t.is_active ? 'default' : 'secondary'}>

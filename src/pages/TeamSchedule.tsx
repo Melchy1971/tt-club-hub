@@ -129,7 +129,6 @@ export default function TeamSchedule() {
             <h1 className="page-title">{team?.name ?? 'Spielplan'}</h1>
             <p className="page-description">
               {team?.league}
-              {team?.division ? ` · ${team.division}` : ''}
             </p>
           </div>
         </div>
