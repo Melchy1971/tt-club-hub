@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      board_members: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          member_id: string | null
+          notes: string | null
+          position: string
+          term_end: string | null
+          term_start: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          member_id?: string | null
+          notes?: string | null
+          position: string
+          term_end?: string | null
+          term_start?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          member_id?: string | null
+          notes?: string | null
+          position?: string
+          term_end?: string | null
+          term_start?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "board_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       club_settings: {
         Row: {
           association: string | null
