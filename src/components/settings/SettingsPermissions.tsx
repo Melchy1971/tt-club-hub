@@ -94,14 +94,10 @@ export default function SettingsPermissions() {
 
   const updatePermMut = useMutation({
     mutationFn: async ({ role, module, level }: { role: DbAppRole; module: string; level: DbPermissionLevel }) => {
-      const existing = permissions.find((p) => p.role === role && p.module === module);
-      if (existing) {
-        const { error } = await supabase.from('role_module_permissions').update({ level }).eq('id', existing.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('role_module_permissions').insert({ role, module, level });
-        if (error) throw error;
-      }
+      const { error } = await (supabase as any)
+        .from('role_module_permissions')
+        .upsert({ role, module, level }, { onConflict: 'role,module' });
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['role-module-permissions'] });
