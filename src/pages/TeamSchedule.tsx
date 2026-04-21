@@ -61,7 +61,7 @@ export default function TeamSchedule() {
   const [lineupMatch, setLineupMatch] = useState<ScheduleMatch | null>(null);
   const [bulkPinOpen, setBulkPinOpen] = useState(false);
   const [substituteMatch, setSubstituteMatch] = useState<ScheduleMatch | null>(null);
-  const { profile } = useAuth();
+  const { user, member } = useAuth();
 
   const { data: team } = useQuery({
     queryKey: ['team', teamId],
@@ -395,7 +395,7 @@ export default function TeamSchedule() {
           members={teamMembers ?? []}
           open={!!substituteMatch}
           onOpenChange={(open) => { if (!open) setSubstituteMatch(null); }}
-          userId={profile?.user_id ?? ''}
+          userId={user?.id ?? ''}
         />
       )}
     </div>
