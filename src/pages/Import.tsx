@@ -667,18 +667,20 @@ function ScheduleImportTab() {
       if (!firstTeam) throw new Error('Kein Team gefunden');
       const seasonId = firstTeam.season_id ?? null;
 
-      // Resolve Spiellokal locationIds → venue UUIDs
+      // Resolve Spiellokal locationIds → venue UUIDs (by name match)
       const uniqueLocationIds = [...new Set(parsed.map((r) => r.locationId).filter((id): id is number => id !== null))];
       const locationIdToVenueId = new Map<number, string>();
 
       if (uniqueLocationIds.length > 0) {
+        const venueNames = uniqueLocationIds.map((id) => `Spiellokal ${id}`);
         const { data: existingVenues } = await supabase
           .from('venues')
-          .select('id, location_id')
-          .in('location_id', uniqueLocationIds);
+          .select('id, name')
+          .in('name', venueNames);
 
         for (const v of existingVenues ?? []) {
-          if (v.location_id != null) locationIdToVenueId.set(v.location_id, v.id);
+          const match = v.name.match(/^Spiellokal (\d+)$/);
+          if (match) locationIdToVenueId.set(parseInt(match[1], 10), v.id);
         }
 
         // Auto-create venues for unknown location IDs
@@ -686,7 +688,7 @@ function ScheduleImportTab() {
           if (!locationIdToVenueId.has(locId)) {
             const { data: created, error } = await supabase
               .from('venues')
-              .insert({ name: `Spiellokal ${locId}`, location_id: locId, is_home_venue: false })
+              .insert({ name: `Spiellokal ${locId}`, is_home_venue: false })
               .select('id')
               .single();
             if (!error && created) locationIdToVenueId.set(locId, created.id);
