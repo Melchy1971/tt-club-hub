@@ -89,19 +89,30 @@ export default function Substitutes() {
   });
 
   const { data: requests, isLoading: requestsLoading } = useQuery({
-    queryKey: ['substitute-requests', currentSeason?.id],
+    queryKey: ['substitute-requests'],
     queryFn: async () => {
-      if (!matches?.length) return [];
-      const matchIds = matches.map((m) => m.id);
       const { data, error } = await supabase
         .from('substitute_requests')
         .select('*')
-        .in('match_id', matchIds)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as SubstituteRequest[];
     },
-    enabled: !!matches?.length,
+  });
+
+  const { data: allMatches } = useQuery({
+    queryKey: ['all-schedule-matches'],
+    queryFn: async () => {
+      const matchIds = [...new Set((requests ?? []).map((r) => r.match_id))];
+      if (!matchIds.length) return [];
+      const { data, error } = await supabase
+        .from('schedule_matches')
+        .select('*')
+        .in('id', matchIds);
+      if (error) throw error;
+      return data as ScheduleMatch[];
+    },
+    enabled: !!(requests?.length),
   });
 
   const { data: unavailabilities } = useQuery({
@@ -122,7 +133,8 @@ export default function Substitutes() {
 
   const teamMap = new Map((teams ?? []).map((t) => [t.id, t]));
   const memberMap = new Map((members ?? []).map((m) => [m.id, m]));
-  const matchMap = new Map((matches ?? []).map((m) => [m.id, m]));
+  const combinedMatches = [...(matches ?? []), ...(allMatches ?? [])];
+  const matchMap = new Map(combinedMatches.map((m) => [m.id, m]));
 
   // Matches that have unavailable players
   const matchesWithUnavailable = (matches ?? []).filter((m) =>
