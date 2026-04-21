@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      board_members: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          member_id: string | null
+          notes: string | null
+          position: string
+          term_end: string | null
+          term_start: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          member_id?: string | null
+          notes?: string | null
+          position: string
+          term_end?: string | null
+          term_start?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          member_id?: string | null
+          notes?: string | null
+          position?: string
+          term_end?: string | null
+          term_start?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "board_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       club_settings: {
         Row: {
           association: string | null
@@ -1024,39 +1071,39 @@ export type Database = {
           age_group: Database["public"]["Enums"]["age_group"]
           captain_id: string | null
           created_at: string
+          division: string | null
           id: string
           is_active: boolean
           league: string | null
           name: string
           season_id: string | null
           season_phase_id: string | null
-          team_size: number | null
           updated_at: string
         }
         Insert: {
           age_group?: Database["public"]["Enums"]["age_group"]
           captain_id?: string | null
           created_at?: string
+          division?: string | null
           id?: string
           is_active?: boolean
           league?: string | null
           name: string
           season_id?: string | null
           season_phase_id?: string | null
-          team_size?: number | null
           updated_at?: string
         }
         Update: {
           age_group?: Database["public"]["Enums"]["age_group"]
           captain_id?: string | null
           created_at?: string
+          division?: string | null
           id?: string
           is_active?: boolean
           league?: string | null
           name?: string
           season_id?: string | null
           season_phase_id?: string | null
-          team_size?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -1149,7 +1196,6 @@ export type Database = {
           created_at: string
           id: string
           is_home_venue: boolean
-          location_id: number | null
           name: string
           notes: string | null
           street: string | null
@@ -1161,7 +1207,6 @@ export type Database = {
           created_at?: string
           id?: string
           is_home_venue?: boolean
-          location_id?: number | null
           name: string
           notes?: string | null
           street?: string | null
@@ -1173,7 +1218,6 @@ export type Database = {
           created_at?: string
           id?: string
           is_home_venue?: boolean
-          location_id?: number | null
           name?: string
           notes?: string | null
           street?: string | null
