@@ -1,14 +1,31 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, Edit, Trophy, Home, Plane, MapPin, KeyRound, Users, ClipboardList } from 'lucide-react';
+import { ArrowLeft, Edit, Trophy, Home, Plane, MapPin, KeyRound, Users, ClipboardList, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { EditResultDialog } from '@/components/schedule/EditResultDialog';
 import { EditMatchDialog } from '@/components/schedule/EditMatchDialog';
 import { BulkPinCodeDialog } from '@/components/schedule/BulkPinCodeDialog';
@@ -43,6 +60,8 @@ export default function TeamSchedule() {
   const [availabilityMatch, setAvailabilityMatch] = useState<ScheduleMatch | null>(null);
   const [lineupMatch, setLineupMatch] = useState<ScheduleMatch | null>(null);
   const [bulkPinOpen, setBulkPinOpen] = useState(false);
+  const [substituteMatch, setSubstituteMatch] = useState<ScheduleMatch | null>(null);
+  const { profile } = useAuth();
 
   const { data: team } = useQuery({
     queryKey: ['team', teamId],
@@ -82,6 +101,20 @@ export default function TeamSchedule() {
   });
 
   const venueMap = new Map((venues ?? []).map((v) => [v.id, v]));
+
+  // Fetch team members for substitute request
+  const { data: teamMembers } = useQuery({
+    queryKey: ['team-members', teamId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('team_members')
+        .select('member_id, members(id, first_name, last_name)')
+        .eq('team_id', teamId!);
+      if (error) throw error;
+      return (data ?? []).map((tm: any) => tm.members).filter(Boolean);
+    },
+    enabled: !!teamId,
+  });
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: ScheduleMatchUpdate }) => {
@@ -256,6 +289,14 @@ export default function TeamSchedule() {
                         <div className="flex items-center gap-1">
                           <Tooltip>
                             <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" onClick={() => setSubstituteMatch(match)}>
+                                <UserPlus className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Ersatzanfrage</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
                               <Button variant="ghost" size="icon" onClick={() => setAvailabilityMatch(match)}>
                                 <Users className="h-4 w-4" />
                               </Button>
@@ -345,6 +386,102 @@ export default function TeamSchedule() {
           onOpenChange={(open) => !open && setLineupMatch(null)}
         />
       )}
+
+      {substituteMatch && teamId && (
+        <SubstituteRequestDialog
+          match={substituteMatch}
+          teamId={teamId}
+          teamName={team?.name ?? ''}
+          members={teamMembers ?? []}
+          open={!!substituteMatch}
+          onOpenChange={(open) => { if (!open) setSubstituteMatch(null); }}
+          userId={profile?.user_id ?? ''}
+        />
+      )}
     </div>
+  );
+}
+
+// ─── Inline Substitute Request Dialog ────────────────────────────────────────
+
+interface SubstituteDialogProps {
+  match: ScheduleMatch;
+  teamId: string;
+  teamName: string;
+  members: { id: string; first_name: string; last_name: string }[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  userId: string;
+}
+
+function SubstituteRequestDialog({ match, teamId, teamName, members, open, onOpenChange, userId }: SubstituteDialogProps) {
+  const [memberId, setMemberId] = useState('');
+  const [note, setNote] = useState('');
+  const queryClient = useQueryClient();
+
+  const createMut = useMutation({
+    mutationFn: async () => {
+      if (!memberId) throw new Error('Spieler wählen');
+      const { error } = await supabase.from('substitute_requests').insert({
+        match_id: match.id,
+        team_id: teamId,
+        requesting_member_id: memberId,
+        created_by: userId,
+        note: note || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['substitute-requests'] });
+      toast.success('Ersatzanfrage erstellt');
+      setMemberId('');
+      setNote('');
+      onOpenChange(false);
+    },
+    onError: (e: Error) => toast.error(e.message || 'Fehler'),
+  });
+
+  function formatGD(iso: string) {
+    const [y, m, d] = iso.split('-');
+    return `${d}.${m}.${y}`;
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Ersatzanfrage erstellen</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="rounded-md border p-3 bg-muted/50 text-sm space-y-1">
+            <p className="font-medium">{match.home_team} – {match.away_team}</p>
+            <p className="text-muted-foreground">{formatGD(match.match_date)} · {teamName}</p>
+          </div>
+          <div className="space-y-2">
+            <Label>Fehlender Spieler</Label>
+            <Select value={memberId} onValueChange={setMemberId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Spieler wählen" />
+              </SelectTrigger>
+              <SelectContent>
+                {members.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.last_name}, {m.first_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Notiz (optional)</Label>
+            <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="z.B. Grund der Abwesenheit" rows={2} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Abbrechen</Button>
+          <Button onClick={() => createMut.mutate()} disabled={!memberId || createMut.isPending}>Erstellen</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
