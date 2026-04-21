@@ -124,6 +124,12 @@ export const PERMISSION_MODULE_LABELS_DE: Record<ModuleKey, string> = {
   board: MODULE_LABELS_DE.board,
   settings: MODULE_LABELS_DE.settings,
   import: MODULE_LABELS_DE.import,
+  substitutes: MODULE_LABELS_DE.substitutes,
+  training: MODULE_LABELS_DE.training,
+  security: MODULE_LABELS_DE.security,
+  notifications: MODULE_LABELS_DE.notifications,
+  privacy: MODULE_LABELS_DE.privacy,
+  info: MODULE_LABELS_DE.info,
 };
 
 export const MATCH_STATUS_LABELS_DE: Record<MatchStatus, string> = {
