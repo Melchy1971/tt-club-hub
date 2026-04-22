@@ -4,6 +4,7 @@ import {
   CalendarDays,
   UserCheck,
   Dumbbell,
+  TableProperties,
   MessageSquare,
   Landmark,
   Upload,

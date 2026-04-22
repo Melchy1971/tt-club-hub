@@ -13,6 +13,7 @@ export type AppModuleKey =
   | 'schedule'
   | 'substitutes'
   | 'training'
+  | 'standings'
   | 'communication'
   | 'board'
   | 'admin'
