@@ -14,6 +14,7 @@ export const MODULE_KEYS = [
   'import',
   'substitutes',
   'training',
+  'standings',
   'security',
   'notifications',
   'privacy',
