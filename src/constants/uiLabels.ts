@@ -35,6 +35,7 @@ export const MODULE_LABELS_DE: Record<AppModuleKey, string> = {
   schedule: 'Spielplan',
   substitutes: 'Ersatzstellung',
   training: 'Training',
+  standings: 'Tabelle',
   communication: 'Kommunikation',
   board: 'Vorstand',
   admin: 'Administration',
