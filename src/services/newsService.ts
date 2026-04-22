@@ -31,7 +31,8 @@ export const newsService = {
       if (filter.audience === 'public') q = q.eq('is_published', true);
       if (filter.audience === 'internal') q = q.eq('is_published', false);
 
-      q = q.order('created_at', { ascending: false });
+      q = q.order('published_at', { ascending: false, nullsFirst: false })
+           .order('created_at', { ascending: false });
 
       const limit = filter.limit ?? 20;
       if (filter.offset != null) {
