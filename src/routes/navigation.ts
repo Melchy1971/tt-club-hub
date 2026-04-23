@@ -77,6 +77,15 @@ export const ROUTES: RouteConfig[] = [
     guard: { type: 'permission', permission: 'training:read' },
   },
   {
+    path: '/tabelle',
+    label: MODULE_LABELS_DE.standings,
+    moduleKey: 'standings',
+    icon: TableProperties,
+    group: 'sport',
+    navVisibility: 'sidebar',
+    guard: { type: 'module', module: 'standings', level: 'READ' },
+  },
+  {
     path: '/kommunikation',
     label: MODULE_LABELS_DE.communication,
     moduleKey: 'communication',
