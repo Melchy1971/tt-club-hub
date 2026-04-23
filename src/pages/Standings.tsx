@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Trophy } from 'lucide-react';
+import { Trophy, ExternalLink } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -86,7 +87,7 @@ export default function Standings() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('teams')
-        .select('id, name, age_group, league, division')
+        .select('id, name, age_group, league, division, clicktt_url')
         .eq('is_active', true)
         .order('age_group')
         .order('name');
@@ -146,6 +147,14 @@ export default function Standings() {
                 <Badge variant="secondary" className="font-normal">
                   {getAgeGroupLabel(team.age_group)}
                 </Badge>
+                {team.clicktt_url && (
+                  <a href={team.clicktt_url} target="_blank" rel="noopener noreferrer" className="ml-auto">
+                    <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Click-TT
+                    </Button>
+                  </a>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent>
