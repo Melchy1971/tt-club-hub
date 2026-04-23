@@ -70,3 +70,11 @@ Service-seitig (vor Upsert/Insert):
 ### Spielverschiebung
 - Reine Datums-/Zeitverschiebung beeinflusst Gültigkeit nicht.
 - Wenn bei Verschiebung auch `team_id` oder `season_phase_id` geändert wird, greift Revalidierung aller vorhandenen Availability- und Lineup-Einträge.
+
+## Ergebniseingabe
+
+Pro Spiel können Ergebnisse über `home_score` und `away_score` in der Tabelle `schedule_matches` erfasst werden. Nach TT-Regeln beträgt das Maximalergebnis 9:9. Die Ergebniseingabe ist für Admin, Vorstand und Trainer freigeschaltet.
+
+## Tabelle / Standings
+
+Der Bereich „Tabelle" unter Sportbetrieb zeigt alle aktiven Mannschaften mit ihrem Liga-Badge und einem Link zur jeweiligen Click-TT Tabelle (Feld `clicktt_url` in der Tabelle `teams`). Es wird keine eigene Tabelle auf Basis der Spielergebnisse berechnet – stattdessen wird auf die offizielle Click-TT Tabelle verlinkt.

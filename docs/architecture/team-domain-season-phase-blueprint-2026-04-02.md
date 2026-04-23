@@ -18,7 +18,7 @@ Damit werden Team-CRUD, Zuordnungs-Lebenszyklus und Saisonschnitt sauber entkopp
 
 - `Team`
   - Pflicht: `id`, `name`, `season_phase_id`, `season_cycle_id`
-  - Fachfelder: `league`, `division`, `age_group`, `captain_id`, `is_active`
+  - Fachfelder: `league`, `division`, `age_group`, `captain_id`, `is_active`, `team_size` (4 | 6 | null), `clicktt_url` (Link zur Click-TT Tabelle)
 - `TeamMember`
   - technisch-operativ: `team_id`, `member_id`, `position`
   - Fokus: aktueller Kaderzustand

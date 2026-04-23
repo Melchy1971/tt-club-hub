@@ -5,6 +5,7 @@
 Die Team-Domain trennt ab jetzt klar zwischen:
 
 - **`teams`**: Team-Stammdaten (Liga, Altersklasse, `season_phase_id`, Kapitän).
+ - Zusätzliche Felder: `team_size` (4 oder 6 für 4er/6er-Mannschaft), `clicktt_url` (Link zur Click-TT Tabelle).
 - **`team_members`**: technische Kader-/Positionszuordnung pro Team.
 - **`member_team_assignments` (Service-View)**: fachliche Sicht pro Mitglied inkl. Saisonphase und Kapitänsflag (ohne eigene DB-Tabelle).
 
