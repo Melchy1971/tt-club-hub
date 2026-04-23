@@ -683,6 +683,7 @@ function TeamsAdminTab() {
           season_phase_id: data.season_phase_id || null,
           team_size: data.team_size ?? null,
           is_active: data.is_active,
+          clicktt_url: data.clicktt_url || null,
         }).eq('id', id);
         if (error) throw error;
       } else {
@@ -693,6 +694,7 @@ function TeamsAdminTab() {
           season_phase_id: data.season_phase_id || null,
           team_size: data.team_size ?? null,
           is_active: data.is_active,
+          clicktt_url: data.clicktt_url || null,
         } as any);
         if (error) throw error;
       }
