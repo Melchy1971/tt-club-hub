@@ -1070,6 +1070,7 @@ export type Database = {
         Row: {
           age_group: Database["public"]["Enums"]["age_group"]
           captain_id: string | null
+          clicktt_url: string | null
           created_at: string
           division: string | null
           id: string
@@ -1083,6 +1084,7 @@ export type Database = {
         Insert: {
           age_group?: Database["public"]["Enums"]["age_group"]
           captain_id?: string | null
+          clicktt_url?: string | null
           created_at?: string
           division?: string | null
           id?: string
@@ -1096,6 +1098,7 @@ export type Database = {
         Update: {
           age_group?: Database["public"]["Enums"]["age_group"]
           captain_id?: string | null
+          clicktt_url?: string | null
           created_at?: string
           division?: string | null
           id?: string
