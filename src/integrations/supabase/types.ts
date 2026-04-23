@@ -1079,6 +1079,7 @@ export type Database = {
           name: string
           season_id: string | null
           season_phase_id: string | null
+          team_size: number | null
           updated_at: string
         }
         Insert: {
@@ -1093,6 +1094,7 @@ export type Database = {
           name: string
           season_id?: string | null
           season_phase_id?: string | null
+          team_size?: number | null
           updated_at?: string
         }
         Update: {
@@ -1107,6 +1109,7 @@ export type Database = {
           name?: string
           season_id?: string | null
           season_phase_id?: string | null
+          team_size?: number | null
           updated_at?: string
         }
         Relationships: [
