@@ -31,6 +31,7 @@ interface TeamFormData {
   season_phase_id: string;
   team_size: 4 | 6 | null;
   is_active: boolean;
+  clicktt_url: string;
 }
 
 interface TeamEditDialogProps {
@@ -49,6 +50,7 @@ export function TeamEditDialog({ open, onOpenChange, team, onSave, saving }: Tea
     season_phase_id: '',
     team_size: null,
     is_active: true,
+    clicktt_url: '',
   });
 
   const { data: phases } = useQuery({
@@ -74,6 +76,7 @@ export function TeamEditDialog({ open, onOpenChange, team, onSave, saving }: Tea
         season_phase_id: team.season_phase_id ?? '',
         team_size: (team.team_size === 4 || team.team_size === 6) ? team.team_size : null,
         is_active: team.is_active ?? true,
+        clicktt_url: team.clicktt_url ?? '',
       });
     } else {
       const activePhase = phases?.find((p) => p.is_active);
@@ -84,6 +87,7 @@ export function TeamEditDialog({ open, onOpenChange, team, onSave, saving }: Tea
         season_phase_id: activePhase?.id ?? phases?.[0]?.id ?? '',
         team_size: null,
         is_active: true,
+        clicktt_url: '',
       });
     }
   }, [team, open, phases]);
@@ -170,6 +174,17 @@ export function TeamEditDialog({ open, onOpenChange, team, onSave, saving }: Tea
               onCheckedChange={(v) => setForm((f) => ({ ...f, is_active: v }))}
             />
             <Label>Aktiv</Label>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="team-clicktt-url">Click-TT Tabellen-Link</Label>
+            <Input
+              id="team-clicktt-url"
+              type="url"
+              value={form.clicktt_url}
+              onChange={(e) => setForm((f) => ({ ...f, clicktt_url: e.target.value }))}
+              placeholder="https://www.mytischtennis.de/click-tt/..."
+            />
           </div>
 
           <DialogFooter>
