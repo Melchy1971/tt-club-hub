@@ -97,7 +97,7 @@ export function TeamEditDialog({ open, onOpenChange, team, onSave, saving }: Tea
     onSave(form, team?.id);
   };
 
-  const isValid = form.name.trim() && form.league.trim() && form.season_phase_id && form.team_size != null;
+  const isValid = form.name.trim().length > 0 && form.league.trim().length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
