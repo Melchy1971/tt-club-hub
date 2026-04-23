@@ -71,6 +71,7 @@ Typische Admin-Operationen:
 Verantwortlich für:
 
 - paginierte Teamlisten mit Kadergröße, Captain, Saisonkontext
+- Team-Bearbeitung inkl. Typ (team_size: 4er/6er) und Click-TT Tabellen-Link (clicktt_url)
 - Sammelaktionen wie Aktivierung/Deaktivierung, Phasenwechsel vorbereiten
 - Teamlöschung nur mit Vorabprüfung auf abhängige Spiele/Kaderzuordnungen
 
