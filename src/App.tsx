@@ -30,6 +30,7 @@ import SecurityPage from './pages/Security';
 import NotificationsPage from './pages/Notifications';
 import InfoPage from './pages/InfoPage';
 import PrivacyPage from './pages/Privacy';
+import Standings from './pages/Standings';
 
 type AppRouteComponentMap = Record<string, React.ComponentType>;
 
@@ -42,6 +43,7 @@ const APP_ROUTE_COMPONENTS: AppRouteComponentMap = {
   '/spielplan': Schedule,
   '/ersatzstellung': Substitutes,
   '/training': Training,
+  '/tabelle': Standings,
   '/kommunikation': Communication,
   '/vorstand': Board,
   '/import': ImportPage,
