@@ -1,4 +1,4 @@
-import { LogOut } from 'lucide-react';
+import { LogOut, Eye } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
@@ -21,9 +21,16 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export function AppSidebar() {
-  const { signOut, user } = useAuth();
+  const { signOut, user, actualRole, previewRole, setPreviewRole } = useAuth();
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const location = useLocation();
@@ -45,6 +52,9 @@ export function AppSidebar() {
   const initials = user?.name
     ? user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
     : user?.email?.[0]?.toUpperCase() ?? '?';
+
+  // Switcher nur für Developer/Admin (echte Rolle, nicht Preview)
+  const canUseRoleSwitcher = actualRole === 'developer' || actualRole === 'admin';
 
   const renderGroup = (label: string, items: RouteConfig[]) => {
     if (items.length === 0) return null;
