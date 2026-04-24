@@ -72,7 +72,7 @@ function NewsTab() {
           onClick={() => setShowPublishedOnly(!showPublishedOnly)}
         >
           <Filter className="mr-1.5 h-3.5 w-3.5" />
-          {showPublishedOnly ? 'Nur veröffentlicht' : 'Alle anzeigen'}
+          {showPublishedOnly ? 'Auch Entwürfe anzeigen' : 'Nur veröffentlichte anzeigen'}
         </Button>
       </div>
 
