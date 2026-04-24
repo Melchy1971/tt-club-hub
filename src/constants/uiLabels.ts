@@ -132,6 +132,7 @@ export const PERMISSION_MODULE_LABELS_DE: Record<ModuleKey, string> = {
   notifications: MODULE_LABELS_DE.notifications,
   privacy: MODULE_LABELS_DE.privacy,
   info: MODULE_LABELS_DE.info,
+  seasons: MODULE_LABELS_DE.seasons,
 };
 
 export const MATCH_STATUS_LABELS_DE: Record<MatchStatus, string> = {
