@@ -57,6 +57,7 @@ export const SYSTEM_APP_ROLE_PERMISSIONS: Record<string, Record<ModuleKey, Permi
     notifications: 'WRITE',
     privacy: 'WRITE',
     info: 'WRITE',
+    seasons: 'WRITE',
   },
   admin: {
     dashboard: 'WRITE',
@@ -74,6 +75,7 @@ export const SYSTEM_APP_ROLE_PERMISSIONS: Record<string, Record<ModuleKey, Permi
     notifications: 'WRITE',
     privacy: 'WRITE',
     info: 'WRITE',
+    seasons: 'WRITE',
   },
   vorstand: {
     dashboard: 'READ',
@@ -91,6 +93,7 @@ export const SYSTEM_APP_ROLE_PERMISSIONS: Record<string, Record<ModuleKey, Permi
     notifications: 'READ',
     privacy: 'READ',
     info: 'READ',
+    seasons: 'READ',
   },
   trainer: {
     dashboard: 'READ',
@@ -108,6 +111,7 @@ export const SYSTEM_APP_ROLE_PERMISSIONS: Record<string, Record<ModuleKey, Permi
     notifications: 'READ',
     privacy: 'NONE',
     info: 'READ',
+    seasons: 'NONE',
   },
   spieler: {
     dashboard: 'READ',
@@ -125,6 +129,7 @@ export const SYSTEM_APP_ROLE_PERMISSIONS: Record<string, Record<ModuleKey, Permi
     notifications: 'READ',
     privacy: 'NONE',
     info: 'READ',
+    seasons: 'NONE',
   },
   mitglied: {
     dashboard: 'READ',
@@ -142,6 +147,7 @@ export const SYSTEM_APP_ROLE_PERMISSIONS: Record<string, Record<ModuleKey, Permi
     notifications: 'READ',
     privacy: 'NONE',
     info: 'READ',
+    seasons: 'NONE',
   },
   fördermitglied: {
     dashboard: 'READ',
@@ -159,5 +165,6 @@ export const SYSTEM_APP_ROLE_PERMISSIONS: Record<string, Record<ModuleKey, Permi
     notifications: 'NONE',
     privacy: 'NONE',
     info: 'READ',
+    seasons: 'NONE',
   },
 };
