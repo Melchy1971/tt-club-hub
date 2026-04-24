@@ -157,12 +157,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await loadUserData(data.session);
   }, [loadUserData]);
 
+  const setPreviewRole = useCallback((role: AppRole | null) => {
+    setPreviewRoleState(role);
+    if (typeof window === 'undefined') return;
+    try {
+      if (role) {
+        window.localStorage.setItem(PREVIEW_ROLE_STORAGE_KEY, role);
+      } else {
+        window.localStorage.removeItem(PREVIEW_ROLE_STORAGE_KEY);
+      }
+    } catch {
+      // ignore storage errors (private mode etc.)
+    }
+  }, []);
+
+  // Preview-Rolle wird beim Logout zurückgesetzt
+  const wrappedSignOut = useCallback(async () => {
+    setPreviewRoleState(null);
+    if (typeof window !== 'undefined') {
+      try { window.localStorage.removeItem(PREVIEW_ROLE_STORAGE_KEY); } catch { /* ignore */ }
+    }
+    await signOut();
+  }, [signOut]);
+
+  // Effektive Rolle: Preview überschreibt Original (nur wenn authentifiziert)
+  const effectiveRole = previewRole && state.isAuthenticated ? previewRole : state.role;
+  const effectiveRoles = previewRole && state.isAuthenticated ? [previewRole] : state.roles;
+
   return (
     <AuthContext.Provider
       value={{
         ...state,
+        role: effectiveRole,
+        roles: effectiveRoles,
+        actualRole: state.role,
+        actualRoles: state.roles,
+        previewRole,
+        setPreviewRole,
         refresh,
-        signOut,
+        signOut: wrappedSignOut,
       }}
     >
       {children}
