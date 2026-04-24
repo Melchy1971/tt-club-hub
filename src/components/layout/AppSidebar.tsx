@@ -1,4 +1,4 @@
-import { LogOut } from 'lucide-react';
+import { LogOut, Eye } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
@@ -21,9 +21,16 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export function AppSidebar() {
-  const { signOut, user } = useAuth();
+  const { signOut, user, actualRole, previewRole, setPreviewRole } = useAuth();
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const location = useLocation();
@@ -45,6 +52,9 @@ export function AppSidebar() {
   const initials = user?.name
     ? user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
     : user?.email?.[0]?.toUpperCase() ?? '?';
+
+  // Switcher nur für Developer/Admin (echte Rolle, nicht Preview)
+  const canUseRoleSwitcher = actualRole === 'developer' || actualRole === 'admin';
 
   const renderGroup = (label: string, items: RouteConfig[]) => {
     if (items.length === 0) return null;
@@ -110,6 +120,28 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-3 border-t border-sidebar-border">
+        {canUseRoleSwitcher && !collapsed && (
+          <div className="mb-2 rounded-md border border-dashed border-sidebar-border p-2 space-y-1.5">
+            <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-sidebar-foreground/60">
+              <Eye className="h-3 w-3" />
+              <span>Vorschau-Rolle</span>
+            </div>
+            <Select
+              value={previewRole ?? 'none'}
+              onValueChange={(value) => setPreviewRole(value === 'none' ? null : value)}
+            >
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Echte Rolle ({actualRole})</SelectItem>
+                <SelectItem value="mitglied">Member</SelectItem>
+                <SelectItem value="trainer">Mannschaftsführer</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         <NavLink
           to="/profil"
           className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
