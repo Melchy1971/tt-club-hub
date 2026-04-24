@@ -9,8 +9,20 @@ import {
 } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Session, User } from '@supabase/supabase-js';
-import type { AuthContextValue } from '@/types/auth';
+import type { AuthContextValue, AppRole } from '@/types/auth';
 import { resolveAuthUser, resolveSessionState } from '@/lib/auth/resolver';
+
+const PREVIEW_ROLE_STORAGE_KEY = 'dev_preview_role';
+
+const readStoredPreviewRole = (): AppRole | null => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const value = window.localStorage.getItem(PREVIEW_ROLE_STORAGE_KEY);
+    return value && value.length > 0 ? value : null;
+  } catch {
+    return null;
+  }
+};
 
 const initialContext: AuthContextValue = {
   user: null,
@@ -24,6 +36,10 @@ const initialContext: AuthContextValue = {
   problems: [],
   refresh: async () => {},
   signOut: async () => {},
+  actualRole: null,
+  actualRoles: [],
+  previewRole: null,
+  setPreviewRole: () => {},
 };
 
 const AuthContext = createContext<AuthContextValue>(initialContext);
@@ -33,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ...initialContext,
     isLoading: true,
   });
+  const [previewRole, setPreviewRoleState] = useState<AppRole | null>(() => readStoredPreviewRole());
   const requestVersionRef = useRef(0);
   const initializedRef = useRef(false);
 

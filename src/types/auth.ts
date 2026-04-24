@@ -191,6 +191,12 @@ export interface AuthContextValue {
   problems: AuthState['problems'];
   refresh: () => Promise<void>;
   signOut: () => Promise<void>;
+  /** Tatsächliche Rolle aus DB (ohne Preview-Override) */
+  actualRole: AuthState['role'];
+  actualRoles: AuthState['roles'];
+  /** Aktive Preview-Rolle (nur clientseitig, simuliert Sicht einer anderen Rolle) */
+  previewRole: AppRole | null;
+  setPreviewRole: (role: AppRole | null) => void;
 }
 
 export interface GuardResult {
