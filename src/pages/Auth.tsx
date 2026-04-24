@@ -102,6 +102,51 @@ export default function Auth() {
           <CardDescription>Vereinsverwaltung für Tischtennis</CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Dev-Vorschau-Modus: Sicht einer Rolle simulieren (wirkt nach erfolgreichem Login) */}
+          <div className="mb-4 rounded-lg border border-dashed border-border p-3 space-y-2">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Eye className="h-3.5 w-3.5" />
+              <span>Vorschau-Rolle (nach Login angewendet)</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={previewRole === null ? 'default' : 'outline'}
+                onClick={() => setPreviewRole(null)}
+              >
+                Echte Rolle
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={previewRole === 'mitglied' ? 'default' : 'outline'}
+                onClick={() => setPreviewRole('mitglied')}
+              >
+                <UserIcon className="mr-1.5 h-3.5 w-3.5" />
+                Member
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={previewRole === 'trainer' ? 'default' : 'outline'}
+                onClick={() => setPreviewRole('trainer')}
+              >
+                <Users className="mr-1.5 h-3.5 w-3.5" />
+                Mannschaftsführer
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={previewRole === 'admin' ? 'default' : 'outline'}
+                onClick={() => setPreviewRole('admin')}
+              >
+                <Shield className="mr-1.5 h-3.5 w-3.5" />
+                Admin
+              </Button>
+            </div>
+          </div>
+
           <Tabs defaultValue="login">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Anmelden</TabsTrigger>
