@@ -119,7 +119,7 @@ export const ROUTES: RouteConfig[] = [
     icon: Calendar,
     group: 'system',
     navVisibility: 'sidebar',
-    guard: { type: 'permission', permission: 'season:read' },
+    guard: { type: 'roles', roles: ['admin', 'developer'] },
   },
   {
     path: '/einstellungen',
