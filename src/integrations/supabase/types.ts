@@ -647,6 +647,36 @@ export type Database = {
         }
         Relationships: []
       }
+      permission_consistency_audit: {
+        Row: {
+          checked_at: string
+          id: string
+          is_consistent: boolean
+          issue_count: number
+          issues: Json
+          module: string
+          triggered_by: string
+        }
+        Insert: {
+          checked_at?: string
+          id?: string
+          is_consistent: boolean
+          issue_count?: number
+          issues?: Json
+          module: string
+          triggered_by?: string
+        }
+        Update: {
+          checked_at?: string
+          id?: string
+          is_consistent?: boolean
+          issue_count?: number
+          issues?: Json
+          module?: string
+          triggered_by?: string
+        }
+        Relationships: []
+      }
       role_module_permissions: {
         Row: {
           created_at: string
@@ -1237,6 +1267,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_seasons_permission_consistency: { Args: never; Returns: Json }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       is_admin_or_board: { Args: { _user_id: string }; Returns: boolean }
     }
