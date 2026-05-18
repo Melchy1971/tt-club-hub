@@ -115,8 +115,8 @@ export const ROLE_PERMISSIONS: Record<AppRole, Permission[]> = {
     'substitute:read',
     'substitute:write',
   ],
-  mitglied: ['member:read', 'team:read', 'match:read', 'season:read'],
-  fördermitglied: ['member:read', 'team:read', 'match:read', 'season:read'],
+  mitglied: ['team:read', 'match:read', 'season:read'],
+  fördermitglied: ['team:read', 'match:read', 'season:read'],
 };
 
 // === Auth-Fehler ===
