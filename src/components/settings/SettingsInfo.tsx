@@ -79,15 +79,25 @@ export default function SettingsInfo() {
           <div className="flex items-center gap-2">
             <Code2 className="h-5 w-5 text-primary" />
             <div>
-              <CardTitle>App-Informationen</CardTitle>
-              <CardDescription>Version und technische Details</CardDescription>
+              <CardTitle>Über uns</CardTitle>
+              <CardDescription>App-Informationen, Version und Support</CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+          <dl className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
             <InfoRow label="Version" value={toolMetadata?.version ?? '–'} />
             <InfoRow label="Build-Datum" value={toolMetadata?.buildDate ?? '–'} />
+            <div>
+              <dt className="text-muted-foreground">Support-E-Mail</dt>
+              <dd className="font-medium">
+                {toolMetadata?.supportEmail ? (
+                  <a href={`mailto:${toolMetadata.supportEmail}`} className="text-primary hover:underline">
+                    {toolMetadata.supportEmail}
+                  </a>
+                ) : '–'}
+              </dd>
+            </div>
           </dl>
 
           <Separator />
