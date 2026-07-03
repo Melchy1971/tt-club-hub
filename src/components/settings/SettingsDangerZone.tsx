@@ -11,6 +11,8 @@ import { AlertTriangle, Trash2 } from 'lucide-react';
 export default function SettingsDangerZone() {
   const [confirmText, setConfirmText] = useState('');
   const [isWiping, setIsWiping] = useState(false);
+  const [confirmMembersText, setConfirmMembersText] = useState('');
+  const [isWipingMembers, setIsWipingMembers] = useState(false);
   const queryClient = useQueryClient();
 
   const handleWipeAll = async () => {
@@ -23,6 +25,19 @@ export default function SettingsDangerZone() {
     }
     toast.success('Alle Vereinsdaten wurden gelöscht.');
     setConfirmText('');
+    queryClient.invalidateQueries();
+  };
+
+  const handleWipeMembers = async () => {
+    setIsWipingMembers(true);
+    const { error } = await supabase.rpc('admin_wipe_all_members' as any);
+    setIsWipingMembers(false);
+    if (error) {
+      toast.error('Fehler beim Löschen: ' + error.message);
+      return;
+    }
+    toast.success('Alle Mitglieder wurden gelöscht.');
+    setConfirmMembersText('');
     queryClient.invalidateQueries();
   };
 
@@ -80,13 +95,25 @@ export default function SettingsDangerZone() {
               </p>
             </div>
           </div>
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">
+              Gib zur Bestätigung „MITGLIEDER LÖSCHEN" ein:
+            </Label>
+            <Input
+              value={confirmMembersText}
+              onChange={(e) => setConfirmMembersText(e.target.value)}
+              placeholder="MITGLIEDER LÖSCHEN"
+              className="max-w-xs"
+            />
+          </div>
           <Button
             variant="destructive"
             size="sm"
-            onClick={() => toast.info('Diese Funktion ist noch nicht implementiert.')}
+            disabled={confirmMembersText !== 'MITGLIEDER LÖSCHEN' || isWipingMembers}
+            onClick={handleWipeMembers}
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            Alle Mitglieder löschen
+            {isWipingMembers ? 'Lösche…' : 'Alle Mitglieder unwiderruflich löschen'}
           </Button>
         </div>
 
