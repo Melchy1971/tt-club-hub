@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +10,21 @@ import { AlertTriangle, Trash2 } from 'lucide-react';
 
 export default function SettingsDangerZone() {
   const [confirmText, setConfirmText] = useState('');
+  const [isWiping, setIsWiping] = useState(false);
+  const queryClient = useQueryClient();
+
+  const handleWipeAll = async () => {
+    setIsWiping(true);
+    const { error } = await supabase.rpc('admin_wipe_all_data');
+    setIsWiping(false);
+    if (error) {
+      toast.error('Fehler beim Löschen: ' + error.message);
+      return;
+    }
+    toast.success('Alle Vereinsdaten wurden gelöscht.');
+    setConfirmText('');
+    queryClient.invalidateQueries();
+  };
 
   return (
     <Card className="border-destructive/50">
@@ -44,11 +61,11 @@ export default function SettingsDangerZone() {
           <Button
             variant="destructive"
             size="sm"
-            disabled={confirmText !== 'ALLES LÖSCHEN'}
-            onClick={() => toast.info('Diese Funktion ist noch nicht implementiert.')}
+            disabled={confirmText !== 'ALLES LÖSCHEN' || isWiping}
+            onClick={handleWipeAll}
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            Alle Daten unwiderruflich löschen
+            {isWiping ? 'Lösche…' : 'Alle Daten unwiderruflich löschen'}
           </Button>
         </div>
 
