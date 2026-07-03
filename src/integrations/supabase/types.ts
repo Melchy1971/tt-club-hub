@@ -1267,6 +1267,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_wipe_all_data: { Args: never; Returns: undefined }
       check_seasons_permission_consistency: { Args: never; Returns: Json }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       is_admin_or_board: { Args: { _user_id: string }; Returns: boolean }
