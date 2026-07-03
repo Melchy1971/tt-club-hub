@@ -65,8 +65,11 @@ export const infoService: InfoService = {
   },
 
   async getToolMetadata() {
-    // tool_metadata table does not exist yet – return null gracefully
-    return null;
+    return {
+      version: '1.0.0',
+      buildDate: '2026-07-03',
+      supportEmail: 'support@tt-manager-pro.de',
+    };
   },
 
   async getLicense() {
