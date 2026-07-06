@@ -1267,6 +1267,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_restore_table: {
+        Args: { _rows: Json; _table: string; _truncate?: boolean }
+        Returns: number
+      }
       admin_wipe_all_data: { Args: never; Returns: undefined }
       admin_wipe_all_members: { Args: never; Returns: undefined }
       check_seasons_permission_consistency: { Args: never; Returns: Json }
