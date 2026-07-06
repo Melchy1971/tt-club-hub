@@ -56,8 +56,9 @@ function parseCsv(text: string): Record<string, unknown>[] {
     const obj: Record<string, unknown> = {};
     headers.forEach((h, idx) => {
       const v = r[idx];
-      if (v === undefined || v === '') obj[h] = null;
-      else obj[h] = v;
+      // Leere Werte weglassen, damit DB-Defaults (z. B. gen_random_uuid()) greifen
+      if (v === undefined || v === '') return;
+      obj[h] = v;
     });
     return obj;
   });
