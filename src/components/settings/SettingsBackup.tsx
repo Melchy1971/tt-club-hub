@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Download, Upload, AlertTriangle } from 'lucide-react';
+import { Download, Upload, AlertTriangle, FileText, X, Play } from 'lucide-react';
 import { csvAdapter } from '@/lib/export/csvAdapter';
 import type { ExportDocument, ExportTableSection, ExportColumn } from '@/lib/export/types';
 
@@ -69,11 +69,21 @@ function detectTableFromFilename(name: string): string | null {
   return m ? m[1] : null;
 }
 
+interface PreviewFile {
+  file: File;
+  table: string | null;
+  allowed: boolean;
+  rowCount: number;
+  sample: Record<string, unknown> | null;
+  error?: string;
+}
+
 export default function SettingsBackup() {
   const [selected, setSelected] = useState<Set<string>>(new Set(TABLES.map((t) => t.key)));
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [truncateBeforeImport, setTruncateBeforeImport] = useState(false);
+  const [previews, setPreviews] = useState<PreviewFile[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
@@ -127,21 +137,49 @@ export default function SettingsBackup() {
     }
   };
 
-  const handleRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (files.length === 0) return;
 
+    const next: PreviewFile[] = [];
+    for (const file of files) {
+      const table = detectTableFromFilename(file.name);
+      const allowed = !!table && ALLOWED_RESTORE_TABLES.has(table);
+      try {
+        const text = await file.text();
+        const rows = parseCsv(text);
+        next.push({
+          file,
+          table,
+          allowed,
+          rowCount: rows.length,
+          sample: rows[0] ?? null,
+          error: !allowed ? 'Tabelle nicht erkannt oder nicht erlaubt' : rows.length === 0 ? 'Keine Datensätze' : undefined,
+        });
+      } catch (err: any) {
+        next.push({ file, table, allowed, rowCount: 0, sample: null, error: err?.message ?? 'Lesefehler' });
+      }
+    }
+    setPreviews(next);
+  };
+
+  const removePreview = (idx: number) => {
+    setPreviews((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const runRestore = async () => {
+    const valid = previews.filter((p) => p.allowed && p.rowCount > 0);
+    if (valid.length === 0) {
+      toast.warning('Keine gültigen Dateien zum Einspielen');
+      return;
+    }
     setImporting(true);
     let totalInserted = 0;
     const errors: string[] = [];
     try {
-      for (const file of files) {
-        const table = detectTableFromFilename(file.name);
-        if (!table || !ALLOWED_RESTORE_TABLES.has(table)) {
-          errors.push(`${file.name}: Tabelle nicht erkannt/erlaubt`);
-          continue;
-        }
+      for (const p of valid) {
+        const { file, table } = p;
         try {
           const text = await file.text();
           const rows = parseCsv(text);
@@ -165,6 +203,7 @@ export default function SettingsBackup() {
       }
       if (errors.length === 0) {
         toast.success(`Restore abgeschlossen: ${totalInserted} Datensätze eingespielt`);
+        setPreviews([]);
       } else {
         toast.error(`Restore mit Fehlern (${totalInserted} eingespielt): ${errors.join(' • ')}`);
       }
@@ -240,10 +279,10 @@ export default function SettingsBackup() {
           <Button
             onClick={() => fileInputRef.current?.click()}
             disabled={importing}
-            variant="default"
+            variant="outline"
           >
             <Upload className="mr-2 h-4 w-4" />
-            {importing ? 'Spiele ein…' : 'CSV-Dateien auswählen'}
+            CSV-Dateien auswählen
           </Button>
           <input
             ref={fileInputRef}
@@ -251,9 +290,79 @@ export default function SettingsBackup() {
             accept=".csv,text/csv"
             multiple
             className="hidden"
-            onChange={handleRestore}
+            onChange={handleFilesSelected}
           />
+          {previews.length > 0 && (
+            <Button variant="ghost" onClick={() => setPreviews([])} disabled={importing}>
+              Auswahl leeren
+            </Button>
+          )}
         </div>
+
+        {previews.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Vorschau ({previews.length} Datei{previews.length !== 1 ? 'en' : ''})</p>
+            <div className="space-y-2">
+              {previews.map((p, idx) => {
+                const sampleEntries = p.sample ? Object.entries(p.sample).slice(0, 6) : [];
+                return (
+                  <div
+                    key={`${p.file.name}-${idx}`}
+                    className={`rounded-md border p-3 space-y-2 ${p.error ? 'border-destructive/40 bg-destructive/5' : 'border-border'}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{p.file.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {p.table ? <>Tabelle: <code>{p.table}</code></> : 'Tabelle: —'}
+                            {' · '}
+                            {p.rowCount} Zeile{p.rowCount !== 1 ? 'n' : ''}
+                          </p>
+                        </div>
+                      </div>
+                      <Button variant="ghost" size="icon" onClick={() => removePreview(idx)} disabled={importing}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    {p.error && (
+                      <p className="text-xs text-destructive">{p.error}</p>
+                    )}
+                    {sampleEntries.length > 0 && (
+                      <div className="rounded bg-muted/50 p-2 text-xs">
+                        <p className="mb-1 font-medium text-muted-foreground">Beispielzeile</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">
+                          {sampleEntries.map(([k, v]) => (
+                            <div key={k} className="flex gap-2 min-w-0">
+                              <span className="text-muted-foreground shrink-0">{k}:</span>
+                              <span className="truncate">{String(v)}</span>
+                            </div>
+                          ))}
+                        </div>
+                        {p.sample && Object.keys(p.sample).length > sampleEntries.length && (
+                          <p className="mt-1 text-muted-foreground">
+                            … +{Object.keys(p.sample).length - sampleEntries.length} weitere Spalten
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <Button
+                onClick={runRestore}
+                disabled={importing || previews.every((p) => !p.allowed || p.rowCount === 0)}
+              >
+                <Play className="mr-2 h-4 w-4" />
+                {importing ? 'Spiele ein…' : 'Restore starten'}
+              </Button>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
     </div>
