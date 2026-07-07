@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -37,6 +37,9 @@ type RegisterData = z.infer<typeof registerSchema>;
 export default function Auth() {
   const { isAuthenticated, isLoading: authLoading, setPreviewRole, previewRole } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const rawNext = searchParams.get('next');
+  const nextPath = rawNext && rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/';
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
@@ -52,7 +55,7 @@ export default function Auth() {
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={nextPath} replace />;
   }
 
   const handleLogin = async (data: LoginData) => {
@@ -67,7 +70,7 @@ export default function Auth() {
       toast({ variant: 'destructive', title: 'Anmeldung fehlgeschlagen', description: error.message });
       return;
     }
-    navigate('/', { replace: true });
+    navigate(nextPath, { replace: true });
   };
 
   const handleRegister = async (data: RegisterData) => {
@@ -77,7 +80,7 @@ export default function Auth() {
       password: data.password,
       options: {
         data: { first_name: data.firstName, last_name: data.lastName },
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: `${window.location.origin}${nextPath}`,
       },
     });
     setLoading(false);
