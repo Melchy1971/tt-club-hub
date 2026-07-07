@@ -63,6 +63,7 @@ export const SETTINGS_SUBPAGE_LABELS_DE: Record<SettingsSubpageId, string> = {
   season: 'Saisonverwaltung',
   venues: 'Spiellokale',
   backup: 'Backup',
+  agent_integrations: 'Agent-Integrationen',
   danger: 'Gefahrenzone',
 };
 
