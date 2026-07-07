@@ -31,6 +31,7 @@ import NotificationsPage from './pages/Notifications';
 import InfoPage from './pages/InfoPage';
 import PrivacyPage from './pages/Privacy';
 import Standings from './pages/Standings';
+import OAuthConsent from './pages/OAuthConsent';
 
 type AppRouteComponentMap = Record<string, React.ComponentType>;
 
@@ -89,6 +90,7 @@ const App = () => (
               <Route path="/auth" element={<Navigate to="/login" replace />} />
               <Route path="/login" element={<Auth />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
               <Route element={<AppLayout />}>
                 {ROUTES.map((route) => {
                   if (route.path === '/login') return null;
