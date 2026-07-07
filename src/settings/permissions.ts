@@ -18,6 +18,7 @@ export const SETTINGS_PERMISSION_MODEL: Record<SettingsSubpageId, SettingsPermis
   privacy: {},
   security: {},
   backup: { read: { permissions: ['admin:all'] }, write: { permissions: ['admin:all'] } },
+  agent_integrations: { read: { permissions: ['admin:all'] }, write: { permissions: ['admin:all'] } },
   danger: { read: { permissions: ['admin:all'] }, write: { permissions: ['admin:all'] } },
 };
 

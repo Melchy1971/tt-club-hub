@@ -12,6 +12,7 @@ export type SettingsSubpageId =
   | 'privacy'
   | 'security'
   | 'backup'
+  | 'agent_integrations'
   | 'danger';
 
 export type SettingsSubpageGroup = 'account' | 'club' | 'admin';
