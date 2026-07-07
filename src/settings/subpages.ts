@@ -7,6 +7,7 @@ import {
   Users,
   Database,
   SlidersHorizontal,
+  Plug,
 } from 'lucide-react';
 import SettingsRoles from '@/components/settings/SettingsRoles';
 import SettingsPermissions from '@/components/settings/SettingsPermissions';
@@ -16,6 +17,7 @@ import SettingsVenues from '@/components/settings/SettingsVenues';
 import SettingsAppearance from '@/components/settings/SettingsAppearance';
 
 import SettingsBackup from '@/components/settings/SettingsBackup';
+import SettingsAgentIntegrations from '@/components/settings/SettingsAgentIntegrations';
 import SettingsDangerZone from '@/components/settings/SettingsDangerZone';
 import { SETTINGS_SUBPAGE_LABELS_DE } from '@/constants/uiLabels';
 import { getSettingsPermissionRule } from './permissions';
@@ -60,6 +62,15 @@ export const SETTINGS_SUBPAGES: SettingsSubpageDef[] = [
     group: 'admin',
     readAccess: getSettingsPermissionRule('backup').read,
     writeAccess: getSettingsPermissionRule('backup').write,
+  },
+  {
+    id: 'agent_integrations',
+    label: SETTINGS_SUBPAGE_LABELS_DE.agent_integrations,
+    icon: Plug,
+    component: SettingsAgentIntegrations,
+    group: 'admin',
+    readAccess: getSettingsPermissionRule('agent_integrations').read,
+    writeAccess: getSettingsPermissionRule('agent_integrations').write,
   },
   {
     id: 'danger',
